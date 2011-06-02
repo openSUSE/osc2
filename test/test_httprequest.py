@@ -2,7 +2,6 @@ import os
 
 from lxml import etree
 
-import httptest
 from osc.httprequest import Urllib2HTTPRequest
 from httptest import GET, PUT, POST, DELETE, MockUrllib2Request
 
