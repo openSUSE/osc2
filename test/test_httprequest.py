@@ -1,4 +1,5 @@
 import os
+import unittest
 
 from lxml import etree
 
@@ -103,5 +104,4 @@ class TestHTTPRequest(MockUrllib2Request):
         self.assertEqual(resp.read(), 'foobar')
 
 if __name__ == '__main__':
-    import unittest
     unittest.main()
