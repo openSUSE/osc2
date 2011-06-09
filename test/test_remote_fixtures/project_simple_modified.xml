@@ -1,0 +1,3 @@
+<project name="test">
+  <person userid="bar" role="maintainer"/>
+</project>

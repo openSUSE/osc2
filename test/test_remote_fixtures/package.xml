@@ -1,0 +1,11 @@
+<package project="openSUSE:Tools" name="osc">
+  <debuginfo>
+    <disable/>
+    <enable repository="openSUSE_Factory"/>
+    <enable arch="i586" repository="some_repo"/>
+  </debuginfo>
+  <title>tiny title</title>
+  <description>some useless
+description...</description>
+  <person userid="foobar" role="maintainer"/>
+</package>

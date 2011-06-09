@@ -1,0 +1,13 @@
+<project name="foo">
+  <title>just a dummy title</title>
+  <description>This is a detailed and more lengthy
+description of the foo
+project.</description>
+  <person userid="testuser" role="maintainer"/>
+  <person userid="foobar" role="bugowner"/>
+  <repository name="openSUSE_Factory">
+    <path project="openSUSE:Factory" repository="standard"/>
+    <arch>x86_64</arch>
+    <arch>i586</arch>
+  </repository>
+</project>
