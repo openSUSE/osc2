@@ -113,12 +113,13 @@ def add_expected_request(method, url, **kwargs):
 class MockUrllib2Request(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         self._fixtures_dir = kwargs.pop('fixtures_dir', os.curdir)
-        unittest.TestCase.__init__(self, *args, **kwargs)
+        super(MockUrllib2Request, self).__init__(*args, **kwargs)
 
     def fixture_file(self, filename):
         return os.path.join(self._fixtures_dir, filename)
 
     def setUp(self):
+        super(MockUrllib2Request, self).setUp()
         global EXPECTED_REQUESTS
         EXPECTED_REQUESTS = []
         old_build_opener = urllib2.build_opener
@@ -129,4 +130,5 @@ class MockUrllib2Request(unittest.TestCase):
         urllib2.build_opener = build_opener
 
     def tearDown(self):
+        super(MockUrllib2Request, self).tearDown()
         self.assertTrue(len(EXPECTED_REQUESTS) == 0)
