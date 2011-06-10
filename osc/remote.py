@@ -17,7 +17,7 @@ from lxml import etree, objectify
 
 from osc.core import Osc
 
-__all__ = ['RemoteModel', 'RemoteProject', 'RemotePackage']
+__all__ = ['RemoteModel', 'RemoteProject', 'RemotePackage', 'Request']
 
 class ElementFactory(object):
     """Adds a new element called "tag" to the provided "element"
@@ -84,6 +84,19 @@ class OscElement(objectify.ObjectifiedElement):
         factory = ElementFactory(self, data[1])
         return factory
 
+class OscElementClassLookup(etree.PythonElementClassLookup):
+    """A data element should be represented by a StringElement"""
+
+    def __init__(self):
+        fallback = objectify.ObjectifyElementClassLookup(tree_class=OscElement)
+        super(OscElementClassLookup, self).__init__(fallback=fallback)
+
+    def lookup(self, doc, root):
+        # use StringElement if we have text and no children
+        if root.text and not root:
+            return objectify.StringElement
+        return None
+
 
 class RemoteModel(object):
     """Base class for all remote models"""
@@ -110,12 +123,15 @@ class RemoteModel(object):
 #        if tag and xml_data:
 #            raise ValueError("Either specificy tag or xml_data but not both")
         if xml_data:
-            parser = self._get_parser()
-            self._xml = objectify.fromstring(xml_data, parser=parser)
+            self._read_xml_data(xml_data)
         elif tag:
             self._xml = self._get_parser().makeelement(tag, **kwargs)
         else:
             raise ValueError("Either tag or xml_data is required")
+
+    def _read_xml_data(self, xml_data):
+        parser = self._get_parser()
+        self._xml = objectify.fromstring(xml_data, parser=parser)
 
     def _get_parser(self):
         """Returns a parser object which is configured with OscElement as the
@@ -123,7 +139,7 @@ class RemoteModel(object):
 
         """
         parser = objectify.makeparser()
-        lookup = objectify.ObjectifyElementClassLookup(tree_class=OscElement)
+        lookup = OscElementClassLookup()
         parser.set_element_class_lookup(lookup)
         return parser
 
@@ -185,7 +201,7 @@ class RemoteModel(object):
             kwargs['data'] = self.tostring()
         if not 'schema' in kwargs:
             kwargs['schema'] = self._store_schema
-        http_method(path, **kwargs)
+        return http_method(path, **kwargs)
 
     @classmethod
     def find(cls, path, method='GET', **kwargs):
@@ -216,11 +232,14 @@ class RemoteModel(object):
 class RemoteProject(RemoteModel):
     PATH = '/source/%(project)s/_meta'
     SCHEMA = ''
+    # used to validate the response after the xml is stored
     PUT_RESPONSE_SCHEMA = ''
 
     def __init__(self, name='', **kwargs):
+        store_schema = RemoteProject.PUT_RESPONSE_SCHEMA
         super(RemoteProject, self).__init__(tag='project', name=name,
                                             schema=RemoteProject.SCHEMA,
+                                            store_schema=store_schema,
                                             **kwargs)
 
     @classmethod
@@ -232,22 +251,23 @@ class RemoteProject(RemoteModel):
 
     def store(self, **kwargs):
         path = RemoteProject.PATH % {'project': self.get('name')}
-        if not 'schema' in kwargs:
-            kwargs['schema'] = RemoteProject.PUT_RESPONSE_SCHEMA
         return super(RemoteProject, self).store(path, method='PUT', **kwargs)
 
 
 class RemotePackage(RemoteModel):
     PATH = '/source/%(project)s/%(package)s/_meta'
     SCHEMA = ''
+    # used to validate the response after the xml is stored
     PUT_RESPONSE_SCHEMA = ''
 
     def __init__(self, project='', name='', **kwargs):
         # project is not required
         if project:
             kwargs['project'] = project
+        store_schema = RemotePackage.PUT_RESPONSE_SCHEMA
         super(RemotePackage, self).__init__(tag='package', name=name,
                                             schema=RemotePackage.SCHEMA,
+                                            store_schema=store_schema,
                                             **kwargs)
 
     @classmethod
@@ -260,6 +280,26 @@ class RemotePackage(RemoteModel):
     def store(self, **kwargs):
         path = RemotePackage.PATH % {'project': self.get('project'),
                                      'package': self.get('name')}
-        if not 'schema' in kwargs:
-            kwargs['schema'] = RemotePackage.PUT_RESPONSE_SCHEMA
         return super(RemotePackage, self).store(path, method='PUT', **kwargs)
+
+
+class Request(RemoteModel):
+    GET_PATH = '/request/%(reqid)s'
+    SCHEMA = ''
+
+    def __init__(self, **kwargs):
+        super(Request, self).__init__(tag='request', schema=Request.SCHEMA,
+                                      store_schema=Request.SCHEMA, **kwargs)
+
+    @classmethod
+    def find(cls, reqid, **kwargs):
+        path = Request.GET_PATH % {'reqid': reqid}
+        if not 'schema' in kwargs:
+            kwargs['schema'] = Request.SCHEMA
+        return super(Request, cls).find(path, **kwargs)
+
+    def store(self, **kwargs):
+        path = '/request'
+        f = super(Request, self).store(path, method='POST',
+                                       cmd='create', **kwargs)
+        self._read_xml_data(f.read())
