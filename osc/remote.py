@@ -154,7 +154,7 @@ class RemoteModel(object):
         If validation fails an exception is raised (etree.DocumentInvalid)
 
         """
-        if not self._schema or not self.validate:
+        if not self._schema:
             return False
         self._logger.debug("validate modle against schema: %s", self._schema)
         if self._schema.endswith('.rng'):
