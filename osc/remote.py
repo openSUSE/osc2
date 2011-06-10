@@ -17,6 +17,8 @@ from lxml import etree, objectify
 
 from osc.core import Osc
 
+__all__ = ['RemoteModel', 'RemoteProject', 'RemotePackage']
+
 class ElementFactory(object):
     """Adds a new element called "tag" to the provided "element"
 
