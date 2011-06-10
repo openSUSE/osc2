@@ -2,9 +2,12 @@ import unittest
 
 from lxml import etree
 
-from osc.remote import RemoteProject, RemotePackage
+from osc.remote import RemoteProject, RemotePackage, Request
 from osctest import OscTest
 from httptest import GET, PUT, POST, DELETE, MockUrllib2Request
+
+def suite():
+    return unittest.makeSuite(TestRemoteModel)
 
 class TestRemoteModel(OscTest):
     def __init__(self, *args, **kwargs):
@@ -206,6 +209,93 @@ class TestRemoteModel(OscTest):
         # check that validation is ok
         pkg.validate()
         self.assertRaises(etree.DocumentInvalid, pkg.store)
+
+    @GET('http://localhost/request/123', file='request.xml')
+    def test_request1(self):
+        """get a request"""
+        req = Request.find('123')
+        self.assertTrue(len(req.action[:]) == 2)
+        self.assertEqual(req.action[0].get('type'), 'submit')
+        self.assertEqual(req.action[0].source.get('package'), 'abc')
+        self.assertEqual(req.action[0].source.get('project'), 'xyz')
+        self.assertEqual(req.action[0].options.sourceupdate, 'cleanup')
+        self.assertEqual(req.action[0].options.updatelink, '1')
+        self.assertEqual(req.action[1].get('type'), 'add_role')
+        self.assertEqual(req.action[1].target.get('project'), 'home:foo')
+        self.assertEqual(req.action[1].person.get('name'), 'bar')
+        self.assertEqual(req.action[1].person.get('role'), 'maintainer')
+        self.assertEqual(req.action[1].group.get('name'), 'groupxyz')
+        self.assertEqual(req.action[1].group.get('role'), 'reader')
+        self.assertEqual(req.state.get('name'), 'review')
+        self.assertEqual(req.state.get('when'), '2010-12-27T01:36:29')
+        self.assertEqual(req.state.get('who'), 'abc')
+        self.assertEqual(req.review.get('by_group'), 'group1')
+        self.assertEqual(req.review.get('state'), 'new')
+        self.assertEqual(req.review.get('when'), '2010-12-28T00:11:22')
+        self.assertEqual(req.review.get('who'), 'abc')
+        self.assertTrue(len(req.history[:]) == 1)
+        self.assertEqual(req.review.comment, 'review start')
+        self.assertEqual(req.history[0].get('name'), 'new')
+        self.assertEqual(req.history[0].get('when'), '2010-12-11T00:00:00')
+        self.assertEqual(req.history[0].get('who'), 'creator')
+
+    @POST('http://localhost/request?cmd=create', file='request_created.xml',
+          expfile='request_create.xml')
+    def test_request2(self):
+        """create a request"""
+        req = Request()
+        action = req.add_action(type='submit')
+        action.add_source(project='foo', package='bar', rev='12345')
+        action.add_target(project='foobar')
+        options = action.add_options()
+        options.add_sourceupdate('cleanup')
+        req.description = 'some description'
+        req.store()
+        self.assertEqual(req.get('id'), '42')
+        self.assertTrue(len(req.action) == 1)
+        self.assertEqual(req.action[0].get('type'), 'submit')
+        self.assertEqual(req.action[0].source.get('project'), 'foo')
+        self.assertEqual(req.action[0].source.get('package'), 'bar')
+        self.assertEqual(req.action[0].source.get('rev'), '12345')
+        self.assertEqual(req.action[0].target.get('project'), 'foobar')
+        self.assertEqual(req.action[0].options.sourceupdate, 'cleanup')
+        self.assertEqual(req.state.get('name'), 'new')
+        self.assertEqual(req.state.get('who'), 'username')
+        self.assertEqual(req.state.get('when'), '2011-06-10T14:33:55')
+        self.assertEqual(req.description, 'some description')
+
+    @GET('http://localhost/request/456', file='request_simple_created.xml')
+    @POST('http://localhost/request?cmd=create',
+          file='request_simple_created.xml',
+          expfile='request_simple_create.xml')
+    def test_request3(self):
+        """test request validation (incoming + outgoing)"""
+        Request.SCHEMA = self.fixture_file('request_simple.xsd')
+        req = Request.find('456')
+        req = Request()
+        req.add_action(type='submit')
+        req.store()
+
+    @GET('http://localhost/request/456', text='<invalid />')
+    @POST('http://localhost/request?cmd=create',
+          text='<invalid />',
+          expfile='request_simple_create.xml')
+    def test_request3(self):
+        """test request validation (incoming + outgoing)"""
+        Request.SCHEMA = self.fixture_file('request_simple.xsd')
+        self.assertRaises(etree.DocumentInvalid, Request.find, '456')
+        req = Request()
+        req.add_action(type='submit')
+        req.add_invalid(attr='inv')
+        # no http request is made because validation fails
+        self.assertRaises(etree.DocumentInvalid, req.store)
+        req = Request()
+        req.add_action(type='submit')
+        # check that validation is ok
+        req.validate()
+        # we get an invalid response
+        self.assertRaises(etree.DocumentInvalid, req.store)
+
 
 if __name__ == '__main__':
     unittest.main()

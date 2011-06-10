@@ -1,0 +1,10 @@
+<request>
+  <action type="submit">
+    <source project="foo" rev="12345" package="bar"/>
+    <target project="foobar"/>
+    <options>
+      <sourceupdate>cleanup</sourceupdate>
+    </options>
+  </action>
+  <description>some description</description>
+</request>

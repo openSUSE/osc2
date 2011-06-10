@@ -1,0 +1,11 @@
+<request id="42">
+  <action type="submit">
+    <source project="foo" package="bar" rev="12345"/>
+    <target project="foobar"/>
+    <options>
+      <sourceupdate>cleanup</sourceupdate>
+    </options>
+  </action>
+  <state name="new" who="username" when="2011-06-10T14:33:55"/>
+  <description>some description</description>
+</request>
