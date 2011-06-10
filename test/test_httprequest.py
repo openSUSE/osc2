@@ -6,6 +6,9 @@ from lxml import etree
 from osc.httprequest import Urllib2HTTPRequest
 from httptest import GET, PUT, POST, DELETE, MockUrllib2Request
 
+def suite():
+    return unittest.makeSuite(TestHTTPRequest)
+
 class TestHTTPRequest(MockUrllib2Request):
     def __init__(self, *args, **kwargs):
         kwargs['fixtures_dir'] = 'test_httprequest_fixtures'
