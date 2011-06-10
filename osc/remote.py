@@ -1,11 +1,23 @@
+"""Provides a base class from which all xml based remote models should
+inherit.
+
+Example usage:
+ prj = RemoteProject.find('project_name')
+ # add a new maintainer
+ prj.add_person(userid='foobar', role='maintainer')
+ # remove the first repository
+ del prj.repository[0]
+ # send changes back to the server
+ prj.store()
+"""
+
 import logging
 
-from lxml import etree
-from lxml import objectify
+from lxml import etree, objectify
 
 from osc.core import Osc
 
-class AddElement(object):
+class ElementFactory(object):
     """Adds a new element called "tag" to the provided "element"
 
     Note: it tries to add the new element next to existing elements
@@ -14,7 +26,7 @@ class AddElement(object):
     """
 
     def __init__(self, element, tag):
-        """Constructs a new AddElement object.
+        """Constructs a new ElementFactory object.
 
         "element" is the element to which we will add a new element
         which is called "tag".
@@ -59,7 +71,7 @@ class OscElement(objectify.ObjectifiedElement):
 
     This class overrides __getattr__ in order to return our special
     method object if name matches the pattern: add_tagname.
-    In this case an instance is return which adds a new element
+    In this case an instance is returned which adds a new element
     "tagname" to _this_ element.
 
     """
@@ -67,12 +79,9 @@ class OscElement(objectify.ObjectifiedElement):
         data = name.split('_', 1)
         if len(data) == 1 or not data[0] == 'add':
             return super(OscElement, self).__getattr__(name)
-        add = AddElement(self, data[1])
-        return add
+        factory = ElementFactory(self, data[1])
+        return factory
 
-class ReadOnlyModelError(Exception):
-    """Exception raised if a readonly model is going to be stored"""
-    pass
 
 class RemoteModel(object):
     """Base class for all remote models"""
@@ -177,7 +186,7 @@ class RemoteModel(object):
         http_method(path, **kwargs)
 
     @classmethod
-    def get_object(cls, path, method='GET', **kwargs):
+    def find(cls, path, method='GET', **kwargs):
         """Get the remote model from the server.
 
         Keyword arguments:
@@ -213,11 +222,11 @@ class RemoteProject(RemoteModel):
                                             **kwargs)
 
     @classmethod
-    def get_object(cls, project, **kwargs):
+    def find(cls, project, **kwargs):
         path = RemoteProject.PATH % {'project': project}
         if not 'schema' in kwargs:
             kwargs['schema'] = RemoteProject.SCHEMA
-        return super(RemoteProject, cls).get_object(path, **kwargs)
+        return super(RemoteProject, cls).find(path, **kwargs)
 
     def store(self, **kwargs):
         path = RemoteProject.PATH % {'project': self.get('name')}
@@ -240,11 +249,11 @@ class RemotePackage(RemoteModel):
                                             **kwargs)
 
     @classmethod
-    def get_object(cls, project, package, **kwargs):
+    def find(cls, project, package, **kwargs):
         path = RemotePackage.PATH % {'project': project, 'package': package}
         if not 'schema' in kwargs:
             kwargs['schema'] = RemotePackage.SCHEMA
-        return super(RemotePackage, cls).get_object(path, **kwargs)
+        return super(RemotePackage, cls).find(path, **kwargs)
 
     def store(self, **kwargs):
         path = RemotePackage.PATH % {'project': self.get('project'),
