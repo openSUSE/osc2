@@ -14,7 +14,7 @@ class TestRemoteModel(OscTest):
     @GET('http://localhost/source/foo/_meta', file='project.xml')
     def test_project1(self):
         """get a remote project"""
-        prj = RemoteProject.get_object('foo')
+        prj = RemoteProject.find('foo')
         self.assertEqual(prj.title, 'just a dummy title')
         self.assertEqual(prj.description, 'This is a detailed and more' \
                                           ' lengthy\ndescription of the foo' \
@@ -49,7 +49,7 @@ class TestRemoteModel(OscTest):
          expfile='project_modified.xml')
     def test_project3(self):
         """get, modify, store remote project"""
-        prj = RemoteProject.get_object('foo')
+        prj = RemoteProject.find('foo')
         # delete maintainer
         del prj.person[0]
         # delete arch i586
@@ -71,7 +71,7 @@ class TestRemoteModel(OscTest):
     def test_project4(self):
         """test project validation"""
         RemoteProject.SCHEMA = self.fixture_file('project_simple.xsd')
-        prj = RemoteProject.get_object('test')
+        prj = RemoteProject.find('test')
         prj.person.set('userid', 'bar')
         prj.store()
 
@@ -97,8 +97,7 @@ class TestRemoteModel(OscTest):
     def test_project7(self):
         """test project validation (invalid xml response)"""
         RemoteProject.SCHEMA = self.fixture_file('project_simple.xsd')
-        self.assertRaises(etree.DocumentInvalid, RemoteProject.get_object,
-                          'test')
+        self.assertRaises(etree.DocumentInvalid, RemoteProject.find, 'test')
 
     @PUT('http://localhost/source/test/_meta', text='<INVALID />',
          exp='<project name="test"/>\n')
@@ -115,7 +114,7 @@ class TestRemoteModel(OscTest):
          file='package.xml')
     def test_package1(self):
         """get a remote package"""
-        pkg = RemotePackage.get_object('openSUSE:Tools', 'osc')
+        pkg = RemotePackage.find('openSUSE:Tools', 'osc')
         self.assertEqual(pkg.get('project'), 'openSUSE:Tools')
         self.assertEqual(pkg.get('name'), 'osc')
         self.assertEqual(pkg.title, 'tiny title')
@@ -152,7 +151,7 @@ class TestRemoteModel(OscTest):
          expfile='package_modified.xml')
     def test_package3(self):
         """get, modify, store remote package"""
-        pkg = RemotePackage.get_object('openSUSE:Tools', 'osc')
+        pkg = RemotePackage.find('openSUSE:Tools', 'osc')
         # remove debuginfo element
         del pkg.debuginfo
         # add build element
@@ -169,7 +168,7 @@ class TestRemoteModel(OscTest):
     def test_package4(self):
         """test package validation"""
         RemotePackage.SCHEMA = self.fixture_file('package_simple.xsd')
-        pkg = RemotePackage.get_object('foo', 'bar')
+        pkg = RemotePackage.find('foo', 'bar')
         pkg.set('project', 'newprj')
         pkg.store()
 
@@ -194,7 +193,7 @@ class TestRemoteModel(OscTest):
     def test_package7(self):
         """test package validation (invalid xml response)"""
         RemotePackage.SCHEMA = self.fixture_file('package_simple.xsd')
-        self.assertRaises(etree.DocumentInvalid, RemotePackage.get_object,
+        self.assertRaises(etree.DocumentInvalid, RemotePackage.find,
                           'foo', 'bar')
 
     @PUT('http://localhost/source/foo/bar/_meta', text='<INVALID />',
