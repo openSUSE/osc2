@@ -1,0 +1,14 @@
+<resultlist state="11111111111111111111111111111111">
+  <result project="test" repository="openSUSE_Factory" arch="i586" state="building">
+    <status package="foo" code="disabled" />
+    <status package="bar" code="succeeded" />
+    <status package="osc" code="building">
+      <details>builds on host foo</details>
+    </status>
+  </result>
+  <result project="test" repository="openSUSE_Factory" arch="x86_64" state="building" dirty="true">
+    <status package="foo" code="disabled" />
+    <status package="bar" code="succeeded" />
+    <status package="osc" code="succeeded" />
+  </result>
+</resultlist>
