@@ -93,14 +93,14 @@ class TestBuild(OscTest):
         self.assertEqual(res.result[1].status[0].get('code'), 'excluded')
         self.assertEqual(res.result[1].status[0].details, '')
 
-    @GET('http://localhost/build/test/_result?arch=x86_64&' \
+    @GET('http://localhost/build/test/_result?x=y&arch=x86_64&' \
          'repository=openSUSE_Factory&package=bar',
          file='pkg_repo_arch_result.xml')
     def test_buildresult5(self):
         """package repo arch result"""
         br = BuildResult('test', package='bar', repository='openSUSE_Factory',
                          arch='x86_64')
-        res = br.result()
+        res = br.result(x='y')
         self.assertTrue(len(res.result[:]) == 1)
         self.assertEqual(res.result[0].get('project'), 'test')
         self.assertEqual(res.result[0].get('repository'), 'openSUSE_Factory')
@@ -113,6 +113,14 @@ class TestBuild(OscTest):
         # check unknown element
         self.assertRaises(AttributeError, res.result[0].status[0].__getattr__,
                           'asdf')
+
+    @GET('http://localhost/build/test/_result', text='<invalid />')
+    def test_buildresult6(self):
+        """test validation"""
+        # misuse the binarylist schema
+        BuildResult.RESULT_SCHEMA = self.fixture_file('binarylist_simple.xsd')
+        br = BuildResult('test')
+        self.assertRaises(etree.DocumentInvalid, br.result)
 
     @GET('http://localhost/build/test/openSUSE_Factory/i586/_repository',
          file='binarylist1.xml')
