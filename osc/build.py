@@ -98,6 +98,7 @@ class Binary(objectify.ObjectifiedElement):
 
 class BuildResult(object):
     """Provides methods to access the remote build result"""
+    RESULT_SCHEMA = ''
     BUILDDEPINFO_SCHEMA = ''
 
     def __init__(self, project, package='', repository='', arch=''):
@@ -139,8 +140,10 @@ class BuildResult(object):
         arch = kwargs.pop('arch', self.arch)
         request = Osc.get_osc().get_reqobj()
         path = "/build/%s/_result" % self.project
+        if not 'schema' in kwargs:
+            kwargs['schema'] = BuildResult.RESULT_SCHEMA
         f = request.get(path, package=package, repository=repository,
-                        arch=arch)
+                        arch=arch, **kwargs)
         parser = _get_parser()
         results = objectify.fromstring(f.read(), parser=parser)
         return results
