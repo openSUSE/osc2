@@ -12,12 +12,23 @@ Example usage:
 """
 
 import logging
+from tempfile import NamedTemporaryFile
+import os
+from cStringIO import StringIO
 
 from lxml import etree, objectify
 
 from osc.core import Osc
 
 __all__ = ['RemoteModel', 'RemoteProject', 'RemotePackage', 'Request']
+
+def _get_http_method(request_obj, method):
+    """Get the requested http method from the http object (internal)"""
+    meth = getattr(request_obj, method.lower(), None)
+    if meth is None:
+        msg = "http request object doesn't support method: %s" % method
+        raise ValueError(msg)
+    return meth
 
 class ElementFactory(object):
     """Adds a new element called "tag" to the provided "element"
@@ -196,7 +207,7 @@ class RemoteModel(object):
         """
         self.validate()
         request = Osc.get_osc().get_reqobj()
-        http_method = RemoteModel._get_http_method(request, method)
+        http_method = _get_http_method(request, method)
         if not 'data' in kwargs:
             kwargs['data'] = self.tostring()
         if not 'schema' in kwargs:
@@ -215,19 +226,9 @@ class RemoteModel(object):
 
         """
         request = Osc.get_osc().get_reqobj()
-        http_method = RemoteModel._get_http_method(request, method)
+        http_method = _get_http_method(request, method)
         xml_data = http_method(path, **kwargs).read()
         return cls(xml_data=xml_data)
-
-    @staticmethod
-    def _get_http_method(request_obj, method):
-        """Get the requested http method from the http object (internal)"""
-        meth = getattr(request_obj, method.lower(), None)
-        if meth is None:
-            msg = "http request object doesn't support method: %s" % method
-            raise ValueError(msg)
-        return meth
-
 
 class RemoteProject(RemoteModel):
     PATH = '/source/%(project)s/_meta'
@@ -303,3 +304,183 @@ class Request(RemoteModel):
         f = super(Request, self).store(path, method='POST',
                                        cmd='create', **kwargs)
         self._read_xml_data(f.read())
+
+
+class RemoteFile(object):
+    """Provides basic methods to read and to store a remote file.
+
+    Note: it isn't possible to seek around the file, once the data is
+    read it isn't possible to read it again. If you need to seeking and
+    more advanced file support use RWRemoteFile.
+
+    """
+
+    def __init__(self, path, stream_bufsize=8192, method='GET', **kwargs):
+        """Constructs a new RemoteFile object.
+
+        path is the remote path which is used for the http request.
+
+        Keyword arguments:
+        stream_bufsize -- read bytes which are returned when iterating over
+                          this object (default: 8192)
+        method -- the http method which is used for the request (default: GET)
+        kwargs -- optional arguments for the http request (like query
+                  parameters)
+
+        """
+        self.path = path
+        self.stream_bufsize = stream_bufsize
+        self.method = 'GET'
+        self.kwargs = kwargs
+        self._fobj = None
+
+    def _read(self):
+        request = Osc.get_osc().get_reqobj()
+        http_method = _get_http_method(request, self.method)
+        self._fobj = http_method(self.path, **self.kwargs)
+
+    def read(self, size=-1):
+        """Reads size bytes.
+
+        If the size argument is omitted or negative read everything.
+
+        """
+        if self._fobj is None:
+            self._read()
+        return self._fobj.read(size)
+
+    def close(self):
+        if self._fobj is not None:
+            self._fobj.close()
+
+    def _write_to(self, fobj, size):
+        for data in self.__iter__(size):
+            fobj.write(data)
+
+    def write_to(self, dest, size=-1):
+        """Write file to dest.
+
+        If dest is a file-like object (that is it has a write(buf) method)
+        it's write method will be called. If dest is a filename the data will
+        be written to it (existing files will be overwritten, if the file
+        doesn't exist it will be created).
+
+        Keyword arguments:
+        size -- write only size bytes (default: -1 (means write everything))
+
+        """
+        if hasattr(dest, 'write'):
+            self._write_to(dest, size)
+            return
+        dirname = os.path.dirname(dest)
+        if os.path.exists(dest) and not os.access(dest, os.W_OK):
+            raise ValueError("invalid dest filename: %s is not writable" %
+                             dest)
+        elif not os.path.exists(dirname):
+            # or should we check that it is really a dir?
+            raise ValueError("invalid dest filename: dir %s does not exist" %
+                             dir)
+        elif not os.access(dirname, os.W_OK):
+            raise ValueError("invalid dest filename: dir %s is not writable" %
+                             dir)
+        tmp_filename = ''
+        try:
+            tmp = NamedTemporaryFile(dir=dirname)
+            tmp_filename = tmp.file
+            self._write_to(tmp, size)
+            tmp.close()
+            os.rename(tmp_filename, dest)
+            tmp_filename = ''
+        finally:
+            if tmp_filename and os.path.isfile(tmp_filename):
+                os.unlink(tmp_filename)
+
+    def __iter__(self, size=-1):
+        """Iterates over the file"""
+        # this rsize handling is needed by write_to
+        rsize = self.stream_bufsize
+        if size >= 0 and size < rsize:
+            rsize = size
+        data = self.read(rsize)
+        while data:
+            yield data
+            size -= len(data)
+            if size == 0:
+                break
+            data = self.read(rsize)
+
+class RWRemoteFile(RemoteFile):
+    """Provides more advanced methods for reading and writing a remote file.
+
+    It's possible to read, write and seek the file. Additionally convenience
+    methods like readline, readlines are also provided.
+    Note: if you write data to this file the data will be stored in memory
+    until the file is closed (at this point all data is written to the server).
+    This class is mainly used for small text files.
+
+    """
+
+    def __init__(self, path, append=False, wb_method='PUT', wb_path='',
+                 schema='', **kwargs):
+        """Constructs a new RWRemoteFile object.
+
+        path is the remote path which is used for the http request
+        (to get the file, if needed).
+
+        Keyword arguments:
+        append -- append data to the existing file instead of overwriting it
+                   (default: False)
+        wb_method -- write back method for the http request (default: PUT)
+        wb_path -- path which is used to store the file back (default: path)
+        schema -- filename to xml schema which is used to validate the repsonse
+                  after the writeback
+        kwargs -- see class RemoteFile 
+
+        """
+        super(RWRemoteFile, self).__init__(path, **kwargs)
+        self.append = append
+        self.wb_method = wb_method
+        self.wb_path = wb_path
+        self._schema = schema
+        self._sio = None
+
+    def __getattr__(self, name):
+        if self._sio is None:
+            self._init_sio(name != 'write')
+        return getattr(self._sio, name)
+
+    def _init_sio(self, read_required, size=-1):
+        data = ''
+        if read_required or self.append:
+            data = super(RWRemoteFile, self).read(size)
+        self._sio = StringIO()
+        self._sio.write(data)
+        self._sio.seek(0, os.SEEK_SET)
+
+    def read(self, size=-1):
+        if self._sio is None:
+            self._init_sio(True, size)
+        pos = self._sio.tell()
+        # TODO: does this make sense?
+        buf = buffer(self._sio.getvalue())
+        tmp = StringIO(buf)
+        tmp.seek(pos, os.SEEK_SET)
+        return tmp.read(size)
+
+    def close(self, **kwargs):
+        """Close this file and write data back to server.
+
+        The writeback only happens if at least one time the write method
+        was invoced.
+
+        Keyword arguments:
+        kwargs -- optional parameters for the writeback http request (like
+                  query parameters)
+
+        """
+        request = Osc.get_osc().get_reqobj()
+        http_method = _get_http_method(request, self.wb_method)
+        data = self._sio.getvalue()
+        if not 'schema' in kwargs:
+            kwargs['schema'] = self._schema
+        http_method(self.path, data=data, **kwargs)
