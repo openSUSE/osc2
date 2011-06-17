@@ -172,7 +172,7 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
         quoted_path = '/'.join([urllib.quote_plus(p) for p in path.split('/')])
         quoted_query = '&'.join([urllib.quote_plus(k) + '=' +
                                  urllib.quote_plus(v)
-                                 for k, v in query.iteritems()])
+                                 for k, v in query.iteritems() if v])
         scheme, host = urlparse.urlsplit(self.apiurl)[0:2]
         url = urlparse.urlunsplit((scheme, host, quoted_path, quoted_query,
                                    ''))
