@@ -1,8 +1,13 @@
 import unittest
 
-from osc.build import BuildResult
+from lxml import etree
+
+from osc.build import BuildResult, BinaryList
 from osctest import OscTest
 from httptest import GET, PUT, POST, DELETE, MockUrllib2Request
+
+def suite():
+    return unittest.makeSuite(TestBuild)
 
 class TestBuild(OscTest):
     def __init__(self, *args, **kwargs):
@@ -125,6 +130,58 @@ class TestBuild(OscTest):
         self.assertEqual(list.binary[2].get('filename'), 'glibc-devel.rpm')
         self.assertEqual(list.binary[2].get('size'), '122')
         self.assertEqual(list.binary[2].get('mtime'), '1355804055')
+
+    @GET('http://localhost/build/test/repo/i586/_repository',
+         file='binarylist1.xml')
+    @GET('http://localhost/build/test/repo/i586/_repository/osc.rpm?a=b&c=d',
+         text='osc.rpm')
+    @GET('http://localhost/build/test/repo/i586/_repository/glibc.rpm',
+         text='glibc.rpm')
+    @GET('http://localhost/build/test/repo/i586/_repository/glibc-devel.rpm',
+         text='glibc-devel.rpm')
+    def test_binarylist2(self):
+        """list binaries for project repo arch and get each binary file"""
+        br = BuildResult('test', repository='repo', arch='i586')
+        list = br.binarylist()
+        self.assertTrue(len(list.binary[:]) == 3)
+        self.assertEqual(list.binary[0].get('filename'), 'osc.rpm')
+        self.assertEqual(list.binary[0].get('size'), '1294')
+        self.assertEqual(list.binary[0].get('mtime'), '1305804056')
+        self.assertEqual(list.binary[1].get('filename'), 'glibc.rpm')
+        self.assertEqual(list.binary[1].get('size'), '12244')
+        self.assertEqual(list.binary[1].get('mtime'), '1355804056')
+        self.assertEqual(list.binary[2].get('filename'), 'glibc-devel.rpm')
+        self.assertEqual(list.binary[2].get('size'), '122')
+        self.assertEqual(list.binary[2].get('mtime'), '1355804055')
+        bfile = list.binary[0].file(a='b', c='d')
+        self.assertEqual(bfile.read(), 'osc.rpm')
+        bfile = list.binary[1].file()
+        self.assertEqual(bfile.read(), 'glibc.rpm')
+        bfile = list.binary[2].file()
+        self.assertEqual(bfile.read(), 'glibc-devel.rpm')
+
+    @GET('http://localhost/build/test/repo/i586/osc',
+         text='<invalid />')
+    def test_binarylist3(self):
+        """return an invalid binarylist xml (test validation)"""
+        br = BuildResult('test', package='osc', repository='repo', arch='i586')
+        BinaryList.SCHEMA = self.fixture_file('binarylist_simple.xsd')
+        self.assertRaises(etree.DocumentInvalid, br.binarylist)
+
+    @GET('http://localhost/build/test/repo/i586/osc/_log', text='logfile')
+    def test_logfile1(self):
+        """get the logfile"""
+        br = BuildResult('test', package='osc', repository='repo', arch='i586')
+        log = br.log()
+        self.assertEqual(log.read(), 'logfile')
+        log.seek(3)
+        self.assertEqual(log.read(), 'file')
+
+    def test_logfile2(self):
+        """try to get logfile with insufficient arguments (package missing)"""
+        br = BuildResult('test', repository='repo', arch='x86_64')
+        self.assertRaises(ValueError, br.log)
+
 
 if __name__ == '__main__':
     unittest.main()
