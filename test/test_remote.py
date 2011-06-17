@@ -1,10 +1,13 @@
+import os
 import unittest
+from cStringIO import StringIO
 
 from lxml import etree
 
-from osc.remote import RemoteProject, RemotePackage, Request
+from osc.remote import (RemoteProject, RemotePackage, Request, RemoteFile,
+                        RWRemoteFile)
 from osctest import OscTest
-from httptest import GET, PUT, POST, DELETE, MockUrllib2Request
+from httptest import GET, PUT, POST, MockUrllib2Request
 
 def suite():
     return unittest.makeSuite(TestRemoteModel)
@@ -296,6 +299,93 @@ class TestRemoteModel(OscTest):
         # we get an invalid response
         self.assertRaises(etree.DocumentInvalid, req.store)
 
+    @GET('http://localhost/source/project/package/fname', file='remotefile1')
+    def test_remotefile1(self):
+        """get a simple file1"""
+        f = RemoteFile('/source/project/package/fname')
+        self.assertEqual(f.read(5), 'This ')
+        self.assertEqual(f.read(), 'is a simple file\nwith some newlines\n\n' \
+                                   'and\ntext.\n')
+
+    @GET('http://localhost/source/project/package/fname', file='remotefile1')
+    @GET('http://localhost/source/project/package/fname2', file='remotefile2')
+    def test_remotefile2(self):
+        """iterate over the file"""
+        f = RemoteFile('/source/project/package/fname')
+        i = iter(f)
+        self.assertEqualFile(i.next(), 'remotefile1')
+        f = RemoteFile('/source/project/package/fname2', stream_bufsize=6)
+        i = iter(f)
+        self.assertEqual(i.next(), 'yet an')
+        self.assertEqual(i.next(), 'other\n')
+        self.assertEqual(i.next(), 'simple')
+        self.assertEqual(i.next(), '\nfile\n')
+
+    @GET('http://localhost/source/project/package/fname2', file='remotefile2')
+    def test_remotefile3(self):
+        """store file"""
+        f = RemoteFile('/source/project/package/fname2')
+        sio = StringIO()
+        f.write_to(sio, size=12)
+        self.assertEqual(sio.getvalue(), 'yet another\n')
+        sio = StringIO()
+        f.write_to(sio)
+        self.assertEqual(sio.getvalue(), 'simple\nfile\n')
+
+    def test_remotefile4(self):
+        """test exception (we don't try to overwrite existing files)"""
+        f = RemoteFile('/foo/bar')
+        # do not run this as privileged user
+        assert not os.access('/', os.W_OK)
+        self.assertRaises(ValueError, f.write_to, '/foo')
+
+    @GET('http://localhost/source/project/package/fname?rev=123',
+         file='remotefile1')
+    def test_rwremotefile1(self):
+        """read and seek through a file"""
+        f = RWRemoteFile('/source/project/package/fname', rev='123')
+        f.seek(1, os.SEEK_SET)
+        self.assertEqual(f.read(7), 'his is ')
+        f.seek(0, os.SEEK_SET)
+        self.assertEqual(f.read(7), 'This is')
+        f.seek(0, os.SEEK_SET)
+        self.assertTrue(len(f.readlines()) == 5)
+        f.seek(0, os.SEEK_SET)
+        self.assertEqual(f.readline(), 'This is a simple file\n')
+        self.assertEqual(f.readline(), 'with some newlines\n')
+        self.assertEqual(f.read(), '\nand\ntext.\n')
+
+    @PUT('http://localhost/source/project/package/fname2', text='ok',
+         expfile='remotefile2')
+    def test_rwremotefile2(self):
+        """write to file"""
+        f = RWRemoteFile('/source/project/package/fname2')
+        f.write('yet another\nsim')
+        f.write('ple\nfile\n')
+        f.close()
+
+    @PUT('http://localhost/source/project/package/fname2?foo=bar', text='ok',
+         exp='yet another\nsim')
+    def test_rwremotefile3(self):
+        """write and seek"""
+        f = RWRemoteFile('/source/project/package/fname2')
+        f.write('ple\nfile\n')
+        f.seek(0, os.SEEK_SET)
+        f.write('yet another\nsim')
+        f.close(foo='bar')
+
+    @GET('http://localhost/source/project/package/fname2', file='remotefile2')
+    @PUT('http://localhost/source/project/package/fname2', text='ok',
+         expfile='remotefile2_modified')
+    def test_rwremotefile4(self):
+        """append to existing file"""
+        f = RWRemoteFile('/source/project/package/fname2', append=True)
+        # read first line
+        self.assertEqual(f.readline(), 'yet another\n')
+        # append/overwrite text
+        f.write('more complex\n')
+        f.write('testcase\n')
+        f.close()
 
 if __name__ == '__main__':
     unittest.main()
