@@ -19,3 +19,7 @@ class OscTest(MockUrllib2Request):
         if hasattr(super(OscTest, self), 'assertIsNotNone'):
             return super(OscTest, self).assertIsNotNone(x)
         return self.assertTrue(x is not None)
+
+    def assertEqualFile(self, x, filename, mode='r'):
+        with open(self.fixture_file(filename), mode) as f:
+            return self.assertEqual(x, f.read())
