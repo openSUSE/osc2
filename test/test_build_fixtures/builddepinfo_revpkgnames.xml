@@ -1,0 +1,11 @@
+<builddepinfo>
+  <package name="foo">
+    <source>foo</source>
+    <pkgdep>bar</pkgdep>
+    <subpkg>foo</subpkg>
+  </package>
+  <cycle>
+    <package>bar</package>
+    <package>foobar</package>
+  </cycle>
+</builddepinfo>

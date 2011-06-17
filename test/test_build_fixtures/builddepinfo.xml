@@ -1,0 +1,18 @@
+<builddepinfo>
+  <package name="osc">
+    <source>osc</source>
+    <pkgdep>python</pkgdep>
+    <pkgdep>python-devel</pkgdep>
+    <subpkg>osc</subpkg>
+    <subpkg>osc-doc</subpkg>
+  </package>
+  <package name="foo">
+    <source>foo</source>
+    <pkgdep>bar</pkgdep>
+    <subpkg>foo</subpkg>
+  </package>
+  <cycle>
+    <package>bar</package>
+    <package>foobar</package>
+  </cycle>
+</builddepinfo>

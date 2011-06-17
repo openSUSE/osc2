@@ -182,6 +182,52 @@ class TestBuild(OscTest):
         br = BuildResult('test', repository='repo', arch='x86_64')
         self.assertRaises(ValueError, br.log)
 
+    @GET('http://localhost/build/test/repo/x86_64/_repository/_builddepinfo?' \
+         'view=pkgnames',
+         file='builddepinfo.xml')
+    def test_builddepinfo1(self):
+        """test builddepinfo"""
+        br = BuildResult('test', repository='repo', arch='x86_64')
+        info = br.builddepinfo()
+        self.assertTrue(len(info.package[:]) == 2)
+        self.assertEqual(info.package[0].get('name'), 'osc')
+        self.assertEqual(info.package[0].source, 'osc')
+        self.assertEqual(info.package[0].pkgdep[0], 'python')
+        self.assertEqual(info.package[0].pkgdep[1], 'python-devel')
+        self.assertEqual(info.package[0].subpkg[0], 'osc')
+        self.assertEqual(info.package[0].subpkg[1], 'osc-doc')
+        self.assertEqual(info.package[1].get('name'), 'foo')
+        self.assertEqual(info.package[1].source, 'foo')
+        self.assertEqual(info.package[1].pkgdep, 'bar')
+        self.assertEqual(info.package[1].subpkg, 'foo')
+        self.assertEqual(info.cycle[0].package[0], 'bar')
+        self.assertEqual(info.cycle[0].package[1], 'foobar')
+
+    @GET('http://localhost/build/test/repo/x86_64/foo/_builddepinfo?' \
+         'view=revpkgnames',
+         file='builddepinfo_revpkgnames.xml')
+    def test_builddepinfo2(self):
+        """test builddepinfo (reverse=True)"""
+        br = BuildResult('test', package='foo', repository='repo',
+                         arch='x86_64')
+        info = br.builddepinfo(reverse=True)
+        self.assertEqual(info.package[0].get('name'), 'foo')
+        self.assertEqual(info.package[0].source, 'foo')
+        self.assertEqual(info.package[0].pkgdep, 'bar')
+        self.assertEqual(info.package[0].subpkg, 'foo')
+        self.assertEqual(info.cycle[0].package[0], 'bar')
+        self.assertEqual(info.cycle[0].package[1], 'foobar')
+
+    @GET('http://localhost/build/test/repo/x86_64/_repository/_builddepinfo?' \
+         'view=pkgnames',
+         text='<invalid />')
+    def test_builddepinfo3(self):
+        """test schema validation"""
+        # misuse the binarylist schema
+        schema_filename = 'binarylist_simple.xsd'
+        BuildResult.BUILDDEPINFO_SCHEMA = self.fixture_file(schema_filename)
+        br = BuildResult('test', repository='repo', arch='x86_64')
+        self.assertRaises(etree.DocumentInvalid, br.builddepinfo)
 
 if __name__ == '__main__':
     unittest.main()
