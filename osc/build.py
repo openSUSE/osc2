@@ -98,6 +98,7 @@ class Binary(objectify.ObjectifiedElement):
 
 class BuildResult(object):
     """Provides methods to access the remote build result"""
+    BUILDDEPINFO_SCHEMA = ''
 
     def __init__(self, project, package='', repository='', arch=''):
         """Constructs a new object.
@@ -178,3 +179,25 @@ class BuildResult(object):
                                             self.arch, self.package)
         return RWRemoteFile(path, **kwargs)
 
+    def builddepinfo(self, reverse=False, **kwargs):
+        """Get the builddepinfo.
+
+        If reverse is True a reverse builddepinfo lookup is done.
+
+        Keyword arguments:
+        **kwargs -- optional parameters for the http request
+
+        """
+        package = self.package or '_repository'
+        path = "/build/%s/%s/%s/%s/_builddepinfo" % (self.project,
+                                                     self.repository,
+                                                     self.arch, package)
+        request = Osc.get_osc().get_reqobj()
+        view = 'pkgnames'
+        if reverse:
+            view = 'revpkgnames'
+        if not 'schema' in kwargs:
+            kwargs['schema'] = BuildResult.BUILDDEPINFO_SCHEMA
+        f = request.get(path, view=view, **kwargs)
+        # no custom parser needed atm
+        return objectify.fromstring(f.read())
