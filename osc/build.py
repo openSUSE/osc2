@@ -5,6 +5,7 @@ To access the remote build data use the class BuildResult.
 
 from lxml import etree, objectify
 
+from osc.remote import RemoteFile, RWRemoteFile
 from osc.core import Osc
 
 def _get_parser():
@@ -29,6 +30,8 @@ class OscElementClassLookup(etree.PythonElementClassLookup):
             return Status
         elif root.tag == 'binarylist':
             return BinaryList
+        elif root.tag == 'binary':
+            return Binary
         return None
 
 class Status(objectify.ObjectifiedElement):
@@ -60,12 +63,13 @@ class BinaryList(objectify.ObjectifiedElement):
         """
         path = '/build/%s/%s/%s/%s' % (project, repository, arch, package)
         request = Osc.get_osc().get_reqobj()
-        if 'schema' in kwargs:
+        if not 'schema' in kwargs:
             kwargs['schema'] = BinaryList.SCHEMA
         f = request.get(path, **kwargs)
         parser = _get_parser()
         bl = objectify.fromstring(f.read(), parser=parser)
         bl.set('project', project)
+        bl.set('package', package)
         bl.set('repository', repository)
         bl.set('arch', arch)
         return bl
@@ -73,17 +77,24 @@ class BinaryList(objectify.ObjectifiedElement):
 class Binary(objectify.ObjectifiedElement):
     """Represents a binary tag + some additional data"""
 
-    def file(self):
+    def file(self, **kwargs):
         """Returns a RemoteFile object.
         
         This can be used to read/save the binary file.
 
-        """
-        path = '/build/%s/%s/%s/%s' % (self.get('project'),
-                                       self.get('repository'),
-                                       self.get('arch'),
-                                       self.get('filename'))
+        Keyword arguments:
+        **kwargs -- optional parameters for the http request
 
+        """
+        path = '/build/%(project)s/%(repository)s/%(arch)s/%(package)s/' \
+               '%(fname)s'
+        parent = self.getparent()
+        data = {'project': parent.get('project'),
+                'package': parent.get('package'),
+                'repository': parent.get('repository'),
+                'arch': parent.get('arch'), 'fname': self.get('filename')}
+        path = path % data
+        return RemoteFile(path, **kwargs)
 
 class BuildResult(object):
     """Provides methods to access the remote build result"""
@@ -143,17 +154,27 @@ class BuildResult(object):
     def binarylist(self, **kwargs):
         """Get the binarylist.
 
-        Note: package, repository and arch parameters are required
-        (unless already specified during __init__). If missing a
-        ValueError is raised
-
         Keyword arguments:
-        package -- override package attribute (default: '')
-        repository -- override repository attribute
-        arch -- override arch attribute
         kwargs -- optional arguments for the http request
 
         """
-        self._prepare_kwargs(kwargs, 'repository', 'arch')
-        return BinaryList.create(self.project, kwargs.pop('repository'),
-                                 kwargs.pop('arch'), **kwargs)
+        return BinaryList.create(self.project, self.repository, self.arch,
+                                 self.package or '_repository', **kwargs)
+
+    def log(self, **kwargs):
+        """Get the buildlog.
+
+        If repository, arch or package weren't specified during the __init__
+        call a ValueError is raised.
+
+        Keyword arguments:
+        **kwargs -- optional parameters for the http request
+
+        """
+        if not (self.repository and self.arch and self.package):
+            raise ValueError("repository, arch, package are mandatory for log")
+        request = Osc.get_osc().get_reqobj()
+        path = '/build/%s/%s/%s/%s/_log' % (self.project, self.repository,
+                                            self.arch, self.package)
+        return RWRemoteFile(path, **kwargs)
+        
