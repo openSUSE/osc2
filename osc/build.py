@@ -61,7 +61,7 @@ class BinaryList(objectify.ObjectifiedElement):
                   parameters)
 
         """
-        path = '/build/%s/%s/%s/%s' % (project, repository, arch, package)
+        path = "/build/%s/%s/%s/%s" % (project, repository, arch, package)
         request = Osc.get_osc().get_reqobj()
         if not 'schema' in kwargs:
             kwargs['schema'] = BinaryList.SCHEMA
@@ -86,8 +86,8 @@ class Binary(objectify.ObjectifiedElement):
         **kwargs -- optional parameters for the http request
 
         """
-        path = '/build/%(project)s/%(repository)s/%(arch)s/%(package)s/' \
-               '%(fname)s'
+        path = "/build/%(project)s/%(repository)s/%(arch)s/%(package)s/" \
+               "%(fname)s"
         parent = self.getparent()
         data = {'project': parent.get('project'),
                 'package': parent.get('package'),
@@ -174,7 +174,7 @@ class BuildResult(object):
         if not (self.repository and self.arch and self.package):
             raise ValueError("repository, arch, package are mandatory for log")
         request = Osc.get_osc().get_reqobj()
-        path = '/build/%s/%s/%s/%s/_log' % (self.project, self.repository,
+        path = "/build/%s/%s/%s/%s/_log" % (self.project, self.repository,
                                             self.arch, self.package)
         return RWRemoteFile(path, **kwargs)
-        
+
