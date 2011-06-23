@@ -24,6 +24,75 @@ from lxml import etree
 
 __all__ = ['AbstractHTTPRequest', 'Urllib2HTTPRequest']
 
+class AbstractHTTPResponse(object):
+    """Base class for an http response object.
+    
+    It provides the following attributes:
+
+    """
+
+    def __init__(self, url, code, headers, orig_resp=None):
+        """Constructs a new object.
+
+        Arguments:
+        url -- the url of the request
+        code -- the http status code (int)
+        headers -- a dict which contains the headers
+
+        Keyword arugments:
+        orig_resp -- the original response object (default: None)
+
+        """
+        self.url = url
+        self.code = code
+        self.headers = headers
+        self.orig_resp = orig_resp
+
+    def read(self, size=-1):
+        """Read the response.
+
+        If size is specified read size bytes (by default size is -1
+        so everything will be read).
+
+        """
+        raise NotImplementedError()
+
+    def close(self):
+        """Close the connection/files.
+
+        Subsequent reads are not guaranteed to succeed (depends on
+        the implementation).
+
+        """
+        raise NotImplementedError()
+
+
+class HTTPError(Exception):
+    """Raised if a http error occured.
+
+    It is simply a wrapper for the implementation specific exception.
+
+    """
+
+    def __init__(self, url, code, headers, orig_exc=None):
+        """Constructs a new HTTPError object.
+
+        Arguments:
+        url -- the url of the request
+        code -- the http status code (int)
+        headers -- a dict which contains the headers (if present)
+
+        Keyword arguments:
+        orig_exc -- the original exception (default: None)
+
+        """
+        super(HTTPError, self).__init__((), str(orig_exc))
+        self.url = url
+        self.code = code
+        self.headers = headers
+        self.orig_exc = orig_exc
+
+
 class AbstractHTTPRequest(object):
     """Base class which provides methods for doing http requests.
 
@@ -97,6 +166,40 @@ class AbstractHTTPRequest(object):
 
         """
         raise NotImplementedError()
+
+
+class Urllib2HTTPResponse(AbstractHTTPResponse):
+    """Wraps an urllib2 http response.
+
+    The original response is a urllib.addinfourl object.
+
+    """
+    def __init__(self, resp):
+        super(Urllib2HTTPResponse, self).__init__(resp.geturl(),
+                                                  resp.getcode(),
+                                                  resp.info(),
+                                                  resp)
+        self._sio = None
+
+    def _fobj(self):
+        if self._sio is not None:
+            return self._sio
+        return self.orig_resp
+
+    def read(self, size=-1):
+        return self._fobj().read(size)
+
+    def close(self):
+        return self._fobj().close()
+
+
+class Urllib2HTTPError(HTTPError):
+    """Wraps an urllib2.HTTPError"""
+
+    def __init__(self, exc):
+        super(Urllib2HTTPError, self).__init__(exc.filename, exc.code,
+                                               exc.hdrs, exc)
+
 
 class Urllib2HTTPRequest(AbstractHTTPRequest):
     """Do http requests with urllib2.
@@ -183,9 +286,13 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
     def _validate_response(self, resp, schema_filename):
         if not schema_filename or not self.validate:
             return False
+        # this is needed for validation so that we can seek to the "top" of
+        # the file again (after validation)
+        sio = cStringIO.StringIO(resp.read())
+        resp._sio = sio
         self._logger.debug("validate resp against schema: %s", schema_filename)
         root = etree.fromstring(resp.read())
-        resp.fp.seek(0, os.SEEK_SET)
+        resp._sio.seek(0, os.SEEK_SET)
         if schema_filename.endswith('.rng'):
             schema = etree.RelaxNG(file=schema_filename)
         elif schema_filename.endswith('.xsd'):
@@ -196,17 +303,15 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
         return True
 
     def _new_response(self, resp):
-        # this is needed for validation so that we can seek to the "top" of
-        # the file again (after validation)
-        sio = cStringIO.StringIO(resp.read())
-        new_resp = urllib.addinfourl(sio, resp.headers, resp.url, resp.code)
-        resp.close()
-        return new_resp
+        return Urllib2HTTPResponse(resp)
 
     def _send_request(self, method, path, schema, **query):
         request = self._build_request(method, path, **query)
         self._logger.info(request.get_full_url())
-        f = urllib2.urlopen(request)
+        try:
+            f = urllib2.urlopen(request)
+        except urllib2.HTTPError as e:
+            raise Urllib2HTTPError(e)
         f = self._new_response(f)
         self._validate_response(f, schema)
         return f
@@ -218,12 +323,15 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
         if urlencoded:
             request.add_header('Content-type',
                                'application/x-www-form-urlencoded')
-        if filename:
-            f = self._send_file(request, filename, urlencoded)
-        else:
-            if urlencoded:
-                data = urllib.quote_plus(data)
-            f = urllib2.urlopen(request, data)
+        try:
+            if filename:
+                f = self._send_file(request, filename, urlencoded)
+            else:
+                if urlencoded:
+                    data = urllib.quote_plus(data)
+                f = urllib2.urlopen(request, data)
+        except urllib2.HTTPError as e:
+            raise Urllib2HTTPError(e)
         f = self._new_response(f)
         self._validate_response(f, schema)
         return f
