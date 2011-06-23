@@ -5,7 +5,7 @@ To access the remote build data use the class BuildResult.
 
 from lxml import etree, objectify
 
-from osc.remote import RemoteFile, RWRemoteFile
+from osc.remote import RORemoteFile, RWRemoteFile
 from osc.core import Osc
 
 def _get_parser():
@@ -94,7 +94,7 @@ class Binary(objectify.ObjectifiedElement):
                 'repository': parent.get('repository'),
                 'arch': parent.get('arch'), 'fname': self.get('filename')}
         path = path % data
-        return RemoteFile(path, **kwargs)
+        return RORemoteFile(path, **kwargs)
 
 class BuildResult(object):
     """Provides methods to access the remote build result"""
