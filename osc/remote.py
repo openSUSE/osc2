@@ -306,7 +306,7 @@ class Request(RemoteModel):
         self._read_xml_data(f.read())
 
 
-class RemoteFile(object):
+class RORemoteFile(object):
     """Provides basic methods to read and to store a remote file.
 
     Note: it isn't possible to seek around the file, once the data is
@@ -332,12 +332,26 @@ class RemoteFile(object):
         self.stream_bufsize = stream_bufsize
         self.method = 'GET'
         self.kwargs = kwargs
+        self._remote_size = -1
         self._fobj = None
 
-    def _read(self):
+    def _init_read(self):
         request = Osc.get_osc().get_reqobj()
         http_method = _get_http_method(request, self.method)
         self._fobj = http_method(self.path, **self.kwargs)
+        self._remote_size = int(self._fobj.headers.get('Content-Length', -1))
+
+    def _read(self, size=-1):
+        """internal method which performs the read.
+
+        All method in _this_ class should use _read instead of read
+        (otherwise it'll lead to problems if subclasses override the
+        read method).
+
+        """
+        if self._fobj is None:
+            self._init_read()
+        return self._fobj.read(size)
 
     def read(self, size=-1):
         """Reads size bytes.
@@ -345,9 +359,7 @@ class RemoteFile(object):
         If the size argument is omitted or negative read everything.
 
         """
-        if self._fobj is None:
-            self._read()
-        return self._fobj.read(size)
+        return self._read(size)
 
     def close(self):
         if self._fobj is not None:
@@ -401,27 +413,27 @@ class RemoteFile(object):
         rsize = self.stream_bufsize
         if size >= 0 and size < rsize:
             rsize = size
-        data = self.read(rsize)
+        data = self._read(rsize)
         while data:
             yield data
             size -= len(data)
             if size == 0:
                 break
-            data = self.read(rsize)
+            data = self._read(rsize)
 
-class RWRemoteFile(RemoteFile):
+class RWRemoteFile(RORemoteFile):
     """Provides more advanced methods for reading and writing a remote file.
 
     It's possible to read, write and seek the file. Additionally convenience
     methods like readline, readlines are also provided.
-    Note: if you write data to this file the data will be stored in memory
-    until the file is closed (at this point all data is written to the server).
-    This class is mainly used for small text files.
+    If the remote file is small than 8096 bytes the file is represented by
+    a StringIO object (the size is configurable, see __init__). Otherwise the
+    file is represented by a NamedTemporaryFile which is written to disk.
 
     """
 
     def __init__(self, path, append=False, wb_method='PUT', wb_path='',
-                 schema='', **kwargs):
+                 schema='', tmp_size=8096, use_tmp=False, **kwargs):
         """Constructs a new RWRemoteFile object.
 
         path is the remote path which is used for the http request
@@ -432,9 +444,12 @@ class RWRemoteFile(RemoteFile):
                    (default: False)
         wb_method -- write back method for the http request (default: PUT)
         wb_path -- path which is used to store the file back (default: path)
+        tmp_size -- if the remote file exceeds or equals this size limit a
+                    tmpfile is used
+        use_tmp -- always use a tmpfile (regardless of the tmp_size)
         schema -- filename to xml schema which is used to validate the repsonse
                   after the writeback
-        kwargs -- see class RemoteFile 
+        kwargs -- see class RemoteReadOnlyFile 
 
         """
         super(RWRemoteFile, self).__init__(path, **kwargs)
@@ -442,30 +457,41 @@ class RWRemoteFile(RemoteFile):
         self.wb_method = wb_method
         self.wb_path = wb_path
         self._schema = schema
-        self._sio = None
+        self.tmp_size = tmp_size
+        self.use_tmp = use_tmp
+        # local file object - either a StringIO or NamedTemporaryFile instance
+        self._lfobj = None
+        self._modified = False
 
     def __getattr__(self, name):
-        if self._sio is None:
-            self._init_sio(name != 'write')
-        return getattr(self._sio, name)
+        if self._lfobj is None:
+            self._init_lfobj(name != 'write')
+        if name in ('write', 'writelines', 'truncate'):
+            self._modified = True
+        return getattr(self._lfobj, name)
 
-    def _init_sio(self, read_required, size=-1):
-        data = ''
-        if read_required or self.append:
-            data = super(RWRemoteFile, self).read(size)
-        self._sio = StringIO()
-        self._sio.write(data)
-        self._sio.seek(0, os.SEEK_SET)
+    def _init_lfobj(self, read_required):
+        read_required = read_required or self.append
+        if read_required:
+            self._init_read()
+        if self._remote_size >= self.tmp_size or self.use_tmp:
+            self._lfobj = NamedTemporaryFile()
+        else:
+            self._lfobj = StringIO()
+        if read_required:
+            # we read/write _everything_ (otherwise this class needs
+            # a bit more logic - can be added if needed)
+            self.write_to(self._lfobj)
+        self._lfobj.seek(0, os.SEEK_SET)
 
     def read(self, size=-1):
-        if self._sio is None:
-            self._init_sio(True, size)
-        pos = self._sio.tell()
-        # TODO: does this make sense?
-        buf = buffer(self._sio.getvalue())
-        tmp = StringIO(buf)
-        tmp.seek(pos, os.SEEK_SET)
-        return tmp.read(size)
+        if self._lfobj is None:
+            self._init_lfobj(True)
+        return self._lfobj.read(size)
+
+    def _close(self):
+        super(RWRemoteFile, self).close()
+        self._lfobj.close()
 
     def close(self, **kwargs):
         """Close this file and write data back to server.
@@ -478,9 +504,19 @@ class RWRemoteFile(RemoteFile):
                   query parameters)
 
         """
+        if not self._modified:
+            self._close()
+            return
         request = Osc.get_osc().get_reqobj()
         http_method = _get_http_method(request, self.wb_method)
-        data = self._sio.getvalue()
         if not 'schema' in kwargs:
             kwargs['schema'] = self._schema
-        http_method(self.path, data=data, **kwargs)
+        data = None
+        filename = ''
+        if hasattr(self._lfobj, 'getvalue'):
+            data = self._lfobj.getvalue()
+        else:
+            filename = self._lfobj.name
+        self._lfobj.flush()
+        http_method(self.path, data=data, filename=filename, **kwargs)
+        self._close()
