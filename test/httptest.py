@@ -52,7 +52,7 @@ class MyHTTPHandler(urllib2.HTTPHandler):
         exp = kwargs.pop('exp', None)
         if exp is not None and 'expfile' in kwargs:
             raise ValueError('either specify exp or expfile')
-        elif kwargs.has_key('expfile'):
+        elif 'expfile' in kwargs:
             filename = os.path.join(self._fixtures_dir, kwargs.pop('expfile'))
             exp = open(filename, 'r').read()
         elif exp is None:
@@ -69,7 +69,7 @@ class MyHTTPHandler(urllib2.HTTPHandler):
 
     def _get_response(self, url, **kwargs):
         f = None
-        if kwargs.has_key('exception'):
+        if 'exception' in kwargs:
             raise kwargs['exception']
         if not 'text' in kwargs and 'file' in kwargs:
             filename = os.path.join(self._fixtures_dir, kwargs.pop('file'))
