@@ -4,8 +4,8 @@ from cStringIO import StringIO
 
 from lxml import etree
 
-from osc.remote import (RemoteProject, RemotePackage, Request, RemoteFile,
-                        RWRemoteFile)
+from osc.remote import (RemoteProject, RemotePackage, Request,
+                        RORemoteFile, RWRemoteFile)
 from osctest import OscTest
 from httptest import GET, PUT, POST, MockUrllib2Request
 
@@ -302,7 +302,7 @@ class TestRemoteModel(OscTest):
     @GET('http://localhost/source/project/package/fname', file='remotefile1')
     def test_remotefile1(self):
         """get a simple file1"""
-        f = RemoteFile('/source/project/package/fname')
+        f = RORemoteFile('/source/project/package/fname')
         self.assertEqual(f.read(5), 'This ')
         self.assertEqual(f.read(), 'is a simple file\nwith some newlines\n\n' \
                                    'and\ntext.\n')
@@ -311,10 +311,10 @@ class TestRemoteModel(OscTest):
     @GET('http://localhost/source/project/package/fname2', file='remotefile2')
     def test_remotefile2(self):
         """iterate over the file"""
-        f = RemoteFile('/source/project/package/fname')
+        f = RORemoteFile('/source/project/package/fname')
         i = iter(f)
         self.assertEqualFile(i.next(), 'remotefile1')
-        f = RemoteFile('/source/project/package/fname2', stream_bufsize=6)
+        f = RORemoteFile('/source/project/package/fname2', stream_bufsize=6)
         i = iter(f)
         self.assertEqual(i.next(), 'yet an')
         self.assertEqual(i.next(), 'other\n')
@@ -324,7 +324,7 @@ class TestRemoteModel(OscTest):
     @GET('http://localhost/source/project/package/fname2', file='remotefile2')
     def test_remotefile3(self):
         """store file"""
-        f = RemoteFile('/source/project/package/fname2')
+        f = RORemoteFile('/source/project/package/fname2')
         sio = StringIO()
         f.write_to(sio, size=12)
         self.assertEqual(sio.getvalue(), 'yet another\n')
@@ -334,13 +334,13 @@ class TestRemoteModel(OscTest):
 
     def test_remotefile4(self):
         """test exception (we don't try to overwrite existing files)"""
-        f = RemoteFile('/foo/bar')
+        f = RORemoteFile('/foo/bar')
         # do not run this as privileged user
         assert not os.access('/', os.W_OK)
         self.assertRaises(ValueError, f.write_to, '/foo')
 
     @GET('http://localhost/source/project/package/fname?rev=123',
-         file='remotefile1')
+         file='remotefile1', Content_Length='52')
     def test_rwremotefile1(self):
         """read and seek through a file"""
         f = RWRemoteFile('/source/project/package/fname', rev='123')
@@ -354,6 +354,7 @@ class TestRemoteModel(OscTest):
         self.assertEqual(f.readline(), 'This is a simple file\n')
         self.assertEqual(f.readline(), 'with some newlines\n')
         self.assertEqual(f.read(), '\nand\ntext.\n')
+        f.close()
 
     @PUT('http://localhost/source/project/package/fname2', text='ok',
          expfile='remotefile2')
@@ -374,7 +375,8 @@ class TestRemoteModel(OscTest):
         f.write('yet another\nsim')
         f.close(foo='bar')
 
-    @GET('http://localhost/source/project/package/fname2', file='remotefile2')
+    @GET('http://localhost/source/project/package/fname2', file='remotefile2',
+         Content_Length='24')
     @PUT('http://localhost/source/project/package/fname2', text='ok',
          expfile='remotefile2_modified')
     def test_rwremotefile4(self):
@@ -386,6 +388,66 @@ class TestRemoteModel(OscTest):
         f.write('more complex\n')
         f.write('testcase\n')
         f.close()
+
+    @GET('http://localhost/source/project/package/fname?rev=123',
+         file='remotefile1', Content_Length='52')
+    def test_rwremotefile5(self):
+        """read and seek through a file (tmpfile)"""
+        f = RWRemoteFile('/source/project/package/fname',
+                         tmp_size=20, rev='123')
+        f.seek(1, os.SEEK_SET)
+        self.assertTrue(os.path.exists(f._lfobj.name))
+        self.assertEqual(f.read(7), 'his is ')
+        f.seek(0, os.SEEK_SET)
+        self.assertEqual(f.read(7), 'This is')
+        f.seek(0, os.SEEK_SET)
+        self.assertTrue(len(f.readlines()) == 5)
+        f.seek(0, os.SEEK_SET)
+        self.assertEqual(f.readline(), 'This is a simple file\n')
+        self.assertEqual(f.readline(), 'with some newlines\n')
+        self.assertEqual(f.read(), '\nand\ntext.\n')
+        f.close()
+        self.assertFalse(os.path.exists(f._lfobj.name))
+
+    @PUT('http://localhost/source/project/package/fname2', text='ok',
+         expfile='remotefile2')
+    def test_rwremotefile6(self):
+        """write to file (tmpfile)"""
+        f = RWRemoteFile('/source/project/package/fname2', use_tmp=True)
+        f.write('yet another\nsim')
+        self.assertTrue(os.path.exists(f._lfobj.name))
+        f.write('ple\nfile\n')
+        f.close()
+        self.assertFalse(os.path.exists(f._lfobj.name))
+
+    @PUT('http://localhost/source/project/package/fname2?foo=bar', text='ok',
+         exp='yet another\nsim')
+    def test_rwremotefile7(self):
+        """write and seek (tmpfile)"""
+        f = RWRemoteFile('/source/project/package/fname2', use_tmp=True)
+        f.write('ple\nfile\n')
+        self.assertTrue(os.path.exists(f._lfobj.name))
+        f.seek(0, os.SEEK_SET)
+        f.write('yet another\nsim')
+        f.close(foo='bar')
+        self.assertFalse(os.path.exists(f._lfobj.name))
+
+    @GET('http://localhost/source/project/package/fname2', file='remotefile2',
+         Content_Length='24')
+    @PUT('http://localhost/source/project/package/fname2', text='ok',
+         expfile='remotefile2_modified')
+    def test_rwremotefile8(self):
+        """append to existing file"""
+        f = RWRemoteFile('/source/project/package/fname2',
+                         tmp_size=15, append=True)
+        # read first line
+        self.assertEqual(f.readline(), 'yet another\n')
+        self.assertTrue(os.path.exists(f._lfobj.name))
+        # append/overwrite text
+        f.write('more complex\n')
+        f.write('testcase\n')
+        f.close()
+        self.assertFalse(os.path.exists(f._lfobj.name))
 
 if __name__ == '__main__':
     unittest.main()
