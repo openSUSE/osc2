@@ -1,6 +1,6 @@
 import os
 import unittest
-from cStringIO import StringIO
+from cStringIO import StringIO, OutputType
 
 from lxml import etree
 
@@ -387,6 +387,8 @@ class TestRemoteModel(OscTest):
         # append/overwrite text
         f.write('more complex\n')
         f.write('testcase\n')
+        # check that it is a StringIO
+        self.assertTrue(isinstance(f._lfobj, OutputType))
         f.close()
 
     @GET('http://localhost/source/project/package/fname?rev=123',
