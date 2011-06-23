@@ -49,11 +49,11 @@ class MyHTTPHandler(urllib2.HTTPHandler):
         return self._get_response(fullurl, **kwargs)
 
     def _mock_PUT(self, req, **kwargs):
-        exp = kwargs.get('exp', None)
-        if exp is not None and kwargs.has_key('expfile'):
+        exp = kwargs.pop('exp', None)
+        if exp is not None and 'expfile' in kwargs:
             raise ValueError('either specify exp or expfile')
         elif kwargs.has_key('expfile'):
-            filename = os.path.join(self._fixtures_dir, kwargs['expfile'])
+            filename = os.path.join(self._fixtures_dir, kwargs.pop('expfile'))
             exp = open(filename, 'r').read()
         elif exp is None:
             raise ValueError('exp or expfile required')
@@ -71,14 +71,18 @@ class MyHTTPHandler(urllib2.HTTPHandler):
         f = None
         if kwargs.has_key('exception'):
             raise kwargs['exception']
-        if not kwargs.has_key('text') and kwargs.has_key('file'):
-            filename = os.path.join(self._fixtures_dir, kwargs['file'])
+        if not 'text' in kwargs and 'file' in kwargs:
+            filename = os.path.join(self._fixtures_dir, kwargs.pop('file'))
             f = cStringIO.StringIO(open(filename, 'r').read())
-        elif kwargs.has_key('text') and not kwargs.has_key('file'):
-            f = cStringIO.StringIO(kwargs['text'])
+        elif 'text' in kwargs and not 'file' in kwargs:
+            f = cStringIO.StringIO(kwargs.pop('text'))
         else:
             raise ValueError('either specify text or file')
-        resp = urllib2.addinfourl(f, {}, url)
+        headers = {}
+        for k, v in kwargs.iteritems():
+            k = k.replace('_', '-')
+            headers[k] = v
+        resp = urllib2.addinfourl(f, headers, url)
         resp.code = kwargs.get('code', 200)
         resp.msg = ''
         return resp
