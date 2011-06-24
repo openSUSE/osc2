@@ -3,8 +3,8 @@ import unittest
 from lxml import etree
 
 from osc.build import BuildResult, BinaryList
-from osctest import OscTest
-from httptest import GET, PUT, POST, DELETE
+from test.osctest import OscTest
+from test.httptest import GET, PUT, POST, DELETE
 
 def suite():
     return unittest.makeSuite(TestBuild)

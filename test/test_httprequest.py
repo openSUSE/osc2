@@ -4,9 +4,9 @@ import urllib2
 
 from lxml import etree
 
-from osctest import OscTest
+from test.osctest import OscTest
 from osc.httprequest import Urllib2HTTPRequest, HTTPError
-from httptest import GET, PUT, POST, DELETE
+from test.httptest import GET, PUT, POST, DELETE
 
 def suite():
     return unittest.makeSuite(TestHTTPRequest)
