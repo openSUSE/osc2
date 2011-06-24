@@ -7,7 +7,7 @@ from lxml import etree
 from osc.remote import (RemoteProject, RemotePackage, Request,
                         RORemoteFile, RWRemoteFile)
 from osctest import OscTest
-from httptest import GET, PUT, POST, MockUrllib2Request
+from httptest import GET, PUT, POST
 
 def suite():
     return unittest.makeSuite(TestRemoteModel)

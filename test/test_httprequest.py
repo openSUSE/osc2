@@ -6,7 +6,7 @@ from lxml import etree
 
 from osctest import OscTest
 from osc.httprequest import Urllib2HTTPRequest, HTTPError
-from httptest import GET, PUT, POST, DELETE, MockUrllib2Request
+from httptest import GET, PUT, POST, DELETE
 
 def suite():
     return unittest.makeSuite(TestHTTPRequest)
