@@ -7,6 +7,7 @@ class Osc(object):
 
     def __init__(self, apiurl, username='', password='', request_object=None,
                  debug=False, validate=True):
+        super(Osc, self).__init__()
         if username and request_object is not None:
             raise ValueError('either specify username or request_object')
         self.request_object = request_object

@@ -46,6 +46,7 @@ class ElementFactory(object):
         which is called "tag".
 
         """
+        super(ElementFactory, self).__init__()
         self._element = element
         self._tag = tag
 
@@ -329,6 +330,7 @@ class RORemoteFile(object):
                   parameters)
 
         """
+        super(RORemoteFile, self).__init__()
         self.path = path
         self.stream_bufsize = stream_bufsize
         self.method = 'GET'

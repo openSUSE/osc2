@@ -9,7 +9,7 @@ EXPECTED_REQUESTS = []
 class RequestWrongOrder(Exception):
     """raised if an unexpected request is issued to urllib2"""
     def __init__(self, url, exp_url, method, exp_method):
-        Exception.__init__(self)
+        super(Exception, self).__init__()
         self.url = url
         self.exp_url = exp_url
         self.method = method
@@ -22,6 +22,7 @@ class RequestWrongOrder(Exception):
 class RequestDataMismatch(Exception):
     """raised if POSTed or PUTed data doesn't match with the expected data"""
     def __init__(self, url, got, exp):
+        super(Exception, self).__init__()
         self.url = url
         self.got = got
         self.exp = exp
@@ -33,6 +34,8 @@ class MyHTTPHandler(urllib2.HTTPHandler):
     def __init__(self, *args, **kwargs):
         self._exp_requests = kwargs.pop('exp_requests')
         self._fixtures_dir = kwargs.pop('fixtures_dir')
+        # XXX: we can't use super because no class in
+        # HTTPHandler's inheritance hierarchy extends object
         urllib2.HTTPHandler.__init__(self, *args, **kwargs)
 
     def http_open(self, req):

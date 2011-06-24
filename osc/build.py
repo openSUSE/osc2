@@ -120,6 +120,7 @@ class BuildResult(object):
         not present a ValueError is raised).
 
         """
+        super(BuildResult, self).__init__()
         self.project = project
         self.package = package
         self.repository = repository

@@ -44,6 +44,7 @@ class AbstractHTTPResponse(object):
         orig_resp -- the original response object (default: None)
 
         """
+        super(AbstractHTTPResponse, self).__init__()
         self.url = url
         self.code = code
         self.headers = headers
@@ -113,6 +114,7 @@ class AbstractHTTPRequest(object):
                     specifed) (default False)
 
         """
+        super(AbstractHTTPRequest, self).__init__()
         self.apiurl = apiurl
         self.validate = validate
 
@@ -230,8 +232,7 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
                       (default 1024*512)
 
         """
-
-        AbstractHTTPRequest.__init__(self, apiurl, validate)
+        super(Urllib2HTTPRequest, self).__init__(apiurl, validate)
         self.debug = debug
         self._use_mmap = mmap
         self._mmap_fsize = mmap_fsize
