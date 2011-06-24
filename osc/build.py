@@ -8,6 +8,8 @@ from lxml import etree, objectify
 from osc.remote import RORemoteFile, RWRemoteFile
 from osc.core import Osc
 
+__all__ = ['BuildResult']
+
 def _get_parser():
     """Returns a parser object which uses OscElementClassLookup as
     the lookup class.

@@ -22,7 +22,8 @@ import logging
 
 from lxml import etree
 
-__all__ = ['AbstractHTTPRequest', 'Urllib2HTTPRequest']
+__all__ = ['AbstractHTTPRequest', 'AbstractHTTPResponse', 'HTTPError',
+           'Urllib2HTTPResponse', 'Urllib2HTTPError', 'Urllib2HTTPRequest']
 
 class AbstractHTTPResponse(object):
     """Base class for an http response object.

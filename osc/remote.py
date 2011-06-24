@@ -20,7 +20,8 @@ from lxml import etree, objectify
 
 from osc.core import Osc
 
-__all__ = ['RemoteModel', 'RemoteProject', 'RemotePackage', 'Request']
+__all__ = ['RemoteModel', 'RemoteProject', 'RemotePackage', 'Request',
+           'RORemoteFile', 'RWRemoteFile']
 
 def _get_http_method(request_obj, method):
     """Get the requested http method from the http object (internal)"""
