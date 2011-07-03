@@ -3,7 +3,7 @@
 To access the remote build data use the class BuildResult.
 """
 
-from lxml import etree, objectify
+from lxml import objectify
 
 from osc.remote import RORemoteFile, RWRemoteFile
 from osc.util.xml import get_parser
