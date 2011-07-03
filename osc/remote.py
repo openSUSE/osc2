@@ -19,6 +19,7 @@ from cStringIO import StringIO
 from lxml import etree, objectify
 
 from osc.core import Osc
+from osc.util.xml import ElementClassLookup, get_parser
 
 __all__ = ['RemoteModel', 'RemoteProject', 'RemotePackage', 'Request',
            'RORemoteFile', 'RWRemoteFile']
@@ -97,12 +98,9 @@ class OscElement(objectify.ObjectifiedElement):
         factory = ElementFactory(self, data[1])
         return factory
 
-class OscElementClassLookup(etree.PythonElementClassLookup):
-    """A data element should be represented by a StringElement"""
 
-    def __init__(self):
-        fallback = objectify.ObjectifyElementClassLookup(tree_class=OscElement)
-        super(OscElementClassLookup, self).__init__(fallback=fallback)
+class OscElementClassLookup(ElementClassLookup):
+    """A data element should be represented by a StringElement"""
 
     def lookup(self, doc, root):
         # use StringElement if we have text and no children
@@ -148,13 +146,11 @@ class RemoteModel(object):
 
     def _get_parser(self):
         """Returns a parser object which is configured with OscElement as the
-        default tree_class.
+        default tree_class and uses a StringElement for all data elements.
 
         """
-        parser = objectify.makeparser()
-        lookup = OscElementClassLookup()
-        parser.set_element_class_lookup(lookup)
-        return parser
+        return get_parser(tree_class=OscElement,
+                          lookup_class=OscElementClassLookup)
 
     def __getattr__(self, name):
         return getattr(self._xml, name)

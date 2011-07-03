@@ -6,35 +6,17 @@ To access the remote build data use the class BuildResult.
 from lxml import etree, objectify
 
 from osc.remote import RORemoteFile, RWRemoteFile
+from osc.util.xml import get_parser
 from osc.core import Osc
 
 __all__ = ['BuildResult']
 
 def _get_parser():
-    """Returns a parser object which uses OscElementClassLookup as
-    the lookup class.
+    """Returns an objectify parser object."""
+    tag_class = {'status': Status, 'binarylist': BinaryList,
+                 'binary': Binary}
+    return get_parser(**tag_class)
 
-    """
-    parser = objectify.makeparser()
-    lookup = OscElementClassLookup()
-    parser.set_element_class_lookup(lookup)
-    return parser
-
-class OscElementClassLookup(etree.PythonElementClassLookup):
-    """A data element should be represented by a StringElement"""
-
-    def __init__(self):
-        fallback = objectify.ObjectifyElementClassLookup()
-        super(OscElementClassLookup, self).__init__(fallback=fallback)
-
-    def lookup(self, doc, root):
-        if root.tag == 'status':
-            return Status
-        elif root.tag == 'binarylist':
-            return BinaryList
-        elif root.tag == 'binary':
-            return Binary
-        return None
 
 class Status(objectify.ObjectifiedElement):
     """Represents a status tag"""
