@@ -4,7 +4,7 @@ from lxml import etree
 
 from osc.build import BuildResult, BinaryList
 from test.osctest import OscTest
-from test.httptest import GET, PUT, POST, DELETE
+from test.httptest import GET
 
 def suite():
     return unittest.makeSuite(TestBuild)
