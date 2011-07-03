@@ -32,6 +32,7 @@ def _get_http_method(request_obj, method):
         raise ValueError(msg)
     return meth
 
+
 class ElementFactory(object):
     """Adds a new element called "tag" to the provided "element"
 
@@ -228,6 +229,7 @@ class RemoteModel(object):
         xml_data = http_method(path, **kwargs).read()
         return cls(xml_data=xml_data)
 
+
 class RemoteProject(RemoteModel):
     PATH = '/source/%(project)s/_meta'
     SCHEMA = ''
@@ -419,6 +421,7 @@ class RORemoteFile(object):
             if size == 0:
                 break
             data = self._read(rsize)
+
 
 class RWRemoteFile(RORemoteFile):
     """Provides more advanced methods for reading and writing a remote file.

@@ -29,6 +29,7 @@ class Status(objectify.ObjectifiedElement):
                 return ''
             raise
 
+
 class BinaryList(objectify.ObjectifiedElement):
     """Represents a binarylist + some additional data"""
     SCHEMA = ''
@@ -58,6 +59,7 @@ class BinaryList(objectify.ObjectifiedElement):
         bl.set('arch', arch)
         return bl
 
+
 class Binary(objectify.ObjectifiedElement):
     """Represents a binary tag + some additional data"""
 
@@ -79,6 +81,7 @@ class Binary(objectify.ObjectifiedElement):
                 'arch': parent.get('arch'), 'fname': self.get('filename')}
         path = path % data
         return RORemoteFile(path, **kwargs)
+
 
 class BuildResult(object):
     """Provides methods to access the remote build result"""

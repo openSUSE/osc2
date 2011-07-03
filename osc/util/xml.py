@@ -20,6 +20,7 @@ class ElementClassLookup(etree.PythonElementClassLookup):
             return klass
         return None
 
+
 def get_parser(tree_class=None, empty_data_class=None,
                lookup_class=ElementClassLookup, **tag_class):
     """Returns an objectify parser object.
