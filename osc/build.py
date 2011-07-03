@@ -64,7 +64,7 @@ class Binary(objectify.ObjectifiedElement):
     """Represents a binary tag + some additional data"""
 
     def file(self, **kwargs):
-        """Returns a RemoteFile object.
+        """Returns a RORemoteFile object.
         
         This can be used to read/save the binary file.
 
