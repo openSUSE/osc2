@@ -1,0 +1,17 @@
+<revisionlist>
+  <revision rev="1" vrev="1">
+    <srcmd5>abc</srcmd5>
+    <version>unknown</version>
+    <time>1308140485</time>
+    <user>foo</user>
+    <comment>updated pkg</comment>
+  </revision>
+  <revision rev="2" vrev="1">
+    <srcmd5>fff</srcmd5>
+    <version>unknown</version>
+    <time>1308140486</time>
+    <user>foo</user>
+    <comment>request</comment>
+    <requestid>123</requestid>
+  </revision>
+</revisionlist>
