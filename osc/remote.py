@@ -100,16 +100,6 @@ class OscElement(objectify.ObjectifiedElement):
         return factory
 
 
-class OscElementClassLookup(ElementClassLookup):
-    """A data element should be represented by a StringElement"""
-
-    def lookup(self, doc, root):
-        # use StringElement if we have text and no children
-        if root.text and not root:
-            return objectify.StringElement
-        return None
-
-
 class RemoteModel(object):
     """Base class for all remote models"""
 
@@ -150,8 +140,7 @@ class RemoteModel(object):
         default tree_class and uses a StringElement for all data elements.
 
         """
-        return get_parser(tree_class=OscElement,
-                          lookup_class=OscElementClassLookup)
+        return get_parser(tree_class=OscElement)
 
     def __getattr__(self, name):
         return getattr(self._xml, name)

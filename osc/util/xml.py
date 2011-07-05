@@ -18,6 +18,9 @@ class ElementClassLookup(etree.PythonElementClassLookup):
         klass = self._tag_class.get(root.tag)
         if klass is not None:
             return klass
+        # use StringElement if we have text and no children
+        if root.text and not root:
+            return objectify.StringElement
         return None
 
 
