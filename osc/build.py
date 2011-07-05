@@ -6,16 +6,10 @@ To access the remote build data use the class BuildResult.
 from lxml import objectify
 
 from osc.remote import RORemoteFile, RWRemoteFile
-from osc.util.xml import get_parser
+from osc.util.xml import fromstring
 from osc.core import Osc
 
 __all__ = ['BuildResult']
-
-def _get_parser():
-    """Returns an objectify parser object."""
-    tag_class = {'status': Status, 'binarylist': BinaryList,
-                 'binary': Binary}
-    return get_parser(**tag_class)
 
 
 class Status(objectify.ObjectifiedElement):
@@ -51,8 +45,7 @@ class BinaryList(objectify.ObjectifiedElement):
         if not 'schema' in kwargs:
             kwargs['schema'] = BinaryList.SCHEMA
         f = request.get(path, **kwargs)
-        parser = _get_parser()
-        bl = objectify.fromstring(f.read(), parser=parser)
+        bl = fromstring(f.read(), binarylist=BinaryList, binary=Binary)
         bl.set('project', project)
         bl.set('package', package)
         bl.set('repository', repository)
@@ -132,8 +125,7 @@ class BuildResult(object):
             kwargs['schema'] = BuildResult.RESULT_SCHEMA
         f = request.get(path, package=package, repository=repository,
                         arch=arch, **kwargs)
-        parser = _get_parser()
-        results = objectify.fromstring(f.read(), parser=parser)
+        results = fromstring(f.read(), status=Status)
         return results
 
     def _prepare_kwargs(self, kwargs, *required):
@@ -191,4 +183,4 @@ class BuildResult(object):
             kwargs['schema'] = BuildResult.BUILDDEPINFO_SCHEMA
         f = request.get(path, view=view, **kwargs)
         # no custom parser needed atm
-        return objectify.fromstring(f.read())
+        return fromstring(f.read())

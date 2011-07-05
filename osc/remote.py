@@ -19,7 +19,7 @@ from cStringIO import StringIO
 from lxml import etree, objectify
 
 from osc.core import Osc
-from osc.util.xml import ElementClassLookup, get_parser
+from osc.util.xml import ElementClassLookup, get_parser, fromstring
 
 __all__ = ['RemoteModel', 'RemoteProject', 'RemotePackage', 'Request',
            'RORemoteFile', 'RWRemoteFile']
@@ -133,7 +133,7 @@ class RemoteModel(object):
 
     def _read_xml_data(self, xml_data):
         parser = self._get_parser()
-        self._xml = objectify.fromstring(xml_data, parser=parser)
+        self._xml = fromstring(xml_data, parser=parser)
 
     def _get_parser(self):
         """Returns a parser object which is configured with OscElement as the

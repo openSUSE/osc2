@@ -44,3 +44,18 @@ def get_parser(tree_class=None, empty_data_class=None,
     lookup = lookup_class(tree_class, empty_data_class, **tag_class)
     parser.set_element_class_lookup(lookup)
     return parser
+
+def fromstring(data, parser=None, **kwargs):
+    """Parse a string into a xml objectify object.
+
+    data is the xml string.
+
+    Keyword arguments:
+    parser -- parser which should be used for parsing; if specified
+              all other keyword arguments are ignored (default: None)
+    see get_parser() for keyword arguments
+
+    """
+    if parser is None:
+        parser = get_parser(**kwargs)
+    return objectify.fromstring(data, parser=parser)
