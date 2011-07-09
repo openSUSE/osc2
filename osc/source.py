@@ -60,7 +60,7 @@ class Project(object):
         r = []
         # using an xml representation for the <entry /> makes no
         # sense
-        for e in entries.entry:
+        for e in entries.iterfind('entry'):
             r.append(Package(self.name, e.get('name')))
         return r
 
