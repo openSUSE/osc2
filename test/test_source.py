@@ -25,8 +25,16 @@ class TestSource(OscTest):
         self.assertEqual(pkgs[1].name, 'glibc')
         self.assertEqual(pkgs[2].name, 'python')
 
-    @GET('http://localhost/source/openSUSE%3AFactory', text='<invalid />')
+    @GET('http://localhost/source/test', file='pkg_list_empty.xml')
     def test2(self):
+        """test empty package list"""
+        Project.LIST_SCHEMA = self.fixture_file('directory.xsd')
+        prj = Project('test')
+        pkgs = prj.list()
+        self.assertTrue(len(pkgs) == 0)
+
+    @GET('http://localhost/source/openSUSE%3AFactory', text='<invalid />')
+    def test3(self):
         """test invalid xml data (package list)"""
         Project.LIST_SCHEMA = self.fixture_file('directory.xsd')
         prj = Project('openSUSE:Factory')
@@ -37,7 +45,7 @@ class TestSource(OscTest):
          file='file_list.xml')
     @GET('http://localhost/source/openSUSE%3AFactory/osc/osc.spec?rev=ef2',
          file='osc.spec')
-    def test3(self):
+    def test4(self):
         """test list's return value"""
         Project.LIST_SCHEMA = self.fixture_file('directory.xsd')
         Package.LIST_SCHEMA = self.fixture_file('directory.xsd')
@@ -64,21 +72,21 @@ class TestSource(OscTest):
         self.assertEqual(f.read(), '# this is\n# no spec\n')
 
     @GET('http://localhost/source/foo/bar', text='<foo/>')
-    def test4(self):
+    def test5(self):
         """test invalid xml data (file list)"""
         Project.LIST_SCHEMA = self.fixture_file('directory.xsd')
         pkg = Package('foo', 'bar')
         self.assertRaises(etree.DocumentInvalid, pkg.list)
 
     @GET('http://localhost/source/foo/bar?rev=fff', file='file_list.xml')
-    def test5(self):
+    def test6(self):
         """list a specific package revision"""
         pkg = Package('foo', 'bar')
         pkg.list(rev='fff')
         # the result was already tested in test3
 
     @GET('http://localhost/source/foo/bar/_history', file='pkg_history.xml')
-    def test6(self):
+    def test7(self):
         """test commit log"""
         pkg = Package('foo', 'bar')
         log = pkg.log()
