@@ -123,7 +123,8 @@ class MockUrllib2Request(unittest.TestCase):
         super(MockUrllib2Request, self).__init__(*args, **kwargs)
 
     def fixture_file(self, filename):
-        return os.path.join(self._fixtures_dir, filename)
+        path = os.path.join(self._fixtures_dir, filename)
+        return os.path.abspath(path)
 
     def setUp(self):
         super(MockUrllib2Request, self).setUp()
