@@ -1,0 +1,4 @@
+<packages>
+  <package name="foo" state=" "/>
+  <package name="bar" state=" "/>
+</packages>

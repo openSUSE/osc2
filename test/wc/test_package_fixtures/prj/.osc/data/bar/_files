@@ -1,0 +1,4 @@
+<directory name="bar" rev="72" srcmd5="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa">
+  <entry name="file1" md5="2efbec330bc1204a1361d98fab500b8f" mtime="1310314856" size="23"/>
+  <entry name="baz" md5="258622b1688250cb619f3c9ccaefb7eb" mtime="1310314792" size="4"/>
+</directory>
