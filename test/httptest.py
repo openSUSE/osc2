@@ -3,6 +3,8 @@ import cStringIO
 import unittest
 import urllib2
 import httplib
+import tempfile
+import shutil
 
 EXPECTED_REQUESTS = []
 
@@ -123,7 +125,7 @@ class MockUrllib2Request(unittest.TestCase):
         super(MockUrllib2Request, self).__init__(*args, **kwargs)
 
     def fixture_file(self, filename):
-        path = os.path.join(self._fixtures_dir, filename)
+        path = os.path.join(self._tmp_fixtures, filename)
         return os.path.abspath(path)
 
     def setUp(self):
@@ -136,7 +138,11 @@ class MockUrllib2Request(unittest.TestCase):
                                        fixtures_dir=self._fixtures_dir), )
             return old_build_opener(*handlers)
         urllib2.build_opener = build_opener
+        self._tmp_dir = tempfile.mkdtemp(prefix='osc_test')
+        self._tmp_fixtures = os.path.join(self._tmp_dir, 'fixtures')
+        shutil.copytree(self._fixtures_dir, self._tmp_fixtures)
 
     def tearDown(self):
         super(MockUrllib2Request, self).tearDown()
+        shutil.rmtree(self._tmp_dir)
         self.assertTrue(len(EXPECTED_REQUESTS) == 0)
