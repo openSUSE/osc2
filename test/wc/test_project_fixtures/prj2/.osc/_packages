@@ -1,0 +1,7 @@
+<packages>
+  <package name="foo" state=" "/>
+  <package name="bar" state="A"/>
+  <package name="abc" state="D"/>
+  <package name="xxx" state=" "/>
+  <package name="del" state="D"/>
+</packages>
