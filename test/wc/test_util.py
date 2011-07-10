@@ -3,7 +3,7 @@ import unittest
 
 from test.osctest import OscTest
 from osc.wc.util import (wc_is_project, wc_is_package, wc_read_project,
-                         wc_read_package, wc_read_apiurl)
+                         wc_read_package, wc_read_apiurl, WCLock)
 
 def suite():
     return unittest.makeSuite(TestWCUtil)
@@ -97,6 +97,39 @@ class TestWCUtil(OscTest):
     def test18(self):
         """test wc_read_apiurl"""
         self.assertRaises(ValueError, wc_read_apiurl, '/')
+
+    def test19(self):
+        """test WCLock class"""
+        path = self.fixture_file('lock')
+        lock = os.path.join(path, '.osc', 'wc.lock')
+        wc = WCLock(path)
+        self.assertFalse(wc.has_lock())
+        wc.lock()
+        self.assertTrue(wc.has_lock())
+        self.assertTrue(os.path.isfile(lock))
+        wc.unlock()
+        self.assertFalse(wc.has_lock())
+        self.assertFalse(os.path.exists(lock))
+
+    def test20(self):
+        """test WCLock class (unlock without lock)"""
+        path = self.fixture_file('lock')
+        wc = WCLock(path)
+        self.assertRaises(RuntimeError, wc.unlock)
+
+    def test21(self):
+        """test WCLock class (double lock)"""
+        path = self.fixture_file('lock')
+        lock = os.path.join(path, '.osc', 'wc.lock')
+        wc = WCLock(path)
+        wc.lock()
+        self.assertTrue(os.path.isfile(lock))
+        self.assertRaises(RuntimeError, wc.lock)
+        # wc is still locked
+        self.assertTrue(wc.has_lock())
+        wc.unlock()
+        self.assertFalse(os.path.exists(lock))
+
 
 if __name__ == '__main__':
     unittest.main()
