@@ -133,6 +133,7 @@ def missing_storepaths(path, *paths, **kwargs):
         return list(paths)
     storedir = _storedir(path)
     if data:
+        global _PKG_DATA
         storedir = _storefile(path, _PKG_DATA)
     missing = []
     for p in paths:
@@ -326,7 +327,7 @@ def wc_init(path, ext_storedir=None):
     """
     if (ext_storedir is not None and
         (not os.path.isdir(ext_storedir) or
-         os.access(ext_storedir, os.W_OK))):
+         not os.access(ext_storedir, os.W_OK))):
         msg = "ext_storedir \"%s\" is no dir or not writable" % ext_storedir
         raise ValueError(msg)
 
