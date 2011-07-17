@@ -3,13 +3,14 @@
 import os
 import fcntl
 
-from lxml import objectify
-from lxml.etree import XMLSyntaxError
+from lxml import objectify, etree
 
+from osc.wc.package import Package
 from osc.wc.util import (wc_read_project, wc_read_apiurl, wc_read_packages,
                          wc_init, wc_write_apiurl, wc_write_project,
                          wc_write_packages, missing_storepaths, wc_lock,
-                         WCInconsistentError)
+                         WCInconsistentError, wc_is_project, wc_is_package,
+                         wc_pkg_data_mkdir)
 from osc.source import Project as SourceProject
 
 class UpdateInfo(object):
@@ -57,24 +58,14 @@ class Project(object):
         self.apiurl = wc_read_apiurl(path)
         self.name = wc_read_project(path)
         with wc_lock(self.path) as lock:
-            data = wc_read_packages(self.path)
-            self._packages = objectify.fromstring(data)
+            self._packages = wc_read_packages(self.path)
 
     def packages(self, obj=False):
         """Return list of all package names"""
         pkgs = []
-        for p in self._packages.iterfind('package'):
-            pkgs.append(p.get('name'))
+        for entry in self._packages:
+            pkgs.append(entry.get('name'))
         return pkgs
-
-    def _xml_pkg_node(self, pkg):
-        """Return the package element for package pkg.
-
-        If pkg does not exist in the xml None is returned.
-
-        """
-        xpath = "//package[@name='%s']" % pkg
-        return self._packages.find(xpath)
 
     def _status(self, pkg):
         """Return the status of package pkg.
@@ -92,10 +83,10 @@ class Project(object):
         """
         pkg_dir = os.path.join(self.path, pkg)
         exists = os.path.exists(pkg_dir)
-        node = self._xml_pkg_node(pkg)
-        if node is None:
+        entry = self._packages.find(pkg)
+        if entry is None:
             return '?'
-        st = node.get('state')
+        st = entry.get('state')
         if not exists and st != 'D':
             return '!'
         return st
@@ -130,6 +121,54 @@ class Project(object):
                 added.remove(pkg)
         return UpdateInfo(candidates, added, deleted, conflicted)
 
+    def add_package(self, pkg):
+        """Add a new package to the project.
+
+        pkg is the name of the directory which will be added.
+        A ValueError is raised if pkg is already tracked or if
+        pkg is already an osc working copy.
+        Also if prj/pkg does not exist or is no directory
+        a ValueError is raised.
+
+        """
+        with wc_lock(self.path) as lock:
+            if self._status(pkg) != '?':
+                raise ValueError("package \"%s\" is already tracked" % pkg)
+            pkg_path = os.path.join(self.path, pkg)
+            if not os.path.isdir(pkg_path):
+                raise ValueError("path \"%s\" is no dir" % pkg_path)
+            elif wc_is_project(pkg_path) or wc_is_package(pkg_path):
+                msg = ("path \"%s\" is already an initialized"
+                       "working copy" % pkg_path)
+                raise ValueError(msg)
+            storedir = wc_pkg_data_mkdir(self.path, pkg)
+            Package.init(pkg_path, pkg, self.name, self.apiurl,
+                         ext_storedir=storedir)
+            # TODO: add files
+            self._packages.add(pkg, state='A')
+            self._packages.write()
+
+    def delete_package(self, pkg):
+        """Mark a package for deletion.
+
+        pkg is the name of the package to be deleted.
+        A ValueError is raised if pkg is not under version control.
+        If pkg has state 'A' it is directly removed.
+
+        """
+        with wc_lock(self.path) as lock:
+            st = self._status(pkg)
+            if st == '?':
+                msg = "package \"%s\" is not under version control" % pkg
+                raise ValueError(msg)
+            elif st == 'A':
+                # remove files
+                self._packages.remove(pkg)
+            else:
+                self._packages.set(pkg, 'D')
+                # XXX: pkg has a file conflict, pkg totally broken, remove files
+            self._packages.write()
+
     @classmethod
     def wc_check(cls, path):
         """Check path is a consistent project working copy.
@@ -149,9 +188,8 @@ class Project(object):
         # check if _packages file is a valid xml
         try:
             data = wc_read_packages(path)
-            objectify.fromstring(data)
-        except XMLSyntaxError as e:
-            return (missing, data)
+        except ValueError as e:
+            return (missing, wc_read_packages(path, raw=True))
         return (missing, '')
 
     @staticmethod

@@ -9,6 +9,10 @@ import errno
 import fcntl
 from tempfile import NamedTemporaryFile
 
+from lxml import etree, objectify
+
+from osc.util.xml import fromstring
+
 __all__ = ['wc_is_project', 'wc_is_package', 'wc_read_project',
            'wc_read_package', 'wc_read_apiurl']
 
@@ -98,6 +102,151 @@ class WCLock(object):
         self.unlock()
         # don't suppress any exception
         return False
+
+
+class AbstractEntryTracker(object):
+    """Keeps track of entries.
+
+    For instance an entry can be a file or a
+    package.
+
+    """
+
+    def add(self, name, state):
+        """Add a new entry to track.
+
+        name is the name of the entry and
+        state is the state.
+        A ValueError is raised if name is already
+        tracked.
+
+        """
+        raise NotImplementedError()
+
+    def remove(self, name):
+        """Remove a entry.
+
+        name is the name of the entry.
+        A ValueError is raised if name is
+        not tracked.
+
+        """
+        raise NotImplementedError()
+
+    def find(self, name):
+        """Return the entry or None."""
+        raise NotImplementedError
+
+    def set(self, name, new_state):
+        """Set the state to new_state for entry name.
+
+        A ValueError is raised if entry name is not
+        tracked.
+
+        """
+        raise NotImplementedError()
+
+    def write(self):
+        """Write file."""
+        raise NotImplementedError
+
+    def __iter__(self):
+        """Iterate over entries."""
+        raise NotImplementedError()
+
+    @classmethod
+    def check(self, path):
+        """Check consistency of the backing file.
+
+        path is the path to the working copy.
+        Return True if it is consistent otherwise False.
+
+        """
+        raise NotImplementedError()
+
+
+class XMLEntryTracker(AbstractEntryTracker):
+    """Can be used for trackers which are backed up by a xml.
+
+    Concrete subclasses must implement the filename classmethod.
+
+    """
+
+    def __init__(self, path, entry_tag):
+        """Create a new XMLPackageTracker object.
+
+        path is the path to the project working copy.
+        A ValueError is raised if the file filename is
+        corrupt/inconsistent.
+
+        """
+        super(XMLEntryTracker, self).__init__()
+        filename = self.filename()
+        if not self.check(path):
+            raise ValueError("%s file is corrupt" % filename)
+        self._path = path
+        xml_data = _read_storefile(self._path, filename)
+        # XXX: validation
+        self._xml = self._fromstring(xml_data)
+        self._tag = entry_tag
+
+    def add(self, name, state):
+        if self.find(name) is not None:
+            raise ValueError("entry \"%s\" already exists" % name)
+        elm = self._xml.makeelement(self._tag, name=name,
+                                    state=state)
+        self._xml.append(elm)
+
+    def remove(self, name):
+        elm = self.find(name)
+        if elm is None:
+            raise ValueError("entry \"%s\" does not exist" % name)
+        self._xml.remove(elm)
+
+    def find(self, name):
+        xpath = "//%s[@name='%s']" % (self._tag, name)
+        return self._xml.find(xpath)
+
+    def set(self, name, new_state):
+        entry = self.find(name)
+        if entry is None:
+            raise ValueError("entry \"%s\" does not exist" % name)
+        entry.set('state', new_state)
+
+    def write(self):
+        xml_data = etree.tostring(self._xml, pretty_print=True)
+        _write_storefile(self._path, self.filename(), xml_data)
+
+    def __iter__(self):
+        return self._xml.iterfind(self._tag)
+
+    @classmethod
+    def filename(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    def _fromstring(cls, data):
+        return fromstring(data)
+
+    @classmethod
+    def check(cls, path):
+        try:
+            data = _read_storefile(path, cls.filename())
+            objectify.fromstring(data)
+        except etree.XMLSyntaxError as e:
+            return False
+        return True
+
+
+class XMLPackageTracker(XMLEntryTracker):
+    """Represents the _packages file."""
+
+    def __init__(self, path):
+        super(XMLPackageTracker, self).__init__(path, 'package')
+
+    @classmethod
+    def filename(cls):
+        return '_packages'
 
 
 def _storedir(path):
@@ -224,15 +373,21 @@ def wc_read_project(path):
     """
     return _read_storefile(path, '_project')
 
-def wc_read_packages(path):
-    """Return the xml data of the _packages file.
+def wc_read_packages(path, raw=False):
+    """Return a XMLPackageTracker object.
 
     path is the path to the project working copy.
     If the storefile does not exist or is no file
     a ValueError is raised.
 
+    Keyword arguments:
+    raw -- if True return the raw _packages file data
+           instead of an object (default: False)
+
     """
-    return _read_storefile(path, '_packages')
+    if raw:
+        return _read_storefile(path, XMLPackageTracker.filename())
+    return XMLPackageTracker(path)
 
 def wc_read_package(path):
     """Return the name of the package.
@@ -295,8 +450,7 @@ def wc_write_package(path, package):
 def wc_write_packages(path, xml_data):
     """Write the _packages file.
 
-    path is the path to the project working copy and
-    xml_data is the xml str.
+    path is the path to the project working copy.
 
     """
     _write_storefile(path, '_packages', xml_data)
@@ -353,3 +507,24 @@ def wc_init(path, ext_storedir=None):
     global _PKG_DATA
     data_path = _storefile(path, _PKG_DATA)
     os.mkdir(data_path)
+
+def wc_pkg_data_mkdir(path, new_dir):
+    """Create a new package data dir called new_dir.
+
+    Return the path to the dir.
+    If new_dir already exists a ValueError is raised.
+    Also raises a ValueError is path is no working copy
+    or if the working copy misses a package data dir.
+
+    """
+    global _PKG_DATA
+    if not _has_storedir(path):
+        raise ValueError("path \"%s\" has no storedir" % path)
+    if missing_storepaths(path, _PKG_DATA, dirs=True):
+        raise ValueError("path \"%s\" has no pkg data dir" % path)
+    data_path = _storefile(path, _PKG_DATA)
+    ndir = os.path.join(data_path, new_dir)
+    if os.path.exists(ndir):
+        raise ValueError("directory already exists: %s" % ndir)
+    os.mkdir(ndir)
+    return ndir
