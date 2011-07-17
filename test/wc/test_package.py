@@ -130,5 +130,72 @@ class TestPackage(OscTest):
         self.assertEqual(pkg.status('nonexistent'), '?')
         self.assertEqual(pkg.status('unknown'), '?')
 
+    @GET('http://localhost/source/prj/foo', file='foo_list1.xml')
+    def test10(self):
+        """test _calculate_updateinfo 1"""
+        path = self.fixture_file('foo')
+        pkg = Package(path)
+        uinfo = pkg._calculate_updateinfo()
+        self.assertEqual(uinfo.unchanged, ['file'])
+        self.assertEqual(uinfo.added, ['added'])
+        self.assertEqual(uinfo.deleted, [])
+        self.assertEqual(uinfo.modified, [])
+        self.assertEqual(uinfo.conflicted, [])
+        self.assertEqual(uinfo.skipped, [])
+
+    @GET('http://localhost/source/prj/foo', file='foo_list2.xml')
+    def test11(self):
+        """test _calculate_updateinfo 2"""
+        path = self.fixture_file('foo')
+        pkg = Package(path)
+        uinfo = pkg._calculate_updateinfo()
+        self.assertEqual(uinfo.unchanged, [])
+        self.assertEqual(uinfo.added, ['added'])
+        self.assertEqual(uinfo.deleted, [])
+        self.assertEqual(uinfo.modified, ['file'])
+        self.assertEqual(uinfo.conflicted, [])
+        self.assertEqual(uinfo.skipped, [])
+
+    @GET('http://localhost/source/prj/bar', file='bar_list1.xml')
+    def test12(self):
+        """test _calculate_updateinfo 3"""
+        path = self.fixture_file('prj', 'bar')
+        pkg = Package(path)
+        uinfo = pkg._calculate_updateinfo()
+        self.assertEqual(uinfo.unchanged, [])
+        self.assertEqual(uinfo.added, ['added'])
+        self.assertEqual(uinfo.deleted, ['baz'])
+        self.assertEqual(uinfo.modified, ['file1'])
+        self.assertEqual(uinfo.conflicted, [])
+        self.assertEqual(uinfo.skipped, [])
+
+    @GET('http://localhost/source/prj/bar', file='bar_list2.xml')
+    def test13(self):
+        """test _calculate_updateinfo 4"""
+        path = self.fixture_file('prj', 'bar')
+        pkg = Package(path)
+        uinfo = pkg._calculate_updateinfo()
+        self.assertEqual(uinfo.unchanged, ['file1'])
+        self.assertEqual(uinfo.added, ['added'])
+        self.assertEqual(uinfo.deleted, ['baz'])
+        self.assertEqual(uinfo.modified, [])
+        self.assertEqual(uinfo.conflicted, [])
+        self.assertEqual(uinfo.skipped, [])
+
+    @GET('http://localhost/source/foo/status1',
+         file='status1_list1.xml')
+    def test14(self):
+        """test _calculate_updateinfo 5"""
+        path = self.fixture_file('status1')
+        pkg = Package(path)
+        uinfo = pkg._calculate_updateinfo()
+        self.assertEqual(uinfo.unchanged, ['conflict'])
+        self.assertEqual(uinfo.added, [])
+        self.assertEqual(uinfo.deleted, ['file1', 'delete', 'delete_mod'])
+        self.assertEqual(uinfo.modified, ['modified'])
+        self.assertEqual(uinfo.conflicted, ['added', 'missing'])
+        self.assertEqual(uinfo.skipped, ['skipped'])
+
+
 if __name__ == '__main__':
     unittest.main()

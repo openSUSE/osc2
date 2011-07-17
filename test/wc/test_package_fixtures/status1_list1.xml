@@ -1,0 +1,7 @@
+<directory name="status1" rev="77" srcmd5="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa">
+  <entry name="added" md5="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" mtime="1310908539" size="111"/>
+  <entry name="missing" md5="abcd13fde5797c3785164942c97dfec1" mtime="1310911000" size="898"/>
+  <entry name="modified" md5="11115036dc73d318982805bf4b16e8b2" mtime="1310911557" size="1"/>
+  <entry name="skipped" md5="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" mtime="1310911560" size="48"/>
+  <entry name="conflict" md5="ac543d679fbac88ee6e122a4e5714116" mtime="1310911868" size="16"/>
+</directory>
