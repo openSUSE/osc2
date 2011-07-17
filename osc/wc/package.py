@@ -6,6 +6,7 @@ import hashlib
 from lxml.etree import XMLSyntaxError
 
 from osc.source import File
+from osc.source import Package as SourcePackage
 from osc.util.xml import fromstring
 from osc.wc.util import (wc_read_package, wc_read_project, wc_read_apiurl,
                          wc_init, wc_lock, wc_write_package, wc_write_project,
@@ -32,6 +33,35 @@ def file_md5(filename):
     return md5.hexdigest()
 
 
+class FileUpdateInfo(object):
+    """Contains information about an update.
+
+    It provides the following information:
+    - unchanged files (files which didn't change)
+    - added files (files which exist on the server
+      but not in the local working copy)
+    - deleted files (files which don't exist on the
+      server but are still present in the local wc)
+    - modified files (files which were updated on the server)
+    - conflicted files (local state '?' and a file with the
+      same name exists on the server; local state '!' and file
+      still exists on the server) - this has nothing todo with files
+      with state 'C'
+    - skipped files (files which shouldn't be checked out)
+
+    """
+
+    def __init__(self, unchanged, added, deleted, modified,
+                 conflicted, skipped, data):
+        self.unchanged = unchanged
+        self.added = added
+        self.deleted = deleted
+        self.modified = modified
+        self.conflicted = conflicted
+        self.skipped = skipped
+        self.data = data
+
+
 class Package(object):
     """Represents a package working copy."""
 
@@ -55,6 +85,13 @@ class Package(object):
         self.name = wc_read_package(self.path)
         with wc_lock(self.path) as lock:
             self._files = wc_read_files(self.path)
+
+    def files(self):
+        """Return list of filenames which are tracked."""
+        filenames = []
+        for fname in self._files:
+            filenames.append(fname.get('name'))
+        return filenames
 
     def status(self, filename):
         """Return the status of file filename.
@@ -86,6 +123,45 @@ class Package(object):
         elif st == ' ' and entry.get('md5') != file_md5(fname):
             return 'M'
         return st
+
+    # XXX: we probably need a rev
+    def _calculate_updateinfo(self):
+        unchanged = []
+        added = []
+        deleted = []
+        modified = []
+        conflicted = []
+        skipped = []
+        spkg = SourcePackage(self.project, self.name)
+        remote_files = spkg.list()
+        local_files = self.files()
+        data = {}
+        for rfile in remote_files:
+            rfname = rfile.get('name')
+            data[rfname] = rfile
+            if not rfname in local_files:
+                if os.path.exists(os.path.join(self.path, rfname)):
+                    conflicted.append(rfname)
+                else:
+                    added.append(rfname)
+                continue
+            st = self.status(rfname)
+            lfile = self._files.find(rfname)
+            if st in ('A', '!'):
+                conflicted.append(rfname)
+            elif st == 'S':
+                skipped.append(rfname)
+            elif lfile.get('md5') == rfile.get('md5'):
+                unchanged.append(rfname)
+            else:
+                modified.append(rfname)
+        remote_fnames = [f.get('name') for f in remote_files]
+        for lfname in local_files:
+            if not lfname in remote_fnames:
+                data[lfname] = self._files.find(lfname)
+                deleted.append(lfname)
+        return FileUpdateInfo(unchanged, added, deleted, modified,
+                              conflicted, skipped, data)
 
     @classmethod
     def wc_check(cls, path):

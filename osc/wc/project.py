@@ -13,7 +13,7 @@ from osc.wc.util import (wc_read_project, wc_read_apiurl, wc_read_packages,
                          wc_pkg_data_mkdir)
 from osc.source import Project as SourceProject
 
-class UpdateInfo(object):
+class PackageUpdateInfo(object):
     """Contains information about an update.
 
     It provides the following information:
@@ -119,7 +119,7 @@ class Project(object):
             if st == '?' and os.path.exists(path):
                 conflicted.append(pkg)
                 added.remove(pkg)
-        return UpdateInfo(candidates, added, deleted, conflicted)
+        return PackageUpdateInfo(candidates, added, deleted, conflicted)
 
     def add_package(self, pkg):
         """Add a new package to the project.
