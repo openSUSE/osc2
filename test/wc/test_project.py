@@ -112,11 +112,77 @@ class TestProject(OscTest):
         self.assertEqual(uinfo.added, [])
         self.assertEqual(uinfo.deleted, ['foo', 'abc', 'xxx', 'del'])
 
-#    def test10(self):
-#        """test add_package"""
-#        path = self.fixture_file('project')
-#        prj = Project(path)
-#        prj.add_package('
+    def test10(self):
+        """test add_package"""
+        path = self.fixture_file('project')
+        pkg_path = os.path.join(path, 'added')
+        os.mkdir(pkg_path)
+        prj = Project(path)
+        prj.add_package('added')
+        self.assertEqual(prj._status('added'), 'A')
+        self.assertTrue(os.path.islink(os.path.join(pkg_path, '.osc')))
+
+    def test11(self):
+        """add already existing package"""
+        path = self.fixture_file('prj2')
+        prj = Project(path)
+        self.assertRaises(ValueError, prj.add_package, 'bar')
+
+    def test12(self):
+        """add untracked pkg"""
+        path = self.fixture_file('project')
+        prj = Project(path)
+        self.assertRaises(ValueError, prj.add_package, 'untracked_pkg')
+
+    def test13(self):
+        """add non-existent package"""
+        path = self.fixture_file('project')
+        prj = Project(path)
+        self.assertRaises(ValueError, prj.add_package, 'nonexistent')
+
+    def test14(self):
+        """do not add deleted package"""
+        path = self.fixture_file('prj2')
+        prj = Project(path)
+        self.assertEqual(prj._status('abc'), 'D')
+        pkg_dir = self.fixture_file('prj2', 'abc')
+        shutil.rmtree(pkg_dir)
+        os.mkdir(pkg_dir)
+        self.assertEqual(prj._status('abc'), 'D')
+        self.assertRaises(ValueError, prj.add_package, 'abc')
+        self.assertEqual(prj._status('abc'), 'D')
+
+    def test15(self):
+        """test delete_package"""
+        path = self.fixture_file('prj2')
+        prj = Project(path)
+        # delete foo
+        self.assertEqual(prj._status('foo'), ' ')
+        prj.delete_package('foo')
+        self.assertEqual(prj._status('foo'), 'D')
+        self.assertTrue(os.path.exists(self.fixture_file('prj2', 'foo')))
+        # delete xxx
+        self.assertEqual(prj._status('xxx'), '!')
+        prj.delete_package('xxx')
+        self.assertEqual(prj._status('foo'), 'D')
+        # delete bar
+        self.assertEqual(prj._status('bar'), 'A')
+        prj.delete_package('bar')
+        self.assertEqual(prj._status('bar'), '?')
+        # TODO: uncomment me later
+        # self.assertFalse(os.path.exists(self.fixture_file('prj2', 'bar')))
+
+    def test16(self):
+        """delete untracked package"""
+        path = self.fixture_file('project')
+        prj = Project(path)
+        self.assertRaises(ValueError, prj.delete_package, 'untracked_pkg')
+
+    def test17(self):
+        """delete non-existent package"""
+        path = self.fixture_file('project')
+        prj = Project(path)
+        self.assertRaises(ValueError, prj.delete_package, 'nonexistent')
 
 if __name__ == '__main__':
     unittest.main()
