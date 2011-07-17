@@ -115,5 +115,20 @@ class TestPackage(OscTest):
         self.assertEqual(pkg.name, 'foo')
         self.assertEqual(pkg.apiurl, 'http://localhost')
 
+    def test9(self):
+        """test status"""
+        path = self.fixture_file('status1')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('file1'), ' ')
+        self.assertEqual(pkg.status('added'), 'A')
+        self.assertEqual(pkg.status('delete'), 'D')
+        self.assertEqual(pkg.status('delete_mod'), 'D')
+        self.assertEqual(pkg.status('missing'), '!')
+        self.assertEqual(pkg.status('modified'), 'M')
+        self.assertEqual(pkg.status('skipped'), 'S')
+        self.assertEqual(pkg.status('conflict'), 'C')
+        self.assertEqual(pkg.status('nonexistent'), '?')
+        self.assertEqual(pkg.status('unknown'), '?')
+
 if __name__ == '__main__':
     unittest.main()
