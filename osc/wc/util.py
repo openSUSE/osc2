@@ -11,6 +11,7 @@ from tempfile import NamedTemporaryFile
 
 from lxml import etree, objectify
 
+from osc.source import File
 from osc.util.xml import fromstring
 
 __all__ = ['wc_is_project', 'wc_is_package', 'wc_read_project',
@@ -249,6 +250,21 @@ class XMLPackageTracker(XMLEntryTracker):
         return '_packages'
 
 
+class XMLFileTracker(XMLEntryTracker):
+    """Represents the _files file."""
+
+    def __init__(self, path):
+        super(XMLFileTracker, self).__init__(path, 'entry')
+
+    @classmethod
+    def _fromstring(cls, data):
+        return fromstring(data, entry=File)
+
+    @classmethod
+    def filename(cls):
+        return '_files'
+
+
 def _storedir(path):
     """Return the storedir path"""
     global _STORE
@@ -410,15 +426,21 @@ def wc_read_apiurl(path):
     """
     return _read_storefile(path, '_apiurl')
 
-def wc_read_files(path):
-    """Return the xml data of the _files file.
+def wc_read_files(path, raw=False):
+    """Return a XMLFileTracker object.
 
     path is the path to the package working copy.
     If the storefile does not exist or is no file
     a ValueError is raised.
 
+    Keyword arguments:
+    raw -- if True return the raw _files file data
+           instead of an object (default: False)
+
     """
-    return _read_storefile(path, '_files')
+    if raw:
+        return _read_storefile(path, '_files')
+    return XMLFileTracker(path)
 
 def wc_write_apiurl(path, apiurl):
     """Write the _apiurl file.
