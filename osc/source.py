@@ -7,6 +7,10 @@ from osc.util.xml import fromstring
 from osc.remote import RORemoteFile
 from osc.core import Osc
 
+class Directory(objectify.ObjectifiedElement):
+    def __iter__(self):
+        return self.iterfind('entry')
+
 class File(objectify.ObjectifiedElement):
     """Represents a file entry"""
 
@@ -92,7 +96,7 @@ class Package(object):
         if not 'schema' in kwargs:
             kwargs['schema'] = Package.LIST_SCHEMA
         f = request.get(path, **kwargs)
-        directory = fromstring(f.read(), entry=File)
+        directory = fromstring(f.read(), directory=Directory, entry=File)
         # this is needed by the file class
         directory.set('project', self.project)
         return directory
