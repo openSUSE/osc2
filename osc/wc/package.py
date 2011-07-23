@@ -148,8 +148,7 @@ class Package(object):
             return 'M'
         return st
 
-    # XXX: we probably need a rev
-    def _calculate_updateinfo(self):
+    def _calculate_updateinfo(self, rev=''):
         unchanged = []
         added = []
         deleted = []
@@ -157,7 +156,7 @@ class Package(object):
         conflicted = []
         skipped = []
         spkg = SourcePackage(self.project, self.name)
-        remote_files = spkg.list()
+        remote_files = spkg.list(rev=rev)
         local_files = self.files()
         data = {}
         for rfile in remote_files:
