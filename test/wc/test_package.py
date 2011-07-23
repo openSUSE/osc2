@@ -3,7 +3,7 @@ import unittest
 import tempfile
 import shutil
 
-from osc.wc.package import Package
+from osc.wc.package import Package, FileSkipHandler
 from osc.wc.util import WCInconsistentError
 from test.osctest import OscTest
 from test.httptest import GET
@@ -196,6 +196,74 @@ class TestPackage(OscTest):
         self.assertEqual(uinfo.conflicted, ['added', 'missing'])
         self.assertEqual(uinfo.skipped, ['skipped'])
 
+    @GET('http://localhost/source/foo/status1',
+         file='status1_list1.xml')
+    @GET('http://localhost/source/foo/status1',
+         file='status1_list1.xml')
+    def test15(self):
+        """test _calculate_skips 1"""
+        class FSH_1(FileSkipHandler):
+            def skip(self, uinfo):
+                # check for deepcopy
+                uinfo.deleted.remove('file1')
+                return ['modified'], []
+        class FSH_2(FileSkipHandler):
+            def skip(self, uinfo):
+                return ['conflict'], ['skipped']
+        path = self.fixture_file('status1')
+        pkg = Package(path, [FSH_1()])
+        uinfo = pkg._calculate_updateinfo()
+        pkg._calculate_skips(uinfo)
+        # only FSH_1
+        self.assertEqual(uinfo.unchanged, ['conflict'])
+        self.assertEqual(uinfo.added, [])
+        self.assertEqual(uinfo.deleted, ['file1', 'delete', 'delete_mod'])
+        self.assertEqual(uinfo.modified, [])
+        self.assertEqual(uinfo.conflicted, ['added', 'missing'])
+        self.assertEqual(uinfo.skipped, ['skipped', 'modified'])
+        # FSH_1 and FSH_2
+        uinfo = pkg._calculate_updateinfo()
+        pkg.skip_handlers.append(FSH_2())
+        pkg._calculate_skips(uinfo)
+        self.assertEqual(uinfo.unchanged, [])
+        self.assertEqual(uinfo.added, ['skipped'])
+        self.assertEqual(uinfo.deleted, ['file1', 'delete', 'delete_mod'])
+        self.assertEqual(uinfo.modified, [])
+        self.assertEqual(uinfo.conflicted, ['added', 'missing'])
+        self.assertEqual(uinfo.skipped, ['modified', 'conflict'])
+
+    @GET('http://localhost/source/foo/status1',
+         file='status1_list1.xml')
+    def test16(self):
+        """test _calculate_skips 2"""
+        class FSH(FileSkipHandler):
+            def skip(self, uinfo):
+                return [], ['skipped']
+        path = self.fixture_file('status1')
+        pkg = Package(path, [FSH()])
+        uinfo = pkg._calculate_updateinfo()
+        skipped = os.path.join(path, 'skipped')
+        # touch empty file
+        open(skipped, 'w').close()
+        pkg._calculate_skips(uinfo)
+        self.assertEqual(uinfo.unchanged, ['conflict'])
+        self.assertEqual(uinfo.added, [])
+        self.assertEqual(uinfo.deleted, ['file1', 'delete', 'delete_mod'])
+        self.assertEqual(uinfo.modified, ['modified'])
+        self.assertEqual(uinfo.conflicted, ['added', 'missing', 'skipped'])
+        self.assertEqual(uinfo.skipped, [])
+
+    @GET('http://localhost/source/foo/status1',
+         file='status1_list1.xml')
+    def test17(self):
+        """ test _calculate_skips 3 (invalid skip list)"""
+        class FSH(FileSkipHandler):
+            def skip(self, uinfo):
+                return ['doesnotexist'], []
+        path = self.fixture_file('status1')
+        pkg = Package(path, [FSH()])
+        uinfo = pkg._calculate_updateinfo()
+        self.assertRaises(ValueError, pkg._calculate_skips, uinfo)
 
 if __name__ == '__main__':
     unittest.main()
