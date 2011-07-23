@@ -143,12 +143,12 @@ class TestPackage(OscTest):
         self.assertEqual(uinfo.conflicted, [])
         self.assertEqual(uinfo.skipped, [])
 
-    @GET('http://localhost/source/prj/foo', file='foo_list2.xml')
+    @GET('http://localhost/source/prj/foo?rev=2', file='foo_list2.xml')
     def test11(self):
         """test _calculate_updateinfo 2"""
         path = self.fixture_file('foo')
         pkg = Package(path)
-        uinfo = pkg._calculate_updateinfo()
+        uinfo = pkg._calculate_updateinfo(rev='2')
         self.assertEqual(uinfo.unchanged, [])
         self.assertEqual(uinfo.added, ['added'])
         self.assertEqual(uinfo.deleted, [])
