@@ -2,6 +2,7 @@
 
 import os
 import hashlib
+import copy
 
 from lxml.etree import XMLSyntaxError
 
@@ -47,12 +48,15 @@ class FileUpdateInfo(object):
       same name exists on the server; local state '!' and file
       still exists on the server) - this has nothing todo with files
       with state 'C'
-    - skipped files (files which shouldn't be checked out)
+    - skipped files (files which shouldn't be checked out/updated)
+    - data is a dict which maps a filename to its data object
+      (which provides information like size, mtime, md5)
 
     """
 
     def __init__(self, unchanged, added, deleted, modified,
                  conflicted, skipped, data):
+        super(FileUpdateInfo, self).__init__()
         self.unchanged = unchanged
         self.added = added
         self.deleted = deleted
@@ -62,10 +66,25 @@ class FileUpdateInfo(object):
         self.data = data
 
 
+class FileSkipHandler(object):
+    """Used to skip certain files on update or checkout."""
+
+    def skip(self, uinfo):
+        """Calculate skipped and unskipped files.
+
+        A 2-tuple (skip, unskip) is returned where skip and
+        unskip are lists. All files in the skip list won't be
+        checked out (and will be marked as skipped, state 'S').
+        All files in the unskip list won't be skipped anymore.
+
+        """
+        raise NotImplementedError()
+
+
 class Package(object):
     """Represents a package working copy."""
 
-    def __init__(self, path):
+    def __init__(self, path, skip_handlers=[]):
         """Constructs a new package object.
 
         path is the path to the working copy.
@@ -73,6 +92,10 @@ class Package(object):
         no valid package working copy.
         Raises a WCInconsistentError if the wc's
         metadata is corrupt.
+
+        Keyword arguments:
+        skip_handlers -- list of FileSkipHandler objects
+                         (default: [])
 
         """
         super(Package, self).__init__()
@@ -83,6 +106,7 @@ class Package(object):
         self.apiurl = wc_read_apiurl(self.path)
         self.project = wc_read_project(self.path)
         self.name = wc_read_package(self.path)
+        self.skip_handlers = skip_handlers
         with wc_lock(self.path) as lock:
             self._files = wc_read_files(self.path)
 
@@ -162,6 +186,38 @@ class Package(object):
                 deleted.append(lfname)
         return FileUpdateInfo(unchanged, added, deleted, modified,
                               conflicted, skipped, data)
+
+    def _calculate_skips(self, uinfo):
+        """Calculate skip and unskip files.
+
+        A ValueError is raised if a FileSkipHandler returns
+        an invalid skip or unskip list.
+
+        """
+        def uinfo_remove(skip):
+            uinfo.unchanged = [f for f in uinfo.unchanged if f != skip]
+            uinfo.added = [f for f in uinfo.added if f != skip]
+            uinfo.deleted = [f for f in uinfo.deleted if f != skip]
+            uinfo.modified = [f for f in uinfo.modified if f != skip]
+            uinfo.conflicted = [f for f in uinfo.conflicted if f != skip]
+            uinfo.skipped = [f for f in uinfo.skipped if f != skip]
+
+        for handler in self.skip_handlers:
+            skips, unskips = handler.skip(copy.deepcopy(uinfo))
+            inv = [f for f in skips if not f in uinfo.data.keys()]
+            inv += [f for f in unskips if not f in uinfo.skipped]
+            if inv:
+                msg = "invalid skip/unskip files: %s" % ', '.join(inv)
+                raise ValueError(msg)
+            for skip in skips:
+                uinfo_remove(skip)
+                uinfo.skipped.append(skip)
+            for unskip in unskips:
+                uinfo.skipped.remove(unskip)
+                if os.path.exists(os.path.join(self.path, unskip)):
+                    uinfo.conflicted.append(unskip)
+                else:
+                    uinfo.added.append(unskip)
 
     @classmethod
     def wc_check(cls, path):
