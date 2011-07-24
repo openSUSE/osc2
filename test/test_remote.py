@@ -339,6 +339,14 @@ class TestRemoteModel(OscTest):
         assert not os.access('/', os.W_OK)
         self.assertRaises(ValueError, f.write_to, '/foo')
 
+    @GET('http://localhost/source/project/package/fname2', file='remotefile2')
+    def test_remotefile5(self):
+        """store file"""
+        f = RORemoteFile('/source/project/package/fname2')
+        path = self.fixture_file('write_me')
+        f.write_to(path)
+        self.assertEqualFile('yet another\nsimple\nfile\n', 'remotefile2')
+
     @GET('http://localhost/source/project/package/fname?rev=123',
          file='remotefile1', Content_Length='52')
     def test_rwremotefile1(self):
