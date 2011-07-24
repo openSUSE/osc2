@@ -30,7 +30,7 @@ class File(objectify.ObjectifiedElement):
                 'package': parent.get('name'), 'file': self.get('name')}
         # specifying a different rev probably makes no sense...
         if not 'rev' in kwargs:
-            kwargs['rev'] = self.get('md5')
+            kwargs['rev'] = self.getparent().get('srcmd5')
         path = path % data
         mtime = int(self.get('mtime'))
         return RORemoteFile(path, mtime=mtime, **kwargs)
