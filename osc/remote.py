@@ -387,8 +387,8 @@ class RORemoteFile(object):
                              dir)
         tmp_filename = ''
         try:
-            tmp = NamedTemporaryFile(dir=dirname)
-            tmp_filename = tmp.file
+            tmp = NamedTemporaryFile(dir=dirname, delete=False)
+            tmp_filename = tmp.name
             self._write_to(tmp, size)
             tmp.close()
             os.rename(tmp_filename, dest)
