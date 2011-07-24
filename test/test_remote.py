@@ -1,5 +1,6 @@
 import os
 import unittest
+import stat
 from cStringIO import StringIO, OutputType
 
 from lxml import etree
@@ -342,10 +343,14 @@ class TestRemoteModel(OscTest):
     @GET('http://localhost/source/project/package/fname2', file='remotefile2')
     def test_remotefile5(self):
         """store file"""
-        f = RORemoteFile('/source/project/package/fname2')
+        f = RORemoteFile('/source/project/package/fname2', mtime=1311512569)
         path = self.fixture_file('write_me')
         f.write_to(path)
         self.assertEqualFile('yet another\nsimple\nfile\n', 'remotefile2')
+        st = os.stat(path)
+        self.assertEqual(st.st_mtime, 1311512569)
+        # default mode is 0644
+        self.assertEqual(stat.S_IMODE(st.st_mode), 420)
 
     @GET('http://localhost/source/project/package/fname?rev=123',
          file='remotefile1', Content_Length='52')
