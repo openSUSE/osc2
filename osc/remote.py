@@ -304,15 +304,20 @@ class RORemoteFile(object):
 
     """
 
-    def __init__(self, path, stream_bufsize=8192, method='GET', **kwargs):
+    def __init__(self, path, stream_bufsize=8192, method='GET',
+                 mtime=None, mode=0644, **kwargs):
         """Constructs a new RemoteFile object.
 
         path is the remote path which is used for the http request.
+        A ValueError is raised if mtime or mode are specified but
+        are no integers.
 
         Keyword arguments:
         stream_bufsize -- read bytes which are returned when iterating over
                           this object (default: 8192)
         method -- the http method which is used for the request (default: GET)
+        mtime -- the mtime of the file (only used by write_to) (default: None)
+        mode -- the mode of the file (only used by write_to) (default: 0644)
         kwargs -- optional arguments for the http request (like query
                   parameters)
 
@@ -324,6 +329,13 @@ class RORemoteFile(object):
         self.kwargs = kwargs
         self._remote_size = -1
         self._fobj = None
+        self.mtime = None
+        try:
+            if mtime is not None:
+                self.mtime = int(mtime)
+            self.mode = int(mode)
+        except ValueError as e:
+            raise ValueError("mtime and mode must be integers")
 
     def _init_read(self):
         request = Osc.get_osc().get_reqobj()
@@ -396,6 +408,9 @@ class RORemoteFile(object):
         finally:
             if tmp_filename and os.path.isfile(tmp_filename):
                 os.unlink(tmp_filename)
+        if self.mtime is not None:
+            os.utime(dest, (-1, self.mtime))
+        os.chmod(dest, self.mode)
 
     def __iter__(self, size=-1):
         """Iterates over the file"""

@@ -32,7 +32,8 @@ class File(objectify.ObjectifiedElement):
         if not 'rev' in kwargs:
             kwargs['rev'] = self.get('md5')
         path = path % data
-        return RORemoteFile(path, **kwargs)
+        mtime = int(self.get('mtime'))
+        return RORemoteFile(path, mtime=mtime, **kwargs)
 
 
 class Project(object):
