@@ -11,7 +11,7 @@ from tempfile import NamedTemporaryFile
 
 from lxml import etree, objectify
 
-from osc.source import File
+from osc.source import File, Directory
 from osc.util.xml import fromstring
 
 __all__ = ['wc_is_project', 'wc_is_package', 'wc_read_project',
@@ -136,7 +136,7 @@ class AbstractEntryTracker(object):
 
     def find(self, name):
         """Return the entry or None."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def set(self, name, new_state):
         """Set the state to new_state for entry name.
@@ -147,9 +147,20 @@ class AbstractEntryTracker(object):
         """
         raise NotImplementedError()
 
+    def merge(self, new_states, new_entries):
+        """Merge current entries with new_entries and new_states.
+
+        new_entries is a list (or list-like) object which contains
+        all new entries. new_states is a entry to state mapping.
+        A ValueError is raised if new_states and new_entries are
+        inconsistent.
+
+        """
+        raise NotImplementedError()
+
     def write(self):
         """Write file."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def __iter__(self):
         """Iterate over entries."""
@@ -256,9 +267,19 @@ class XMLFileTracker(XMLEntryTracker):
     def __init__(self, path):
         super(XMLFileTracker, self).__init__(path, 'entry')
 
+    def merge(self, new_states, new_entries):
+        filenames = [entry.get('name') for entry in new_entries]
+        if (len(filenames) != len(new_states.keys())
+            or set(filenames) != set(new_states.keys())):
+            raise ValueError("data of new_states and new_entries mismatch")
+        self._xml = new_entries
+        for filename, st in new_states.iteritems():
+            self.set(filename, st)
+        self.write()
+
     @classmethod
     def _fromstring(cls, data):
-        return fromstring(data, entry=File)
+        return fromstring(data, entry=File, directory=Directory)
 
     @classmethod
     def filename(cls):
@@ -550,3 +571,14 @@ def wc_pkg_data_mkdir(path, new_dir):
         raise ValueError("directory already exists: %s" % ndir)
     os.mkdir(ndir)
     return ndir
+
+def wc_pkg_data_filename(path, filename):
+    """Return the filename to the store's _PKG_DATA/filename dir.
+
+    path is the path to the working copy. filename is the
+    name of the file.
+
+    """
+    global _PKG_DATA
+    data_path = _storefile(path, _PKG_DATA)
+    return os.path.join(data_path, filename)
