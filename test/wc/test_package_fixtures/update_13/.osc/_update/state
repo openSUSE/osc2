@@ -1,0 +1,24 @@
+<update state="2">
+  <states>
+    <state name="D" filename="foobar"/>
+    <state name="M" filename="foo"/>
+    <state name="D" filename="bar"/>
+  </states>
+  <updateinfo>
+    <unchanged/>
+    <added/>
+    <deleted>
+      <file>bar</file>
+      <file>foobar</file>
+    </deleted>
+    <modified>
+      <file>foo</file>
+    </modified>
+    <conflicted/>
+    <skipped/>
+  </updateinfo>
+  <directory name="update_13" rev="77" srcmd5="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" project="prj">
+    <entry size="56" md5="0cd4f0c10ca24c7fbdbe9889651680b2" name="foo" mtime="1311611244"/>
+  </directory>
+</update>
+

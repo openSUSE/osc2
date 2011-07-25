@@ -1,0 +1,7 @@
+<directory name="update_7" rev="77" srcmd5="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa">
+  <entry size="45" md5="0e04f7f7fa4ec3fbbb907ebbe4dc9bc4" name="foo" mtime="1311541493"/>
+  <entry size="30" md5="3a2c6e3cf6986d6e5af70cc467e4b29f" name="bar" mtime="1311541504"/>
+  <entry name="added" md5="0e80600e984f2fdf3b341ebdea0b44ee" mtime="1311547954" size="19"/>
+  <entry name="asdf" md5="0ca9f03c0b4cce5a5a317f297475cccf" mtime="1311548015" size="14"/>
+  <entry name="exists" md5="eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" mtime="1311548000" size="10"/>
+</directory>
