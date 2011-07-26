@@ -121,7 +121,7 @@ class Project(object):
                 added.remove(pkg)
         return PackageUpdateInfo(candidates, added, deleted, conflicted)
 
-    def add_package(self, pkg):
+    def add(self, pkg):
         """Add a new package to the project.
 
         pkg is the name of the directory which will be added.
@@ -148,7 +148,7 @@ class Project(object):
             self._packages.add(pkg, state='A')
             self._packages.write()
 
-    def delete_package(self, pkg):
+    def remove(self, pkg):
         """Mark a package for deletion.
 
         pkg is the name of the package to be deleted.
