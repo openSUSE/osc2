@@ -812,5 +812,43 @@ class TestPackage(OscTest):
         self.assertRaises(ValueError, pkg.revert, 'nonexistent')
         self.assertRaises(ValueError, pkg.revert, 'skipped')
 
+    def test_add1(self):
+        """test add"""
+        path = self.fixture_file('status1')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('unknown'), '?')
+        pkg.add('unknown')
+        self.assertEqual(pkg.status('unknown'), 'A')
+        self._exists(path, 'unknown')
+        self._not_exists(path, 'unknown', data=True)
+
+    def test_add2(self):
+        """test add (add deleted file again)"""
+        path = self.fixture_file('status1')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('delete'), 'D')
+        self._check_md5(path, 'delete', '2e7d76c347da6740e153d154b9064f33',
+                        data=True)
+        with open(os.path.join(path, 'delete'), 'w') as f:
+            f.write('modified')
+        pkg.add('delete')
+        self.assertEqual(pkg.status('delete'), 'M')
+        self._check_md5(path, 'delete', '2e7d76c347da6740e153d154b9064f33',
+                        data=True)
+
+    def test_add3(self):
+        """test add already tracked file"""
+        path = self.fixture_file('status1')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('added'), 'A')
+        self.assertRaises(ValueError, pkg.add, 'added')
+        self.assertEqual(pkg.status('modified'), 'M')
+        self.assertRaises(ValueError, pkg.add, 'modified')
+        # try to add non-existent file
+        self.assertRaises(ValueError, pkg.add, 'nonexistent')
+        # disallow path like filenames
+        self._exists(path, '../update_5_files.xml')
+        self.assertRaises(ValueError, pkg.add, '../update_5_files.xml')
+
 if __name__ == '__main__':
     unittest.main()
