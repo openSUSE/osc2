@@ -20,6 +20,7 @@ from lxml import etree, objectify
 
 from osc.core import Osc
 from osc.util.xml import ElementClassLookup, get_parser, fromstring
+from osc.util.io import copy_file, iter_read
 
 __all__ = ['RemoteModel', 'RemoteProject', 'RemotePackage', 'Request',
            'RORemoteFile', 'RWRemoteFile']
@@ -367,10 +368,6 @@ class RORemoteFile(object):
         if self._fobj is not None:
             self._fobj.close()
 
-    def _write_to(self, fobj, size):
-        for data in self.__iter__(size):
-            fobj.write(data)
-
     def write_to(self, dest, size=-1):
         """Write file to dest.
 
@@ -383,48 +380,12 @@ class RORemoteFile(object):
         size -- write only size bytes (default: -1 (means write everything))
 
         """
-        if hasattr(dest, 'write'):
-            self._write_to(dest, size)
-            return
-        dirname = os.path.dirname(dest)
-        if os.path.exists(dest) and not os.access(dest, os.W_OK):
-            raise ValueError("invalid dest filename: %s is not writable" %
-                             dest)
-        elif not os.path.exists(dirname):
-            # or should we check that it is really a dir?
-            raise ValueError("invalid dest filename: dir %s does not exist" %
-                             dir)
-        elif not os.access(dirname, os.W_OK):
-            raise ValueError("invalid dest filename: dir %s is not writable" %
-                             dir)
-        tmp_filename = ''
-        try:
-            tmp = NamedTemporaryFile(dir=dirname, delete=False)
-            tmp_filename = tmp.name
-            self._write_to(tmp, size)
-            tmp.close()
-            os.rename(tmp_filename, dest)
-            tmp_filename = ''
-        finally:
-            if tmp_filename and os.path.isfile(tmp_filename):
-                os.unlink(tmp_filename)
-        if self.mtime is not None:
-            os.utime(dest, (-1, self.mtime))
-        os.chmod(dest, self.mode)
+        copy_file(self, dest, mtime=self.mtime, mode=self.mode,
+                  bufsize=self.stream_bufsize, size=size, read_method='_read')
 
     def __iter__(self, size=-1):
         """Iterates over the file"""
-        # this rsize handling is needed by write_to
-        rsize = self.stream_bufsize
-        if size >= 0 and size < rsize:
-            rsize = size
-        data = self._read(rsize)
-        while data:
-            yield data
-            size -= len(data)
-            if size == 0:
-                break
-            data = self._read(rsize)
+        return iter_read(self, bufsize=self.stream_bufsize, size=size)
 
 
 class RWRemoteFile(RORemoteFile):
@@ -465,39 +426,36 @@ class RWRemoteFile(RORemoteFile):
         self._schema = schema
         self.tmp_size = tmp_size
         self.use_tmp = use_tmp
-        # local file object - either a StringIO or NamedTemporaryFile instance
-        self._lfobj = None
         self._modified = False
 
     def __getattr__(self, name):
-        if self._lfobj is None:
-            self._init_lfobj(name != 'write')
+        if self._fobj is None:
+            self._init_fobj(name != 'write')
         if name in ('write', 'writelines', 'truncate'):
             self._modified = True
-        return getattr(self._lfobj, name)
+        return getattr(self._fobj, name)
 
-    def _init_lfobj(self, read_required):
+    def _init_fobj(self, read_required):
         read_required = read_required or self.append
         if read_required:
             self._init_read()
         if self._remote_size >= self.tmp_size or self.use_tmp:
-            self._lfobj = NamedTemporaryFile()
+            new_fobj = NamedTemporaryFile()
         else:
-            self._lfobj = StringIO()
+            new_fobj = StringIO()
         if read_required:
             # we read/write _everything_ (otherwise this class needs
             # a bit more logic - can be added if needed)
-            self.write_to(self._lfobj)
-        self._lfobj.seek(0, os.SEEK_SET)
+            self.write_to(new_fobj)
+            # close it because it isn't needed anymore
+            self._fobj.close()
+        new_fobj.seek(0, os.SEEK_SET)
+        self._fobj = new_fobj
 
     def read(self, size=-1):
-        if self._lfobj is None:
-            self._init_lfobj(True)
-        return self._lfobj.read(size)
-
-    def _close(self):
-        super(RWRemoteFile, self).close()
-        self._lfobj.close()
+        if self._fobj is None:
+            self._init_fobj(True)
+        return self._fobj.read(size)
 
     def close(self, **kwargs):
         """Close this file and write data back to server.
@@ -511,7 +469,7 @@ class RWRemoteFile(RORemoteFile):
 
         """
         if not self._modified:
-            self._close()
+            super(RWRemoteFile, self).close()
             return
         request = Osc.get_osc().get_reqobj()
         http_method = _get_http_method(request, self.wb_method)
@@ -519,10 +477,10 @@ class RWRemoteFile(RORemoteFile):
             kwargs['schema'] = self._schema
         data = None
         filename = ''
-        if hasattr(self._lfobj, 'getvalue'):
-            data = self._lfobj.getvalue()
+        if hasattr(self._fobj, 'getvalue'):
+            data = self._fobj.getvalue()
         else:
-            filename = self._lfobj.name
-        self._lfobj.flush()
+            filename = self._fobj.name
+        self._fobj.flush()
         http_method(self.path, data=data, filename=filename, **kwargs)
-        self._close()
+        super(RWRemoteFile, self).close()
