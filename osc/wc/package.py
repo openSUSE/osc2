@@ -706,6 +706,32 @@ class Package(object):
             raise ValueError(msg)
         self._files.write()
 
+    def remove(self, filename):
+        """Remove file from the working copy.
+
+        Actually this marks filename for deletion (filename has
+        state 'D' afterwards).
+        A ValueError is raised if filename is not tracked or
+        if filename is conflicted (has state 'C') or if filename
+        is skipped (has state 'S').
+
+        """
+        # we only allow the plain filename (no path)
+        filename = os.path.basename(filename)
+        wc_filename = os.path.join(self.path, filename)
+        st = self.status(filename)
+        if st == 'C':
+            msg = "file \"%s\" is conflicted. Please resolve first." % filename
+            raise ValueError(msg)
+        elif st == '?':
+            raise ValueError("file \"%s\" is not tracked." % filename)
+        elif st == 'S':
+            raise ValueError("file \"%s\" skipped." % filename)
+        elif st in ('A', ' '):
+            os.unlink(wc_filename)
+        self._files.set(filename, 'D')
+        self._files.write()
+
     @classmethod
     def wc_check(cls, path):
         """Check path is a consistent package working copy.
