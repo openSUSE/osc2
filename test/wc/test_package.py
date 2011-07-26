@@ -14,8 +14,10 @@ from osc.source import Package as SourcePackage
 from test.osctest import OscTest
 from test.httptest import GET
 
+
 def suite():
     return unittest.makeSuite(TestPackage)
+
 
 class TestPackage(OscTest):
     def __init__(self, *args, **kwargs):

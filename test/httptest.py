@@ -8,6 +8,7 @@ import shutil
 
 EXPECTED_REQUESTS = []
 
+
 class RequestWrongOrder(Exception):
     """raised if an unexpected request is issued to urllib2"""
     def __init__(self, url, exp_url, method, exp_method):
@@ -21,6 +22,7 @@ class RequestWrongOrder(Exception):
         return '%s, %s, %s, %s' % (self.url, self.exp_url,
                                    self.method, self.exp_method)
 
+
 class RequestDataMismatch(Exception):
     """raised if POSTed or PUTed data doesn't match with the expected data"""
     def __init__(self, url, got, exp):
@@ -31,6 +33,7 @@ class RequestDataMismatch(Exception):
 
     def __str__(self):
         return '%s, %s, %s' % (self.url, self.got, self.exp)
+
 
 class MyHTTPHandler(urllib2.HTTPHandler):
     def __init__(self, *args, **kwargs):
@@ -92,6 +95,7 @@ class MyHTTPHandler(urllib2.HTTPHandler):
         resp.msg = ''
         return resp
 
+
 def urldecorator(method, fullurl, **kwargs):
     def decorate(test_method):
         def wrapped_test_method(*args):
@@ -118,6 +122,7 @@ def DELETE(fullurl, **kwargs):
 def add_expected_request(method, url, **kwargs):
     global EXPECTED_REQUESTS
     EXPECTED_REQUESTS.append((method, url, kwargs))
+
 
 class MockUrllib2Request(unittest.TestCase):
     def __init__(self, *args, **kwargs):

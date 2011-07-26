@@ -22,6 +22,7 @@ _STORE = '.osc'
 _PKG_DATA = 'data'
 _LOCK = 'wc.lock'
 
+
 class WCInconsistentError(Exception):
     """Represents an invalid working copy state"""
 

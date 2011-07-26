@@ -10,6 +10,7 @@ from tempfile import NamedTemporaryFile
 
 __all__ = ['copy_file', 'iter_read']
 
+
 def _copy_file(fsource_obj, fdest_obj, bufsize, size,
                read_method, write_method):
     """Read from fsource_obj and write to fdest_obj"""
@@ -42,7 +43,7 @@ def copy_file(source, dest, mode=0644, mtime=None, bufsize=8096,
     write_method -- name of the method which should be called on
                     the source file-like object to perform a read
                     (default: write)
-   
+
     mode and mtime are only used if dest is a filename.
 
     """

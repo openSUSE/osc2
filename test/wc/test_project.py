@@ -8,8 +8,10 @@ from osc.wc.util import WCInconsistentError
 from test.osctest import OscTest
 from test.httptest import GET
 
+
 def suite():
     return unittest.makeSuite(TestProject)
+
 
 class TestProject(OscTest):
     def __init__(self, *args, **kwargs):

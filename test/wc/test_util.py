@@ -5,8 +5,10 @@ from test.osctest import OscTest
 from osc.wc.util import (wc_is_project, wc_is_package, wc_read_project,
                          wc_read_package, wc_read_apiurl, WCLock)
 
+
 def suite():
     return unittest.makeSuite(TestWCUtil)
+
 
 class TestWCUtil(OscTest):
     def __init__(self, *args, **kwargs):
@@ -129,7 +131,6 @@ class TestWCUtil(OscTest):
         self.assertTrue(wc.has_lock())
         wc.unlock()
         self.assertFalse(os.path.exists(lock))
-
 
 if __name__ == '__main__':
     unittest.main()

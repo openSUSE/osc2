@@ -6,8 +6,10 @@ from osc.source import Project, Package
 from test.osctest import OscTest
 from test.httptest import GET
 
+
 def suite():
     return unittest.makeSuite(TestSource)
+
 
 class TestSource(OscTest):
     def __init__(self, *args, **kwargs):
@@ -114,7 +116,6 @@ class TestSource(OscTest):
         self.assertEqual(log.revision[1].user, 'foo')
         self.assertEqual(log.revision[1].comment, 'request')
         self.assertEqual(log.revision[1].requestid, '123')
-
 
 if __name__ == '__main__':
     unittest.main()

@@ -58,7 +58,7 @@ class Binary(objectify.ObjectifiedElement):
 
     def file(self, **kwargs):
         """Returns a RORemoteFile object.
-        
+
         This can be used to read/save the binary file.
 
         Keyword arguments:

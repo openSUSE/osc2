@@ -19,12 +19,13 @@ from osc.wc.util import (wc_read_package, wc_read_project, wc_read_apiurl,
                          _storefile, _PKG_DATA, _read_storefile,
                          _write_storefile, wc_pkg_data_filename)
 
+
 def file_md5(filename):
     """Return the md5sum of filename's content.
-    
+
     A ValueError is raised if filename does not exist or
     is no file.
-    
+
     """
     if not os.path.isfile(filename):
         msg = "filename \"%s\" does not exist or is no file" % filename
@@ -87,13 +88,13 @@ class TransactionListener(object):
 
     def finished(self, name, aborted=False, abort_reason=''):
         """Transaction finished.
-        
+
         name is the name of the transaction.
         aborted indicates if the transaction was
         aborted by some listener.
         abort_reason might contain a str which
         describes why the transaction was aborted.
-        
+
         """
         raise NotImplementedError()
 
@@ -217,6 +218,7 @@ class FileUpdateInfo(object):
             data = ', '.join(getattr(self, listname))
             ret.append('%s: %s' % (listname, data))
         return '\n'.join(ret)
+
 
 class FileSkipHandler(object):
     """Used to skip certain files on update or checkout."""
@@ -661,7 +663,7 @@ class Package(object):
 
     def revert(self, filename):
         """Revert filename.
-        
+
         If filename is marked as 'C', '?' or 'S' a
         ValueError is raised.
 

@@ -4,8 +4,10 @@ import unittest
 from osc.oscargs import OscArgs
 from test.osctest import OscTest
 
+
 def suite():
     return unittest.makeSuite(TestOscArgs)
+
 
 class TestOscArgs(OscTest):
     def __init__(self, *args, **kwargs):

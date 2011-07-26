@@ -25,9 +25,10 @@ from lxml import etree
 __all__ = ['AbstractHTTPRequest', 'AbstractHTTPResponse', 'HTTPError',
            'Urllib2HTTPResponse', 'Urllib2HTTPError', 'Urllib2HTTPRequest']
 
+
 class AbstractHTTPResponse(object):
     """Base class for an http response object.
-    
+
     It provides the following attributes:
 
     """
@@ -214,7 +215,7 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
 
     def __init__(self, apiurl, validate=False, username='', password='',
                  cookie_filename='', debug=False, mmap=True,
-                 mmap_fsize=1024*512):
+                 mmap_fsize=1024 * 512):
         """constructs a new Urllib2HTTPRequest object.
 
         apiurl is the url which is used for every request.
@@ -337,7 +338,7 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
         f = self._new_response(f)
         self._validate_response(f, schema)
         return f
-       
+
     def _send_file(self, request, filename, urlencoded):
         with open(filename, 'rb') as fobj:
             fsize = os.path.getsize(filename)

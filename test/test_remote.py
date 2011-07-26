@@ -10,8 +10,10 @@ from osc.remote import (RemoteProject, RemotePackage, Request,
 from test.osctest import OscTest
 from test.httptest import GET, PUT, POST
 
+
 def suite():
     return unittest.makeSuite(TestRemoteModel)
+
 
 class TestRemoteModel(OscTest):
     def __init__(self, *args, **kwargs):
@@ -40,7 +42,7 @@ class TestRemoteModel(OscTest):
     def test_project2(self):
         """create a remote project"""
         prj = RemoteProject(name='foo')
-        prj.title = 'just a dummy title' 
+        prj.title = 'just a dummy title'
         prj.description = 'This is a detailed and more lengthy\ndescription' \
                           ' of the foo\nproject.'
         prj.add_person(userid='testuser', role='maintainer')

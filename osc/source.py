@@ -7,16 +7,18 @@ from osc.util.xml import fromstring
 from osc.remote import RORemoteFile
 from osc.core import Osc
 
+
 class Directory(objectify.ObjectifiedElement):
     def __iter__(self):
         return self.iterfind('entry')
+
 
 class File(objectify.ObjectifiedElement):
     """Represents a file entry"""
 
     def file(self, **kwargs):
         """Returns a RORemoteFile object.
-        
+
         This can be used to read/save the source file.
 
         Keyword arguments:

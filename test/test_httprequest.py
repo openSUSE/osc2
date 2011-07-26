@@ -8,8 +8,10 @@ from test.osctest import OscTest
 from osc.httprequest import Urllib2HTTPRequest, HTTPError
 from test.httptest import GET, PUT, POST, DELETE
 
+
 def suite():
     return unittest.makeSuite(TestHTTPRequest)
+
 
 class TestHTTPRequest(OscTest):
     def __init__(self, *args, **kwargs):
@@ -27,7 +29,8 @@ class TestHTTPRequest(OscTest):
         self.assertEqual(resp.read(), 'foobar')
         self.assertIsNone(resp._sio)
 
-    @GET('http://localhost/source/server%3Amail?foo=bar&esc=foo%26bar', text='foobar')
+    @GET('http://localhost/source/server%3Amail?foo=bar&esc=foo%26bar',
+         text='foobar')
     def test2(self):
         """simple get with query"""
         r = Urllib2HTTPRequest('http://localhost', True, '', '', '', False)
@@ -129,7 +132,6 @@ class TestHTTPRequest(OscTest):
     @GET('http://localhost/source',
          exception=urllib2.HTTPError('http://localhost/source', 403, 'error',
                                     {}, None))
-
     def test12(self):
         """test exception handling (get)"""
         r = Urllib2HTTPRequest('http://localhost', True, '', '', '', False)

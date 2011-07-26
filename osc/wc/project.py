@@ -13,6 +13,7 @@ from osc.wc.util import (wc_read_project, wc_read_apiurl, wc_read_packages,
                          wc_pkg_data_mkdir)
 from osc.source import Project as SourceProject
 
+
 class PackageUpdateInfo(object):
     """Contains information about an update.
 
@@ -34,6 +35,7 @@ class PackageUpdateInfo(object):
         self.added = added
         self.deleted = deleted
         self.conflicted = conflicted
+
 
 class Project(object):
     """Represents a project working copy."""
@@ -166,7 +168,8 @@ class Project(object):
                 self._packages.remove(pkg)
             else:
                 self._packages.set(pkg, 'D')
-                # XXX: pkg has a file conflict, pkg totally broken, remove files
+                # XXX: pkg has a file conflict, pkg totally broken, remove
+                #      files
             self._packages.write()
 
     @classmethod

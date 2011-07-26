@@ -25,6 +25,7 @@ from osc.util.io import copy_file, iter_read
 __all__ = ['RemoteModel', 'RemoteProject', 'RemotePackage', 'Request',
            'RORemoteFile', 'RWRemoteFile']
 
+
 def _get_http_method(request_obj, method):
     """Get the requested http method from the http object (internal)"""
     meth = getattr(request_obj, method.lower(), None)
@@ -416,7 +417,7 @@ class RWRemoteFile(RORemoteFile):
         use_tmp -- always use a tmpfile (regardless of the tmp_size)
         schema -- filename to xml schema which is used to validate the repsonse
                   after the writeback
-        kwargs -- see class RemoteReadOnlyFile 
+        kwargs -- see class RemoteReadOnlyFile
 
         """
         super(RWRemoteFile, self).__init__(path, **kwargs)

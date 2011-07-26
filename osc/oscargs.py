@@ -19,6 +19,7 @@ import logging
 from osc.wc.util import (wc_is_project, wc_is_package, wc_read_project,
                          wc_read_package, wc_read_apiurl)
 
+
 class ResolvedInfo(object):
     """Encapsulate resolved arguments"""
 

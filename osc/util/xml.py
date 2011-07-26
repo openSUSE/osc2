@@ -4,6 +4,7 @@ from lxml import etree, objectify
 
 __all__ = ['ElementLookupClass', 'get_parser']
 
+
 class ElementClassLookup(etree.PythonElementClassLookup):
     """Element lookup class"""
 
@@ -36,7 +37,7 @@ def get_parser(tree_class=None, empty_data_class=None,
     tree_class -- class which is used for tree elements (default: None)
     empty_data_class -- class which is used for empty data elements
                         (default: None)
-    lookup_class -- class which is used for the element lookup 
+    lookup_class -- class which is used for the element lookup
                     (default: ElementClassLookup)
 
     """
