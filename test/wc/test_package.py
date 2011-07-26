@@ -850,5 +850,78 @@ class TestPackage(OscTest):
         self._exists(path, '../update_5_files.xml')
         self.assertRaises(ValueError, pkg.add, '../update_5_files.xml')
 
+    def test_remove1(self):
+        """test remove unmodified file"""
+        path = self.fixture_file('status1')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('file1'), ' ')
+        pkg.remove('file1')
+        self.assertEqual(pkg.status('file1'), 'D')
+        self._not_exists(path, 'file1')
+        self._exists(path, 'file1', data=True)
+
+    def test_remove2(self):
+        """test remove missing file"""
+        path = self.fixture_file('status1')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('missing'), '!')
+        pkg.remove('missing')
+        self.assertEqual(pkg.status('missing'), 'D')
+        self._not_exists(path, 'missing')
+        self._exists(path, 'missing', data=True)
+
+    def test_remove3(self):
+        """test remove modified file"""
+        path = self.fixture_file('status1')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('modified'), 'M')
+        pkg.remove('modified')
+        self.assertEqual(pkg.status('modified'), 'D')
+        self._exists(path, 'modified')
+        self._exists(path, 'modified', data=True)
+
+    def test_remove4(self):
+        """test remove already removed file"""
+        path = self.fixture_file('status1')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('delete'), 'D')
+        pkg.remove('delete')
+        self.assertEqual(pkg.status('delete'), 'D')
+        self._exists(path, 'delete', data=True)
+
+    def test_remove5(self):
+        """test remove added file"""
+        path = self.fixture_file('status1')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('added'), 'A')
+        pkg.remove('added')
+        self.assertEqual(pkg.status('added'), 'D')
+        self._not_exists(path, 'added')
+        self._not_exists(path, 'added', data=True)
+
+    def test_remove6(self):
+        """test remove conflicted/skipped file (raises a ValueError)"""
+        path = self.fixture_file('status1')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('conflict'), 'C')
+        self.assertRaises(ValueError, pkg.remove, 'conflict')
+        # hmm or should we allow to remove skipped files
+        self.assertEqual(pkg.status('skipped'), 'S')
+        self.assertRaises(ValueError, pkg.remove, 'skipped')
+
+    def test_remove7(self):
+        """test remove (raises a ValueError)"""
+        path = self.fixture_file('status1')
+        pkg = Package(path)
+        # try to remove untracked file
+        self.assertEqual(pkg.status('unknown'), '?')
+        self.assertRaises(ValueError, pkg.remove, 'unknown')
+        self._exists(path, 'unknown')
+        self.assertEqual(pkg.status('unknown'), '?')
+        # try to remove non-existent file
+        self.assertRaises(ValueError, pkg.remove, 'nonexistent')
+        # disallow path like filenames
+        self.assertRaises(ValueError, pkg.remove, '../update_7_files.xml')
+
 if __name__ == '__main__':
     unittest.main()
