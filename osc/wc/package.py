@@ -650,6 +650,10 @@ class Package(object):
         A ValueError is raised if filename is not "conflicted".
 
         """
+        with wc_lock(self.path) as lock:
+            self._resolved(filename)
+
+    def _resolved(self, filename):
         st = self.status(filename)
         if st != 'C':
             raise ValueError("file \"%s\" has no conflicts" % filename)
@@ -662,6 +666,10 @@ class Package(object):
         ValueError is raised.
 
         """
+        with wc_lock(self.path) as lock:
+            self._revert(filename)
+
+    def _revert(self, filename):
         st = self.status(filename)
         wc_filename = os.path.join(self.path, filename)
         store_filename = wc_pkg_data_filename(self.path, filename)
@@ -690,6 +698,10 @@ class Package(object):
         or is no file or if it is already tracked.
 
         """
+        with wc_lock(self.path) as lock:
+            self._add(filename)
+
+    def _add(self, filename):
         # we only allow the plain filename
         filename = os.path.basename(filename)
         wc_filename = os.path.join(self.path, filename)
@@ -716,6 +728,10 @@ class Package(object):
         is skipped (has state 'S').
 
         """
+        with wc_lock(self.path) as lock:
+            self._remove(filename)
+
+    def _remove(self, filename):
         # we only allow the plain filename (no path)
         filename = os.path.basename(filename)
         wc_filename = os.path.join(self.path, filename)
