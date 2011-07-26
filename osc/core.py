@@ -1,5 +1,6 @@
 from osc.httprequest import Urllib2HTTPRequest
 
+
 # XXX: needs a bit more thinking... this will be the "global" place where
 #      the library can be configured (like using a specific http object...)
 class Osc(object):
