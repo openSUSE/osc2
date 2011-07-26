@@ -401,7 +401,7 @@ class TestRemoteModel(OscTest):
         f.write('more complex\n')
         f.write('testcase\n')
         # check that it is a StringIO
-        self.assertTrue(isinstance(f._lfobj, OutputType))
+        self.assertTrue(isinstance(f._fobj, OutputType))
         f.close()
 
     @GET('http://localhost/source/project/package/fname?rev=123',
@@ -411,7 +411,7 @@ class TestRemoteModel(OscTest):
         f = RWRemoteFile('/source/project/package/fname',
                          tmp_size=20, rev='123')
         f.seek(1, os.SEEK_SET)
-        self.assertTrue(os.path.exists(f._lfobj.name))
+        self.assertTrue(os.path.exists(f._fobj.name))
         self.assertEqual(f.read(7), 'his is ')
         f.seek(0, os.SEEK_SET)
         self.assertEqual(f.read(7), 'This is')
@@ -422,7 +422,7 @@ class TestRemoteModel(OscTest):
         self.assertEqual(f.readline(), 'with some newlines\n')
         self.assertEqual(f.read(), '\nand\ntext.\n')
         f.close()
-        self.assertFalse(os.path.exists(f._lfobj.name))
+        self.assertFalse(os.path.exists(f._fobj.name))
 
     @PUT('http://localhost/source/project/package/fname2', text='ok',
          expfile='remotefile2')
@@ -430,10 +430,10 @@ class TestRemoteModel(OscTest):
         """write to file (tmpfile)"""
         f = RWRemoteFile('/source/project/package/fname2', use_tmp=True)
         f.write('yet another\nsim')
-        self.assertTrue(os.path.exists(f._lfobj.name))
+        self.assertTrue(os.path.exists(f._fobj.name))
         f.write('ple\nfile\n')
         f.close()
-        self.assertFalse(os.path.exists(f._lfobj.name))
+        self.assertFalse(os.path.exists(f._fobj.name))
 
     @PUT('http://localhost/source/project/package/fname2?foo=bar', text='ok',
          exp='yet another\nsim')
@@ -441,11 +441,11 @@ class TestRemoteModel(OscTest):
         """write and seek (tmpfile)"""
         f = RWRemoteFile('/source/project/package/fname2', use_tmp=True)
         f.write('ple\nfile\n')
-        self.assertTrue(os.path.exists(f._lfobj.name))
+        self.assertTrue(os.path.exists(f._fobj.name))
         f.seek(0, os.SEEK_SET)
         f.write('yet another\nsim')
         f.close(foo='bar')
-        self.assertFalse(os.path.exists(f._lfobj.name))
+        self.assertFalse(os.path.exists(f._fobj.name))
 
     @GET('http://localhost/source/project/package/fname2', file='remotefile2',
          Content_Length='24')
@@ -457,12 +457,40 @@ class TestRemoteModel(OscTest):
                          tmp_size=15, append=True)
         # read first line
         self.assertEqual(f.readline(), 'yet another\n')
-        self.assertTrue(os.path.exists(f._lfobj.name))
+        self.assertTrue(os.path.exists(f._fobj.name))
         # append/overwrite text
         f.write('more complex\n')
         f.write('testcase\n')
         f.close()
-        self.assertFalse(os.path.exists(f._lfobj.name))
+        self.assertFalse(os.path.exists(f._fobj.name))
+
+    @GET('http://localhost/source/project/package/fname', file='remotefile1')
+    @GET('http://localhost/source/project/package/fname2', file='remotefile2')
+    @GET('http://localhost/source/project/package/fname2', file='remotefile2')
+    def test_remotefile9(self):
+        """iterate over the file (but read only 8 bytes)"""
+        f = RORemoteFile('/source/project/package/fname')
+        i = iter(f)
+        self.assertEqualFile(i.next(), 'remotefile1')
+        f = RORemoteFile('/source/project/package/fname2', stream_bufsize=6)
+        i = f.__iter__(size=8)
+        self.assertEqual(i.next(), 'yet an')
+        self.assertEqual(i.next(), 'ot')
+        f = RWRemoteFile('/source/project/package/fname2', stream_bufsize=6)
+        i = f.__iter__(size=8)
+        self.assertEqual(i.next(), 'yet an')
+        self.assertEqual(i.next(), 'ot')
+
+    @GET('http://localhost/source/project/package/fname2', file='remotefile2')
+    def test_remotefile10(self):
+        """read some bytes, write some bytes and call write_to"""
+        f = RWRemoteFile('/source/project/package/fname2', append=True)
+        self.assertEqual(f.read(3), 'yet')
+        self.assertTrue(isinstance(f._fobj, OutputType))
+        f.write('01234567')
+        sio = StringIO()
+        f.write_to(sio, 7)
+        self.assertEqual(sio.getvalue(), '\nsimple')
 
 if __name__ == '__main__':
     unittest.main()
