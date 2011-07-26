@@ -682,6 +682,30 @@ class Package(object):
             copy_file(store_filename, wc_filename)
         self._files.write()
 
+    def add(self, filename):
+        """Add filename to working copy.
+
+        Afterwards filename is tracked with state 'A'.
+        A ValueError is raised if filename does not exist or
+        or is no file or if it is already tracked.
+
+        """
+        # we only allow the plain filename
+        filename = os.path.basename(filename)
+        wc_filename = os.path.join(self.path, filename)
+        if not os.path.isfile(wc_filename):
+            msg = "file \"%s\" does not exist or is no file" % filename
+            raise ValueError(msg)
+        st = self.status(filename)
+        if st == '?':
+            self._files.add(filename, 'A')
+        elif st == 'D':
+            self._files.set(filename, ' ')
+        else:
+            msg = "file \"%s\" is already tracked" % filename
+            raise ValueError(msg)
+        self._files.write()
+
     @classmethod
     def wc_check(cls, path):
         """Check path is a consistent package working copy.
