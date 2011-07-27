@@ -458,19 +458,21 @@ class RWRemoteFile(RORemoteFile):
             self._init_fobj(True)
         return self._fobj.read(size)
 
-    def close(self, **kwargs):
-        """Close this file and write data back to server.
+    def write_back(self, force=False, **kwargs):
+        """Write back data to the server.
 
-        The writeback only happens if at least one time the write method
-        was invoced.
+        The write back only happens if the file was modified
+        (that is the write, writelines or truncate method was
+        called at least one time).
 
         Keyword arguments:
+        force -- always write back data to server (regardless if it
+                 was modified or not) (default: False)
         kwargs -- optional parameters for the writeback http request (like
                   query parameters)
 
         """
-        if not self._modified:
-            super(RWRemoteFile, self).close()
+        if not self._modified and not force:
             return
         request = Osc.get_osc().get_reqobj()
         http_method = _get_http_method(request, self.wb_method)
@@ -484,4 +486,17 @@ class RWRemoteFile(RORemoteFile):
             filename = self._fobj.name
         self._fobj.flush()
         http_method(self.path, data=data, filename=filename, **kwargs)
+        self._modified = False
+
+    def close(self, **kwargs):
+        """Close this file.
+
+        Before the close write_back is called which may write
+        the data back to the server.
+
+        Keyword arguments:
+        kwargs -- optional parameters for the write_back method
+
+        """
+        self.write_back(**kwargs)
         super(RWRemoteFile, self).close()
