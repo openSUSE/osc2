@@ -417,7 +417,7 @@ class RWRemoteFile(RORemoteFile):
         use_tmp -- always use a tmpfile (regardless of the tmp_size)
         schema -- filename to xml schema which is used to validate the repsonse
                   after the writeback
-        kwargs -- see class RemoteReadOnlyFile
+        kwargs -- see class RORemoteFile
 
         """
         super(RWRemoteFile, self).__init__(path, **kwargs)
@@ -485,7 +485,8 @@ class RWRemoteFile(RORemoteFile):
         else:
             filename = self._fobj.name
         self._fobj.flush()
-        http_method(self.path, data=data, filename=filename, **kwargs)
+        wb_path = self.wb_path or self.path
+        http_method(wb_path, data=data, filename=filename, **kwargs)
         self._modified = False
 
     def close(self, **kwargs):
@@ -500,3 +501,28 @@ class RWRemoteFile(RORemoteFile):
         """
         self.write_back(**kwargs)
         super(RWRemoteFile, self).close()
+
+
+class RWLocalFile(RWRemoteFile):
+    """Represents a local file which can be written back to the server."""
+
+    def __init__(self, path, **kwargs):
+        """Constructs a new RWLocalFile object.
+
+        path is the local path to the file.
+        A ValueError is raised if wb_path is not present
+        or empty in kwargs.
+
+        Keyword arguments:
+        kwargs -- see RWRemoteFile (Note: tmp_size and use_tmp are ignored)
+
+        """
+        if not kwargs.get('wb_path', ''):
+            raise ValueError('wb_path keyword argument is required')
+        super(RWLocalFile, self).__init__(path, **kwargs)
+
+    def _init_fobj(self, read_required):
+        if self.append:
+            self._fobj = open(self.path, 'a+')
+        else:
+            self._fobj = open(self.path, 'w+')
