@@ -469,7 +469,7 @@ class TestRemoteModel(OscTest):
     @GET('http://localhost/source/project/package/fname', file='remotefile1')
     @GET('http://localhost/source/project/package/fname2', file='remotefile2')
     @GET('http://localhost/source/project/package/fname2', file='remotefile2')
-    def test_remotefile9(self):
+    def test_rwremotefile9(self):
         """iterate over the file (but read only 8 bytes)"""
         f = RORemoteFile('/source/project/package/fname')
         i = iter(f)
@@ -484,7 +484,7 @@ class TestRemoteModel(OscTest):
         self.assertEqual(i.next(), 'ot')
 
     @GET('http://localhost/source/project/package/fname2', file='remotefile2')
-    def test_remotefile10(self):
+    def test_rwremotefile10(self):
         """read some bytes, write some bytes and call write_to"""
         f = RWRemoteFile('/source/project/package/fname2', append=True)
         self.assertEqual(f.read(3), 'yet')
