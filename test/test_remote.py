@@ -494,5 +494,23 @@ class TestRemoteModel(OscTest):
         f.write_to(sio, 7)
         self.assertEqual(sio.getvalue(), '\nsimple')
 
+    @PUT('http://localhost/source/project/package/fname2?foo=bar', text='ok',
+         exp='yet another\nsim')
+    @PUT('http://localhost/source/project/package/fname2', text='ok',
+         exp='yet another\nsim')
+    def test_rwremotefile11(self):
+        """write, seek and multiple write backs"""
+        f = RWRemoteFile('/source/project/package/fname2')
+        f.write('ple\nfile\n')
+        f.seek(0, os.SEEK_SET)
+        f.write('yet another\nsim')
+        f.write_back(foo='bar')
+        # no request is issued because file isn't modified
+        f.write_back()
+        # force write back
+        f.write_back(force=True)
+        # no write back is issued
+        f.close(foo='bar')
+
 if __name__ == '__main__':
     unittest.main()
