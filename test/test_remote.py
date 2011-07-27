@@ -6,7 +6,7 @@ from cStringIO import StringIO, OutputType
 from lxml import etree
 
 from osc.remote import (RemoteProject, RemotePackage, Request,
-                        RORemoteFile, RWRemoteFile)
+                        RORemoteFile, RWRemoteFile, RWLocalFile)
 from test.osctest import OscTest
 from test.httptest import GET, PUT, POST
 
@@ -494,13 +494,14 @@ class TestRemoteModel(OscTest):
         f.write_to(sio, 7)
         self.assertEqual(sio.getvalue(), '\nsimple')
 
-    @PUT('http://localhost/source/project/package/fname2?foo=bar', text='ok',
+    @PUT('http://localhost/other/path?foo=bar', text='ok',
          exp='yet another\nsim')
-    @PUT('http://localhost/source/project/package/fname2', text='ok',
+    @PUT('http://localhost/other/path', text='ok',
          exp='yet another\nsim')
     def test_rwremotefile11(self):
         """write, seek and multiple write backs"""
-        f = RWRemoteFile('/source/project/package/fname2')
+        f = RWRemoteFile('/source/project/package/fname2',
+                         wb_path='/other/path')
         f.write('ple\nfile\n')
         f.seek(0, os.SEEK_SET)
         f.write('yet another\nsim')
@@ -511,6 +512,44 @@ class TestRemoteModel(OscTest):
         f.write_back(force=True)
         # no write back is issued
         f.close(foo='bar')
+
+    @PUT('http://localhost/foo/bar?foo=bar', text='ok',
+         exp='some data')
+    def test_rwlocalfile1(self):
+        """test simple read write (file does not exist)"""
+        path = self.fixture_file('doesnotexist')
+        self.assertFalse(os.path.exists(path))
+        f = RWLocalFile(path, wb_path='/foo/bar')
+        f.write('some data')
+        f.flush()
+        self.assertTrue(os.path.isfile(path))
+        with open(path, 'r') as fobj:
+            self.assertEqual(fobj.read(), 'some data')
+        f.seek(0, os.SEEK_SET)
+        self.assertEqual(f.read(), 'some data')
+        f.write_back(foo='bar')
+        f.close()
+
+    def test_rwlocalfile2(self):
+        """no wb_path is specified"""
+        path = self.fixture_file('doesnotexist')
+        self.assertRaises(ValueError, RWLocalFile, path)
+
+    @PUT('http://localhost/source/prj/pkg/remotefile2', text='ok',
+         exp = 'yet another\nsimple\nfile\n testcase\n')
+    def test_rwlocalfile3(self):
+        """use existing file"""
+        path = self.fixture_file('remotefile2')
+        self.assertTrue(os.path.exists(path))
+        f = RWLocalFile(path, wb_path='/source/prj/pkg/remotefile2',
+                        append=True)
+        f.write(' testcase\n')
+        f.flush()
+        with open(path, 'r') as fobj:
+            exp = 'yet another\nsimple\nfile\n testcase\n'
+            self.assertEqual(fobj.read(), exp)
+        f.write_back()
+        f.close()
 
 if __name__ == '__main__':
     unittest.main()
