@@ -925,5 +925,129 @@ class TestPackage(OscTest):
         # disallow path like filenames
         self.assertRaises(ValueError, pkg.remove, '../update_7_files.xml')
 
+    def test_calculate_commitinfo1(self):
+        """test _calculate_commitinfo"""
+        path = self.fixture_file('update_2')
+        pkg = Package(path)
+        cinfo = pkg._calculate_commitinfo()
+        self.assertEqual(cinfo.unchanged, ['bar', 'foobar'])
+        self.assertEqual(cinfo.added, [])
+        self.assertEqual(cinfo.deleted, [])
+        self.assertEqual(cinfo.modified, ['foo'])
+        self.assertEqual(cinfo.conflicted, [])
+
+    def test_calculate_commitinfo2(self):
+        """test _calculate_commitinfo (modified file)"""
+        path = self.fixture_file('update_2')
+        pkg = Package(path)
+        cinfo = pkg._calculate_commitinfo('foo')
+        self.assertEqual(cinfo.unchanged, ['bar', 'foobar'])
+        self.assertEqual(cinfo.added, [])
+        self.assertEqual(cinfo.deleted, [])
+        self.assertEqual(cinfo.modified, ['foo'])
+        self.assertEqual(cinfo.conflicted, [])
+
+    def test_calculate_commitinfo3(self):
+        """test _calculate_commitinfo (2 unchanged files)"""
+        path = self.fixture_file('update_2')
+        pkg = Package(path)
+        cinfo = pkg._calculate_commitinfo('bar', 'foobar')
+        self.assertEqual(cinfo.unchanged, ['foo', 'bar', 'foobar'])
+        self.assertEqual(cinfo.added, [])
+        self.assertEqual(cinfo.deleted, [])
+        self.assertEqual(cinfo.modified, [])
+        self.assertEqual(cinfo.conflicted, [])
+
+    def test_calculate_commitinfo4(self):
+        """test _calculate_commitinfo (missing file)"""
+        path = self.fixture_file('update_10')
+        pkg = Package(path)
+        cinfo = pkg._calculate_commitinfo()
+        self.assertEqual(cinfo.unchanged, ['foo'])
+        self.assertEqual(cinfo.added, [])
+        self.assertEqual(cinfo.deleted, [])
+        self.assertEqual(cinfo.modified, ['foobar'])
+        # bar is missing (state '!')
+        self.assertEqual(cinfo.conflicted, ['bar'])
+
+    def test_calculate_commitinfo5(self):
+        """ test _calculate_commitinfo ()"""
+        path = self.fixture_file('update_10')
+        pkg = Package(path)
+        cinfo = pkg._calculate_commitinfo('foo', 'foobar')
+        # bar isn't explicitly committed (and at least one specific
+        # file was specified when calling _calculate_commitinfo)
+        self.assertEqual(cinfo.unchanged, ['foo', 'bar'])
+        self.assertEqual(cinfo.added, [])
+        self.assertEqual(cinfo.deleted, [])
+        self.assertEqual(cinfo.modified, ['foobar'])
+        self.assertEqual(cinfo.conflicted, [])
+
+    def test_calculate_commitinfo6(self):
+        """test _calculate_commitinfo (explicitly commit deleted files)"""
+        path = self.fixture_file('update_11')
+        pkg = Package(path)
+        self._not_exists(path, 'bar')
+        self.assertEqual(pkg.status('foo'), 'M')
+        self.assertEqual(pkg.status('bar'), 'D')
+        self.assertEqual(pkg.status('foobar'), 'D')
+        cinfo = pkg._calculate_commitinfo('bar')
+        self.assertEqual(cinfo.unchanged, ['foo', 'foobar'])
+        self.assertEqual(cinfo.added, [])
+        self.assertEqual(cinfo.deleted, ['bar'])
+        self.assertEqual(cinfo.modified, [])
+        self.assertEqual(cinfo.conflicted, [])
+
+    def test_calculate_commitinfo7(self):
+        """test _calculate_commitinfo (deleted+modified files)"""
+        path = self.fixture_file('update_11')
+        pkg = Package(path)
+        self._not_exists(path, 'bar')
+        self.assertEqual(pkg.status('foo'), 'M')
+        self.assertEqual(pkg.status('bar'), 'D')
+        self.assertEqual(pkg.status('foobar'), 'D')
+        cinfo = pkg._calculate_commitinfo()
+        self.assertEqual(cinfo.unchanged, [])
+        self.assertEqual(cinfo.added, [])
+        self.assertEqual(cinfo.deleted, ['bar', 'foobar'])
+        self.assertEqual(cinfo.modified, ['foo'])
+        self.assertEqual(cinfo.conflicted, [])
+
+    def test_calculate_commitinfo8(self):
+        """test _calculate_commitinfo (untracked files)"""
+        path = self.fixture_file('update_1')
+        pkg = Package(path)
+        cinfo = pkg._calculate_commitinfo('untracked', 'nonexistent')
+        self.assertEqual(cinfo.unchanged, ['foo', 'bar', 'foobar'])
+        self.assertEqual(cinfo.added, [])
+        self.assertEqual(cinfo.deleted, [])
+        self.assertEqual(cinfo.modified, [])
+        self.assertEqual(cinfo.conflicted, ['untracked', 'nonexistent'])
+
+    def test_calculate_commitinfo9(self):
+        """test _calculate_commitinfo (various states)"""
+        path = self.fixture_file('status1')
+        pkg = Package(path)
+        cinfo = pkg._calculate_commitinfo()
+        self.assertEqual(cinfo.unchanged, ['file1', 'skipped'])
+        self.assertEqual(cinfo.added, ['added', 'added2'])
+        self.assertEqual(cinfo.deleted, ['delete', 'delete_mod'])
+        self.assertEqual(cinfo.modified, ['modified'])
+        self.assertEqual(cinfo.conflicted, ['missing', 'conflict'])
+
+    def test_calculate_commitinfo10(self):
+        """test _calculate_commitinfo (explicitly commit added file)"""
+        path = self.fixture_file('status1')
+        pkg = Package(path)
+        cinfo = pkg._calculate_commitinfo('added')
+        # added2 isn't listed at all
+        self.assertEqual(cinfo.unchanged, ['file1', 'delete', 'delete_mod',
+                                           'missing', 'modified', 'skipped',
+                                           'conflict'])
+        self.assertEqual(cinfo.added, ['added'])
+        self.assertEqual(cinfo.deleted, [])
+        self.assertEqual(cinfo.modified, [])
+        self.assertEqual(cinfo.conflicted, [])
+
 if __name__ == '__main__':
     unittest.main()
