@@ -220,6 +220,28 @@ class FileUpdateInfo(object):
         return '\n'.join(ret)
 
 
+class FileCommitInfo(object):
+    """Contains information about a commit.
+
+    It provides the following information:
+    - unchanged files (files which weren't changed and will be kept)
+    - added files (files which will be added to the package)
+    - deleted files (files which will be deleted from the package)
+    - modified files (files which were changed)
+    - conflicted files (local state '!' and the file is explicitly specified
+      for the commit)
+
+    """
+
+    def __init__(self, unchanged, added, deleted, modified, conflicted):
+        super(FileCommitInfo, self).__init__()
+        self.unchanged = unchanged
+        self.added = added
+        self.deleted = deleted
+        self.modified = modified
+        self.conflicted = conflicted
+
+
 class FileSkipHandler(object):
     """Used to skip certain files on update or checkout."""
 
@@ -644,6 +666,38 @@ class Package(object):
             f = data[filename].file()
             self.notifier.download(filename)
             f.write_to(path)
+
+    def _calculate_commitinfo(self, *filenames):
+        unchanged = []
+        added = []
+        deleted = []
+        modified = []
+        conflicted = []
+        wc_filenames = self.files()
+        if not filenames:
+            filenames = wc_filenames
+        for filename in wc_filenames:
+            st = self.status(filename)
+            if not filename in filenames:
+                if st != 'A':
+                    unchanged.append(filename)
+                continue
+            if st in ('!', 'C', '?'):
+                conflicted.append(filename)
+            elif st == 'A':
+                added.append(filename)
+            elif st == 'D':
+                deleted.append(filename)
+            elif st == 'M':
+                modified.append(filename)
+            else:
+                unchanged.append(filename)
+        # check for untracked
+        for filename in filenames:
+            if not filename in wc_filenames:
+                conflicted.append(filename)
+        return FileCommitInfo(unchanged, added, deleted,
+                              modified, conflicted)
 
     def resolved(self, filename):
         """Remove conflicted state from filename.
