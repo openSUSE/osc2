@@ -98,8 +98,13 @@ class TransactionListener(object):
         """
         raise NotImplementedError()
 
-    def download(self, filename):
-        """Downloading filename."""
+    def transfer(self, transfer_type, filename):
+        """Transfer filename.
+        
+        transfer_type is either 'download' or
+        'upload'.
+        
+        """
         raise NotImplementedError()
 
     def processed(self, filename, new_state):
@@ -136,8 +141,8 @@ class TransactionNotifier(object):
     def finished(self, *args, **kwargs):
         self._notify('finished', *args, **kwargs)
 
-    def download(self, *args, **kwargs):
-        self._notify('download', *args, **kwargs)
+    def transfer(self, *args, **kwargs):
+        self._notify('transfer', *args, **kwargs)
 
     def processed(self, *args, **kwargs):
         self._notify('processed', *args, **kwargs)
@@ -664,7 +669,7 @@ class Package(object):
         for filename in filenames:
             path = os.path.join(location, filename)
             f = data[filename].file()
-            self.notifier.download(filename)
+            self.notifier.transfer('download', filename)
             f.write_to(path)
 
     def _calculate_commitinfo(self, *filenames):
