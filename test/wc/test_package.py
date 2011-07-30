@@ -482,7 +482,7 @@ class TestPackage(OscTest):
             def __init__(self, abort=True):
                 self._begin = []
                 self._finished = []
-                self._download = []
+                self._transfer = []
                 self._processed = {}
                 self._abort = abort
 
@@ -493,8 +493,8 @@ class TestPackage(OscTest):
             def finished(self, name, aborted=False, abort_reason=''):
                 self._finished.append(name)
 
-            def download(self, filename):
-                self._download.append(filename)
+            def transfer(self, transfer_type, filename):
+                self._transfer.append((transfer_type, filename))
 
             def processed(self, filename, new_state):
                 self._processed[filename] = new_state
@@ -531,7 +531,8 @@ class TestPackage(OscTest):
         # check transaction listener
         self.assertEqual(tl._begin, ['update'])
         self.assertEqual(tl._finished, ['update'])
-        self.assertEqual(tl._download, ['added', 'asdf'])
+        self.assertEqual(tl._transfer, [('download', 'added'),
+                                        ('download', 'asdf')])
         self.assertEqual(set(tl._processed.keys()),
                          set(['added', 'asdf', 'foobar']))
         self.assertEqual(tl._processed['added'], ' ')
