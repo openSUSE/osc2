@@ -551,5 +551,15 @@ class TestRemoteModel(OscTest):
         f.write_back()
         f.close()
 
+    @PUT('http://localhost/source/prj/pkg/remotefile2', text='ok',
+         exp = 'yet another\nsimple\nfile\n')
+    def test_rwlocalfile4(self):
+        """test direct write_back (no previous read, write etc.)"""
+        path = self.fixture_file('remotefile2')
+        f = RWLocalFile(path, wb_path='/source/prj/pkg/remotefile2',
+                        append=True)
+        f.write_back(force=True)
+        f.close()
+
 if __name__ == '__main__':
     unittest.main()
