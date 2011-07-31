@@ -474,6 +474,8 @@ class RWRemoteFile(RORemoteFile):
         """
         if not self._modified and not force:
             return
+        if self._fobj is None:
+            self._init_fobj(read_required=True)
         request = Osc.get_osc().get_reqobj()
         http_method = _get_http_method(request, self.wb_method)
         if not 'schema' in kwargs:
