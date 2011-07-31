@@ -1,0 +1,5 @@
+<directory name="update_2" rev="77" srcmd5="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa">
+  <entry name="foo" md5="90aa8a29ecd8d33e7b099c0f108c026b" mtime="1311544490" size="51"/>
+  <entry name="bar" md5="3a2c6e3cf6986d6e5af70cc467e4b29f" mtime="1311541504" size="30"/>
+  <entry name="foobar" md5="d8fb5cb79e98b0257f7c5ff2624ac280" mtime="1311541580" size="51"/>
+</directory>

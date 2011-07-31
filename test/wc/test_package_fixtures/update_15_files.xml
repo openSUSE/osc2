@@ -1,0 +1,6 @@
+<directory name="commit_6" rev="77" srcmd5="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa">
+  <entry name="foo" md5="0e04f7f7fa4ec3fbbb907ebbe4dc9bc4" mtime="1311541493" size="45"/>
+  <entry name="bar" md5="3a2c6e3cf6986d6e5af70cc467e4b29f" mtime="1311541504" size="30"/>
+  <entry name="foobar" md5="d8fb5cb79e98b0257f7c5ff2624ac280" mtime="1311541580" size="51"/>
+  <entry name="missing" md5="d270046aad5d2f694eab724ab041c84a" mtime="1312119705" size="13"/>
+</directory>

@@ -1,8 +1,8 @@
-<update state="1">
+<transaction name="update" state="1">
   <states>
     <state name=" " filename="file"/>
   </states>
-  <updateinfo>
+  <info>
     <unchanged>
       <file>file</file>
     </unchanged>
@@ -13,10 +13,10 @@
     <modified/>
     <conflicted/>
     <skipped/>
-  </updateinfo>
+  </info>
   <directory name="foo" rev="73" srcmd5="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" project="prj">
     <entry name="file" md5="d8e8fca2dc0f896fd7cb4cb0031ba249" mtime="1310326682" size="5"/>
     <entry name="added" md5="b423d194c75e59ee4d8d2e07ba24323d" mtime="1311512569" size="11"/>
   </directory>
-</update>
+</transaction>
 

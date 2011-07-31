@@ -1,0 +1,24 @@
+<transaction name="commit" state="10">
+  <states>
+    <state name="D" filename="foobar"/>
+    <state name="A" filename="added"/>
+    <state name="D" filename="bar"/>
+    <state name=" " filename="foo"/>
+    <state name="!" filename="missing"/>
+  </states>
+  <info>
+    <unchanged>
+      <file>missing</file>
+    </unchanged>
+    <added>
+      <file>added</file>
+    </added>
+    <deleted>
+      <file>bar</file>
+      <file>foobar</file>
+    </deleted>
+    <modified/>
+    <conflicted/>
+  </info>
+</transaction>
+

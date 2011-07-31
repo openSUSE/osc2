@@ -8,18 +8,43 @@ from lxml import etree
 
 from osc.wc.package import (Package, FileSkipHandler, PackageUpdateState,
                             FileUpdateInfo, file_md5, is_binaryfile,
-                            TransactionListener, FileConflictError)
+                            TransactionListener, FileConflictError,
+                            FileCommitPolicy, PendingTransactionError)
 from osc.wc.util import WCInconsistentError
 from osc.source import Package as SourcePackage
 from test.osctest import OscTest
-from test.httptest import GET
+from test.httptest import GET, PUT, POST
 
 
 def suite():
     return unittest.makeSuite(TestPackage)
 
 
+class TL(TransactionListener):
+    def __init__(self, abort=True):
+        self._begin = []
+        self._finished = []
+        self._transfer = []
+        self._processed = {}
+        self._abort = abort
+
+    def begin(self, name, uinfo):
+        self._begin.append(name)
+        return not self._abort
+
+    def finished(self, name, aborted=False, abort_reason=''):
+        self._finished.append(name)
+
+    def transfer(self, transfer_type, filename):
+        self._transfer.append((transfer_type, filename))
+
+    def processed(self, filename, new_state):
+        self._processed[filename] = new_state
+
+
 class TestPackage(OscTest):
+    UPLOAD_REV = '<revision rev="repository"><srcmd5>empty</srcmd5></repository>'
+
     def __init__(self, *args, **kwargs):
         kwargs['fixtures_dir'] = 'wc/test_package_fixtures'
         super(TestPackage, self).__init__(*args, **kwargs)
@@ -304,6 +329,7 @@ class TestPackage(OscTest):
         uinfo = FileUpdateInfo(['file'], ['added'], [], [], [], [],
                                data, remote_xml)
         ustate = PackageUpdateState(path, uinfo=uinfo, file=' ')
+        self.assertEqual(ustate.name, 'update')
         self.assertEqual(ustate.state, PackageUpdateState.STATE_DOWNLOADING)
         uinfo_new = ustate.uinfo
         self.assertEqual(uinfo_new.unchanged, uinfo.unchanged)
@@ -362,7 +388,7 @@ class TestPackage(OscTest):
         uinfo = ustate.uinfo
         pkg = Package(path)
         pkg._download(ustate.location, uinfo.data, *uinfo.added)
-        fname = os.path.join('foo_dl_state', '.osc', '_update',
+        fname = os.path.join('foo_dl_state', '.osc', '_transaction',
                              'data', 'added')
         self.assertTrue(os.path.isfile(self.fixture_file(fname)))
         self.assertEqualFile('added file\n', fname)
@@ -388,7 +414,7 @@ class TestPackage(OscTest):
                         data=True)
         self._not_exists(path, 'foobar')
         self._not_exists(path, 'foobar', data=True)
-        self._not_exists(path, '_update', store=True)
+        self._not_exists(path, '_transaction', store=True)
         self.assertEqual(pkg.status('foo'), ' ')
         self.assertEqual(pkg.status('bar'), ' ')
         self.assertEqual(pkg.status('foobar'), '?')
@@ -414,7 +440,7 @@ class TestPackage(OscTest):
                         data=True)
         self._not_exists(path, 'foobar')
         self._not_exists(path, 'foobar', data=True)
-        self._not_exists(path, '_update', store=True)
+        self._not_exists(path, '_transaction', store=True)
         self.assertEqual(pkg.status('foo'), 'C')
         self.assertEqual(pkg.status('bar'), ' ')
         self.assertEqual(pkg.status('foobar'), '?')
@@ -437,7 +463,7 @@ class TestPackage(OscTest):
                         data=True)
         self._not_exists(path, 'foobar')
         self._not_exists(path, 'foobar', data=True)
-        self._not_exists(path, '_update', store=True)
+        self._not_exists(path, '_transaction', store=True)
         self.assertEqual(pkg.status('foo'), ' ')
         self.assertEqual(pkg.status('bar'), ' ')
         self.assertEqual(pkg.status('foobar'), '?')
@@ -463,7 +489,7 @@ class TestPackage(OscTest):
                         data=True)
         self._not_exists(path, 'foobar')
         self._not_exists(path, 'foobar', data=True)
-        self._not_exists(path, '_update', store=True)
+        self._not_exists(path, '_transaction', store=True)
         self.assertEqual(pkg.status('foo'), 'C')
         self.assertEqual(pkg.status('bar'), ' ')
         self.assertEqual(pkg.status('foobar'), '?')
@@ -478,27 +504,6 @@ class TestPackage(OscTest):
           '?rev=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), file='update_5_asdf')
     def test_update5(self):
         """test update (adds + delete)"""
-        class TL(TransactionListener):
-            def __init__(self, abort=True):
-                self._begin = []
-                self._finished = []
-                self._transfer = []
-                self._processed = {}
-                self._abort = abort
-
-            def begin(self, name, uinfo):
-                self._begin.append(name)
-                return not self._abort
-
-            def finished(self, name, aborted=False, abort_reason=''):
-                self._finished.append(name)
-
-            def transfer(self, transfer_type, filename):
-                self._transfer.append((transfer_type, filename))
-
-            def processed(self, filename, new_state):
-                self._processed[filename] = new_state
-
         path = self.fixture_file('update_5')
         tl = TL(abort=False)
         tl_abort = TL(abort=True)
@@ -522,7 +527,7 @@ class TestPackage(OscTest):
                         data=True)
         self._not_exists(path, 'foobar')
         self._not_exists(path, 'foobar', data=True)
-        self._not_exists(path, '_update', store=True)
+        self._not_exists(path, '_transaction', store=True)
         self.assertEqual(pkg.status('foo'), ' ')
         self.assertEqual(pkg.status('bar'), ' ')
         self.assertEqual(pkg.status('added'), ' ')
@@ -569,7 +574,7 @@ class TestPackage(OscTest):
         # bar isn't deleted because the wc file is modified
         self._check_md5(path, 'bar', '9ed1175ea6a36a26e9a6cea4532f271c')
         self._not_exists(path, 'bar', data=True)
-        self._not_exists(path, '_update', store=True)
+        self._not_exists(path, '_transaction', store=True)
         self.assertEqual(pkg.status('foo'), 'S')
         self.assertEqual(pkg.status('bar'), 'S')
         self.assertEqual(pkg.status('added'), ' ')
@@ -746,6 +751,38 @@ class TestPackage(OscTest):
         self.assertEqual(pkg.status('foo'), 'M')
         self.assertEqual(pkg.status('bar'), '?')
         self.assertEqual(pkg.status('foobar'), '?')
+
+    def test_update14(self):
+        """test update (pending commit transaction)"""
+        path = self.fixture_file('commit_6_resume')
+        pkg = Package(path)
+        self.assertRaises(PendingTransactionError, pkg.update)
+
+    @GET('http://localhost/source/prj/commit_6?rev=latest',
+         file='update_15_files.xml')
+    def test_update15(self):
+        """test update (rollback commit transaction)"""
+        path = self.fixture_file('commit_6_uploading')
+        pkg = Package(path)
+        self._not_exists(path, 'foo')
+        pkg.update()
+        self._exists(path, 'foo')
+        self.assertEqual(pkg.status('foo'), 'M')
+        self._not_exists(path, 'some_tmp')
+
+    @GET('http://localhost/source/prj/update_16?rev=latest',
+         file='update_16_files.xml')
+    @GET(('http://localhost/source/prj/update_16/file1'
+          '?rev=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), file='update_16_file1')
+    def test_update16(self):
+        """test update (file with state 'A' exists)"""
+        path = self.fixture_file('update_16')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('added'), 'A')
+        self.assertEqual(pkg.status('file1'), ' ')
+        pkg.update()
+        self.assertEqual(pkg.status('added'), 'A')
+        self.assertEqual(pkg.status('file1'), ' ')
 
     def test_resolved1(self):
         """test resolved"""
@@ -1049,6 +1086,220 @@ class TestPackage(OscTest):
         self.assertEqual(cinfo.deleted, [])
         self.assertEqual(cinfo.modified, [])
         self.assertEqual(cinfo.conflicted, [])
+
+    @POST('http://localhost/source/prj/update_2?cmd=sourcecommitfilelist',
+          expfile='commit_1_lfiles.xml', file='commit_1_mfiles.xml')
+    @PUT('http://localhost/source/prj/update_2/foo?rev=repository',
+         expfile='commit_1_foo', text=UPLOAD_REV)
+    @POST('http://localhost/source/prj/update_2?cmd=sourcecommitfilelist',
+          expfile='commit_1_lfiles.xml', file='commit_1_files.xml')
+    def test_commit1(self):
+        """test commit (modified)"""
+        path = self.fixture_file('update_2')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('foo'), 'M')
+        self.assertEqual(pkg.status('bar'), ' ')
+        self.assertEqual(pkg.status('foobar'), ' ')
+        self._check_md5(path, 'foo', '0e04f7f7fa4ec3fbbb907ebbe4dc9bc4',
+                        data=True)
+        pkg.commit()
+        self._check_md5(path, 'foo', '90aa8a29ecd8d33e7b099c0f108c026b',
+                        data=True)
+        fname = os.path.join(path, '.osc', 'data', 'foo')
+        st = os.stat(fname)
+        self.assertEqual(st.st_mtime, 1311544490)
+        self.assertEqual(pkg.status('foo'), ' ')
+        self.assertEqual(pkg.status('bar'), ' ')
+        self.assertEqual(pkg.status('foobar'), ' ')
+
+    @POST('http://localhost/source/prj/update_11?cmd=sourcecommitfilelist',
+          expfile='commit_2_lfiles.xml', file='commit_2_mfiles.xml')
+    @PUT('http://localhost/source/prj/update_11/foo?rev=repository',
+         expfile='commit_2_foo', text=UPLOAD_REV)
+    @POST('http://localhost/source/prj/update_11?cmd=sourcecommitfilelist',
+          expfile='commit_2_lfiles.xml', file='commit_2_files.xml')
+    def test_commit2(self):
+        """test commit (modified + deleted)"""
+        path = self.fixture_file('update_11')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('foo'), 'M')
+        self.assertEqual(pkg.status('bar'), 'D')
+        self.assertEqual(pkg.status('foobar'), 'D')
+        self._check_md5(path, 'foo', '0e04f7f7fa4ec3fbbb907ebbe4dc9bc4',
+                        data=True)
+        pkg.commit()
+        self._check_md5(path, 'foo', '5fb9f8bed64fb741e760b0db312b7c5a',
+                        data=True)
+        self._not_exists(path, 'bar')
+        self._not_exists(path, 'bar', data=True)
+        self._exists(path, 'foobar')
+        self._not_exists(path, 'foobar', data=True)
+        self.assertEqual(pkg.status('foo'), ' ')
+        self.assertEqual(pkg.status('bar'), '?')
+        self.assertEqual(pkg.status('foobar'), '?')
+
+    @POST('http://localhost/source/prj/update_11?cmd=sourcecommitfilelist',
+          expfile='commit_3_lfiles.xml', file='commit_2_mfiles.xml')
+    @PUT('http://localhost/source/prj/update_11/foo?rev=repository',
+         expfile='commit_2_foo', text=UPLOAD_REV)
+    @POST('http://localhost/source/prj/update_11?cmd=sourcecommitfilelist',
+          expfile='commit_3_lfiles.xml', file='commit_3_files.xml')
+    def test_commit3(self):
+        """test commit (only commit modified file)"""
+        tl = TL(abort=False)
+        tl_abort = TL(abort=True)
+        path = self.fixture_file('update_11')
+        pkg = Package(path, transaction_listener=[tl, tl_abort])
+        # commit is aborted because a transaction listener returned False
+        pkg.commit('foo')
+        tl = TL(abort=False)
+        pkg = Package(path, transaction_listener=[tl])
+        self.assertEqual(pkg.status('foo'), 'M')
+        self.assertEqual(pkg.status('bar'), 'D')
+        self.assertEqual(pkg.status('foobar'), 'D')
+        self._check_md5(path, 'foo', '0e04f7f7fa4ec3fbbb907ebbe4dc9bc4',
+                        data=True)
+        pkg.commit('foo')
+        self._check_md5(path, 'foo', '5fb9f8bed64fb741e760b0db312b7c5a',
+                        data=True)
+        self._not_exists(path, 'bar')
+        self._exists(path, 'bar', data=True)
+        # foobar was modified before deletion
+        self._exists(path, 'foobar')
+        self._exists(path, 'foobar', data=True)
+        self.assertEqual(pkg.status('foo'), ' ')
+        self.assertEqual(pkg.status('bar'), 'D')
+        self.assertEqual(pkg.status('foobar'), 'D')
+        # check transaction listener
+        self.assertEqual(tl._begin, ['commit'])
+        self.assertEqual(tl._finished, ['commit'])
+        self.assertEqual(tl._transfer, [('upload', 'foo')])
+        self.assertEqual(tl._processed.keys(), ['foo'])
+        self.assertEqual(tl._processed['foo'], ' ')
+
+    @POST('http://localhost/source/prj/update_11?cmd=sourcecommitfilelist',
+          expfile='commit_4_lfiles.xml', file='commit_4_files.xml')
+    def test_commit4(self):
+        """test commit (only commit deleted file bar)"""
+        path = self.fixture_file('update_11')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('foo'), 'M')
+        self.assertEqual(pkg.status('bar'), 'D')
+        self.assertEqual(pkg.status('foobar'), 'D')
+        pkg.commit('bar')
+        self._not_exists(path, 'bar')
+        self._not_exists(path, 'bar', data=True)
+        # foobar was modified before deletion
+        self._exists(path, 'foobar')
+        self._exists(path, 'foobar', data=True)
+        self.assertEqual(pkg.status('foo'), 'M')
+        self.assertEqual(pkg.status('bar'), '?')
+        self.assertEqual(pkg.status('foobar'), 'D')
+
+    @POST('http://localhost/source/prj/update_11?cmd=sourcecommitfilelist',
+          expfile='commit_4_lfiles.xml', file='commit_4_files.xml')
+    def test_commit5(self):
+        """test commit (only commit deleted file bar)"""
+        class FCP_1(FileCommitPolicy):
+            def apply(self, cinfo):
+                # foobar should be treated as unchanged
+                return ['foo'], []
+        class FCP_2(FileCommitPolicy):
+            def apply(self, cinfo):
+                # foo should be treated as unchanged
+                return ['foobar'], []
+        path = self.fixture_file('update_11')
+        pkg = Package(path, commit_policies=[FCP_1(), FCP_2()])
+        self.assertEqual(pkg.status('foo'), 'M')
+        self.assertEqual(pkg.status('bar'), 'D')
+        self.assertEqual(pkg.status('foobar'), 'D')
+        # only bar is committed due to FileCommitPolicy
+        pkg.commit()
+        self._not_exists(path, 'bar')
+        self._not_exists(path, 'bar', data=True)
+        # foobar was modified before deletion
+        self._exists(path, 'foobar')
+        self._exists(path, 'foobar', data=True)
+        self.assertEqual(pkg.status('foo'), 'M')
+        self.assertEqual(pkg.status('bar'), '?')
+        self.assertEqual(pkg.status('foobar'), 'D')
+
+    @POST('http://localhost/source/prj/commit_6?cmd=sourcecommitfilelist',
+          expfile='commit_6_lfiles1.xml', file='commit_6_mfiles1.xml')
+    @PUT('http://localhost/source/prj/commit_6/foo?rev=repository',
+         expfile='commit_6_foo', text=UPLOAD_REV)
+    @PUT('http://localhost/source/prj/commit_6/added?rev=repository',
+         expfile='commit_6_added', text=UPLOAD_REV)
+    @POST('http://localhost/source/prj/commit_6?cmd=sourcecommitfilelist',
+          expfile='commit_6_lfiles1.xml', file='commit_6_files1.xml')
+    def test_commit6(self):
+        """test commit (commit added, modified and deleted files)."""
+        path = self.fixture_file('commit_6')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('foo'), 'M')
+        self.assertEqual(pkg.status('bar'), 'D')
+        self.assertEqual(pkg.status('foobar'), 'D')
+        self.assertEqual(pkg.status('missing'), '!')
+        self.assertEqual(pkg.status('added'), 'A')
+        self._check_md5(path, 'foo', '0e04f7f7fa4ec3fbbb907ebbe4dc9bc4',
+                        data=True)
+        pkg.commit('foo', 'bar', 'foobar', 'added')
+        self._check_md5(path, 'foo', '5fb9f8bed64fb741e760b0db312b7c5a',
+                        data=True)
+        self._exists(path, 'added')
+        self._exists(path, 'added', data=True)
+        self._check_md5(path, 'added', '8dee900466b680b0717524878e42bf04',
+                        data=True)
+        self._not_exists(path, 'bar')
+        self._not_exists(path, 'bar', data=True)
+        # foobar was modified before deletion
+        self._exists(path, 'foobar')
+        self._not_exists(path, 'foobar', data=True)
+        self.assertEqual(pkg.status('foo'), ' ')
+        self.assertEqual(pkg.status('bar'), '?')
+        self.assertEqual(pkg.status('foobar'), '?')
+        self.assertEqual(pkg.status('missing'), '!')
+        self.assertEqual(pkg.status('added'), ' ')
+
+    def test_commit7(self):
+        """test commit (fails because a missing file should be committed)"""
+        path = self.fixture_file('commit_6')
+        pkg = Package(path)
+        self.assertRaises(FileConflictError, pkg.commit)
+
+    def test_commit8(self):
+        """test commit (missing and conflicted files present)"""
+        path = self.fixture_file('status1')
+        pkg = Package(path)
+        self.assertRaises(FileConflictError, pkg.commit)
+
+    def test_commit9(self):
+        """test commit (resume commit, PackageCommitState.STATE_COMMITTING)"""
+        path = self.fixture_file('commit_6_resume')
+        pkg = Package(path)
+        pkg.commit('foo', 'bar', 'foobar', 'added')
+        self._check_md5(path, 'foo', '5fb9f8bed64fb741e760b0db312b7c5a',
+                        data=True)
+        self._exists(path, 'added')
+        self._exists(path, 'added', data=True)
+        self._check_md5(path, 'added', '8dee900466b680b0717524878e42bf04',
+                        data=True)
+        self._not_exists(path, 'bar')
+        self._not_exists(path, 'bar', data=True)
+        # foobar was modified before deletion
+        self._exists(path, 'foobar')
+        self._not_exists(path, 'foobar', data=True)
+        self.assertEqual(pkg.status('foo'), ' ')
+        self.assertEqual(pkg.status('bar'), '?')
+        self.assertEqual(pkg.status('foobar'), '?')
+        self.assertEqual(pkg.status('missing'), '!')
+        self.assertEqual(pkg.status('added'), ' ')
+
+    def test_commit10(self):
+        """test commit (pending update transaction)"""
+        path = self.fixture_file('update_13')
+        pkg = Package(path)
+        self.assertRaises(PendingTransactionError, pkg.commit)
 
 if __name__ == '__main__':
     unittest.main()
