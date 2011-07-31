@@ -270,12 +270,18 @@ class XMLFileTracker(XMLEntryTracker):
 
     def merge(self, new_states, new_entries):
         filenames = [entry.get('name') for entry in new_entries]
-        if (len(filenames) != len(new_states.keys())
-            or set(filenames) != set(new_states.keys())):
+        # ignore locally added files
+        st_filenames = [f for f, st in new_states.iteritems() if st != 'A']
+        if (len(filenames) != len(st_filenames)
+            or set(filenames) != set(st_filenames)):
             raise ValueError("data of new_states and new_entries mismatch")
         self._xml = new_entries
         for filename, st in new_states.iteritems():
-            self.set(filename, st)
+            if st == 'A':
+                # add files with state 'A' again
+                self.add(filename, st)
+            else:
+                self.set(filename, st)
         self.write()
 
     @classmethod
