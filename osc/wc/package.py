@@ -8,8 +8,10 @@ import subprocess
 
 from lxml import etree, objectify
 
+from osc.core import Osc
 from osc.source import File, Directory
 from osc.source import Package as SourcePackage
+from osc.remote import RWLocalFile
 from osc.util.xml import fromstring
 from osc.util.io import copy_file
 from osc.wc.util import (wc_read_package, wc_read_project, wc_read_apiurl,
@@ -67,6 +69,18 @@ class FileConflictError(Exception):
         self.conflicts = conflicts
 
 
+class WCOutOfDateError(Exception):
+    """Exception raised if the wc is out of date.
+
+    That is a an operation cannot be executed because
+    the wc has to be updated first.
+
+    """
+
+    def __init__(self):
+        super(WCOutOfDateError, self).__init__()
+
+
 class TransactionListener(object):
     """Notify a client about a transaction.
 
@@ -100,10 +114,10 @@ class TransactionListener(object):
 
     def transfer(self, transfer_type, filename):
         """Transfer filename.
-        
+
         transfer_type is either 'download' or
         'upload'.
-        
+
         """
         raise NotImplementedError()
 
@@ -262,51 +276,78 @@ class FileSkipHandler(object):
         raise NotImplementedError()
 
 
-class PackageUpdateState(object):
-    """Represents the state of a package update"""
-    STATE_DOWNLOADING = '1'
-    STATE_UPDATING = '2'
-    FILENAME = os.path.join('_update', 'state')
+class FileCommitPolicy(object):
+    """Used to manipulate the calculated commitinfo."""
 
-    def __init__(self, path, uinfo=None, xml_data=None, **states):
-        """Constructs a new PackageUpdateState object.
+    def apply(self, cinfo):
+        """Calculate new commit lists.
+
+        cinfo is a FileCommitInfo instance.
+        A 4-tuple (unchanged, added, deleted, modified) is
+        returned. These lists will be used to create a new
+        FileCommitInfo object.
+
+        """
+        raise NotImplementedError()
+
+
+class PendingTransactionError(Exception):
+    """Raised if a transaction was aborted and no rollback is possible."""
+
+    def __init__(self, name):
+        """Constructs a new PendingTransactionError object.
+
+        name is the name of the pending transaction.
+
+        """
+        self.name = name
+
+
+class XMLTransactionState(object):
+    """Represents the state of a transaction"""
+
+    DIR = '_transaction'
+    FILENAME = os.path.join(DIR, 'state')
+
+    def __init__(self, path, name, initial_state, info=None,
+                 xml_data=None, **states):
+        """Constructs a new XMLTransactionState object.
 
         path is the path to the package working copy.
-        Either uinfo or xml_data has to be specified otherwise
+        name is the name of the transaction.
+        initial_state is the initial state of the transaction.
+        Either info or xml_data has to be specified otherwise
         a ValueError is raised.
 
         Keyword arguments:
-        uinfo -- a FileUpdateInfo object.
+        info -- a FileUpdateInfo or FileCommitInfo object.
         xml_data -- xml string.
         states -- maps each wc file to its current state
 
         """
-        if ((uinfo is not None and xml_data)
-            or (uinfo is None and xml_data is None)):
-            raise ValueError('either specify uinfo or xml_data')
-        super(PackageUpdateState, self).__init__()
+        if ((info is not None and xml_data)
+            or (info is None and xml_data is None)):
+            raise ValueError('either specify info or xml_data')
+        super(XMLTransactionState, self).__init__()
         self._path = path
         global _PKG_DATA
-        update_dir = _storefile(self._path, '_update')
-        data_dir = os.path.join(update_dir, _PKG_DATA)
+        trans_dir = _storefile(self._path, XMLTransactionState.DIR)
+        data_dir = os.path.join(trans_dir, _PKG_DATA)
         self.location = data_dir
         if xml_data:
             self._xml = fromstring(xml_data, entry=File, directory=Directory)
         else:
             self.cleanup()
-            os.mkdir(update_dir)
+            os.mkdir(trans_dir)
             os.mkdir(data_dir)
-            xml_data = ('<update state="%s"/>'
-                % PackageUpdateState.STATE_DOWNLOADING)
+            xml_data = ('<transaction name="%s" state="%s"/>'
+                % (name, initial_state))
             self._xml = fromstring(xml_data)
             self._xml.append(self._xml.makeelement('states'))
             self._add_states(states)
-            self._xml.append(self._xml.makeelement('updateinfo'))
-            self._xml.append(uinfo.remote_xml)
-            listnames = ('unchanged', 'added', 'deleted', 'modified',
-                         'conflicted', 'skipped')
-            for listname in listnames:
-                self._add_list(listname, uinfo)
+            self._xml.append(self._xml.makeelement('info'))
+            for listname in self._listnames():
+                self._add_list(listname, info)
             self._write()
 
     def _add_states(self, states):
@@ -315,11 +356,11 @@ class PackageUpdateState(object):
             elm = states_elm.makeelement('state', filename=filename, name=st)
             states_elm.append(elm)
 
-    def _add_list(self, listname, uinfo):
-        uinfo_elm = self._xml.find('updateinfo')
-        child = uinfo_elm.makeelement(listname)
-        uinfo_elm.append(child)
-        for filename in getattr(uinfo, listname):
+    def _add_list(self, listname, info):
+        info_elm = self._xml.find('info')
+        child = info_elm.makeelement(listname)
+        info_elm.append(child)
+        for filename in getattr(info, listname):
             data = objectify.DataElement(filename)
             elm = child.makeelement('file')
             child.append(elm)
@@ -332,9 +373,18 @@ class PackageUpdateState(object):
         _write_storefile(self._path, PackageUpdateState.FILENAME, xml_data)
 
     def processed(self, filename, new_state=None):
-        # remove file from updateinfo
-        uinfo_elm = self._xml.find('updateinfo')
-        elm = uinfo_elm.find("//*[text() = '%s']" % filename)
+        """The file filename was processed.
+
+        new_state is the new state of filename. If new_state
+        is None filename won't be tracked anymore. Afterwards
+        filename is removed from the info list.
+        A ValueError is raised if filename is not part of
+        a info list.
+
+        """
+        # remove file from info
+        info_elm = self._xml.find('info')
+        elm = info_elm.find("//*[text() = '%s']" % filename)
         if elm is None:
             raise ValueError("file \"%s\" is not known" % filename)
         elm.getparent().remove(elm)
@@ -349,6 +399,10 @@ class PackageUpdateState(object):
         else:
             elm.set('name', new_state)
         self._write()
+
+    @property
+    def name(self):
+        return self._xml.get('name')
 
     @property
     def state(self):
@@ -366,29 +420,29 @@ class PackageUpdateState(object):
             states[st.get('filename')] = st.get('name')
         return states
 
-    @property
-    def uinfo(self):
-        lists = {'unchanged': [], 'added': [], 'deleted': [], 'modified': [],
-                 'conflicted': [], 'skipped': []}
-        data = {}
-        directory = self._xml.find('directory')
-        uinfo_elm = self._xml.find('updateinfo')
-        for listname in lists.keys():
-            for entry in uinfo_elm.find(listname).iterchildren():
+    def _lists(self):
+        """Reconstructs info lists from xml data.
+
+        Return a listname -> list mapping/dict.
+
+        """
+        lists = {}
+        info_elm = self._xml.find('info')
+        for listname in self._listnames():
+            lists[listname] = []
+            for entry in info_elm.find(listname).iterchildren():
                 filename = entry.text
                 lists[listname].append(filename)
-                elm = directory.find("//entry[@name='%s']" % filename)
-                data[filename] = elm
-        return FileUpdateInfo(data=data, remote_xml=directory, **lists)
+        return lists
 
     def cleanup(self):
-        """Remove _update dir"""
-        path = _storefile(self._path, '_update')
+        """Remove _transaction dir"""
+        path = _storefile(self._path, XMLTransactionState.DIR)
         if os.path.exists(path):
             shutil.rmtree(path)
 
-    @staticmethod
-    def read_state(path):
+    @classmethod
+    def read_state(cls, path):
         """Tries to read the update state.
 
         path is the path to the package working copy.
@@ -398,18 +452,119 @@ class PackageUpdateState(object):
         """
         ret = None
         try:
-            data = _read_storefile(path, PackageUpdateState.FILENAME)
-            ret = PackageUpdateState(path, xml_data=data)
+            data = _read_storefile(path, XMLTransactionState.FILENAME)
+            ret = cls(path, xml_data=data)
         except ValueError as e:
             pass
         return ret
+
+    @staticmethod
+    def rollback(path):
+        """Revert current transaction (if possible).
+
+        Return True if a rollback is possible (this also
+        indicates that the rollback itself was successfull).
+        Otherwise False is returned.
+        A ValueError is raised if the transaction names/types
+        mismatch.
+
+        """
+        raise NotImplementedError()
+
+
+class PackageUpdateState(XMLTransactionState):
+    STATE_DOWNLOADING = '1'
+    STATE_UPDATING = '2'
+
+    def __init__(self, path, uinfo=None, xml_data=None, **states):
+        initial_state = PackageUpdateState.STATE_DOWNLOADING
+        super(PackageUpdateState, self).__init__(path, 'update', initial_state,
+                                                 uinfo, xml_data, **states)
+        if xml_data is None:
+            self._xml.append(uinfo.remote_xml)
+
+    def _listnames(self):
+        return ('unchanged', 'added', 'deleted', 'modified',
+                'conflicted', 'skipped')
+
+    @property
+    def uinfo(self):
+        """Return the FileUpdateInfo object."""
+        lists = self._lists()
+        directory = self._xml.find('directory')
+        data = {}
+        for filenames in lists.itervalues():
+            for filename in filenames:
+                elm = directory.find("//entry[@name='%s']" % filename)
+                data[filename] = elm
+        return FileUpdateInfo(data=data, remote_xml=directory, **lists)
+
+    @property
+    def filelist(self):
+        return self._xml.find('directory')
+
+    @staticmethod
+    def rollback(path):
+        ustate = PackageUpdateState.read_state(path)
+        if ustate.name != 'update':
+            raise ValueError("no update transaction")
+        if ustate.state == PackageUpdateState.STATE_DOWNLOADING:
+            ustate.cleanup()
+            return True
+        return False
+
+
+class PackageCommitState(XMLTransactionState):
+    STATE_UPLOADING = '10'
+    STATE_COMMITTING = '11'
+
+    def __init__(self, path, cinfo=None, xml_data=None, **states):
+        initial_state = PackageCommitState.STATE_UPLOADING
+        super(PackageCommitState, self).__init__(path, 'commit', initial_state,
+                                                 cinfo, xml_data, **states)
+
+    def _listnames(self):
+        return ('unchanged', 'added', 'deleted', 'modified',
+                'conflicted')
+
+    def append_filelist(self, filelist):
+        self._xml.append(filelist)
+        self._write()
+
+    @property
+    def filelist(self):
+        return self._xml.find('directory')
+
+    @property
+    def cinfo(self):
+        """Return the FileCommitInfo object."""
+        lists = self._lists()
+        return FileCommitInfo(**lists)
+
+    @staticmethod
+    def rollback(path):
+        cstate = PackageCommitState.read_state(path)
+        if cstate.name != 'commit':
+            raise ValueError("no commit transaction")
+        if cstate.state == PackageCommitState.STATE_COMMITTING:
+            return False
+        states = cstate.filestates
+        for filename in os.listdir(cstate.location):
+            wc_filename = os.path.join(path, filename)
+            commit_filename = os.path.join(cstate.location, filename)
+            st = states.get(filename, None)
+            if st is not None and not os.path.exists(wc_filename):
+                # restore original wcfile
+                os.rename(commit_filename, wc_filename)
+        cstate.cleanup()
+        return True
 
 
 class Package(object):
     """Represents a package working copy."""
 
-    def __init__(self, path, skip_handlers=[], merge_class=Merge,
-                 transaction_listener=[]):
+    def __init__(self, path, skip_handlers=[], commit_policies=[],
+                 merge_class=Merge, transaction_listener=[]):
         """Constructs a new package object.
 
         path is the path to the working copy.
@@ -435,6 +590,7 @@ class Package(object):
         self.project = wc_read_project(self.path)
         self.name = wc_read_package(self.path)
         self.skip_handlers = skip_handlers
+        self.commit_policies = commit_policies
         self.merge_class = merge_class
         self.notifier = TransactionNotifier(transaction_listener)
         with wc_lock(self.path) as lock:
@@ -557,7 +713,10 @@ class Package(object):
     def update(self, revision='latest'):
         with wc_lock(self.path) as lock:
             ustate = PackageUpdateState.read_state(self.path)
-            if (ustate is not None
+            if not self.is_updateable(rollback=True):
+                # commit can be the only pending transaction
+                raise PendingTransactionError('commit')
+            elif (ustate is not None
                 and ustate.state == PackageUpdateState.STATE_UPDATING):
                 self._update(ustate)
             else:
@@ -672,6 +831,24 @@ class Package(object):
             self.notifier.transfer('download', filename)
             f.write_to(path)
 
+    def is_updateable(self, rollback=False):
+        """Check if wc can be updated.
+
+        If rollback is True a pending transaction will be
+        rolled back (if possible).
+        Return True if an update is possible. Otherwise
+        False is returned.
+
+        """
+        ustate = PackageUpdateState.read_state(self.path)
+        if ustate is None:
+            return True
+        elif ustate.name == 'update':
+            return True
+        elif rollback:
+            return PackageCommitState.rollback(self.path)
+        return ustate.state == PackageCommitState.STATE_UPLOADING
+
     def _calculate_commitinfo(self, *filenames):
         unchanged = []
         added = []
@@ -703,6 +880,176 @@ class Package(object):
                 conflicted.append(filename)
         return FileCommitInfo(unchanged, added, deleted,
                               modified, conflicted)
+
+    def _apply_commit_policies(self, cinfo):
+        """Apply commit policies.
+
+        A ValueError is raised if a commit policy returns
+        an invalid unchanged or deleted list.
+
+        """
+        def cinfo_remove(filename):
+            cinfo.unchanged = [f for f in cinfo.unchanged if f != filename]
+            cinfo.added = [f for f in cinfo.added if f != filename]
+            cinfo.deleted = [f for f in cinfo.deleted if f != filename]
+            cinfo.modified = [f for f in cinfo.modified if f != filename]
+
+        filenames = self.files()
+        for policy in self.commit_policies:
+            unchanged, deleted = policy.apply(copy.deepcopy(cinfo))
+            dis = [f for f in unchanged if f in deleted]
+            if dis:
+                msg = "commit policy: unchanged and deleted not disjunct"
+                raise ValueError(msg)
+            lists = {'unchanged': unchanged, 'deleted': deleted}
+            for listname, data in lists.iteritems():
+                for filename in data:
+                    if not filename in filenames:
+                        msg = ("commit policy: file \"%s\" isn't tracked"
+                               % filename)
+                        raise ValueError(msg)
+                    cinfo_remove(filename)
+                    cinfo_list = getattr(cinfo, listname)
+                    cinfo_list.append(filename)
+
+    def commit(self, *filenames):
+        """Commit working copy.
+
+        If no filenames are specified all tracked files
+        are committed.
+
+        """
+        with wc_lock(self.path) as lock:
+            cstate = PackageCommitState.read_state(self.path)
+            if not self.is_commitable(rollback=True):
+                # update can be the only pending transaction
+                raise PendingTransactionError('update')
+            elif (cstate is not None
+                and cstate.state == PackageCommitState.STATE_COMMITTING):
+                self._commit(cstate)
+            else:
+                cinfo = self._calculate_commitinfo(*filenames)
+                self._apply_commit_policies(cinfo)
+                conflicts = cinfo.conflicted
+                conflicts += [c for c in self.files() if self.status(c) == 'C']
+                if conflicts:
+                    raise FileConflictError(conflicts)
+                if not self.notifier.begin('commit', cinfo):
+                    msg = 'listener aborted commit'
+                    self.notifier.finished('commit', aborted=True,
+                                           abort_reason=msg)
+                    return
+                states = dict([(f, self.status(f)) for f in self.files()])
+                cstate = PackageCommitState(self.path, cinfo=cinfo, **states)
+                self._commit(cstate)
+
+    def _commit(self, cstate):
+        cinfo = cstate.cinfo
+        # FIXME: validation
+        if cstate.state == PackageCommitState.STATE_UPLOADING:
+            cfilelist = self._calculate_commit_filelist(cinfo)
+            missing = self._commit_filelist(cfilelist)
+            send_filenames = self._read_send_files(missing)
+            if send_filenames:
+                self._commit_files(cstate, send_filenames)
+                filelist = self._commit_filelist(cfilelist)
+            else:
+                filelist = missing
+            cstate.append_filelist(filelist)
+            cstate.state = PackageCommitState.STATE_COMMITTING
+        # only local changes left
+        for filename in cinfo.deleted:
+            store_filename = wc_pkg_data_filename(self.path, filename)
+            # it might be already removed (if we resume a commit)
+            if os.path.exists(store_filename):
+                os.unlink(store_filename)
+            cstate.processed(filename, None)
+            self.notifier.processed(filename, None)
+        for filename in os.listdir(cstate.location):
+            wc_filename = os.path.join(self.path, filename)
+            store_filename = wc_pkg_data_filename(self.path, filename)
+            commit_filename = os.path.join(cstate.location, filename)
+            if os.path.exists(store_filename):
+                # just to reduce disk space usage
+                os.unlink(store_filename)
+            copy_file(commit_filename, wc_filename)
+            os.rename(commit_filename, store_filename)
+        self._files.merge(cstate.filestates, cstate.filelist)
+        # fixup mtimes
+        for filename in self.files():
+            if self.status(filename) != ' ':
+                continue
+            entry = self._files.find(filename)
+            wc_filename = os.path.join(self.path, filename)
+            store_filename = wc_pkg_data_filename(self.path, filename)
+            mtime = int(entry.get('mtime'))
+            os.utime(wc_filename, (-1, mtime))
+            os.utime(store_filename, (-1, mtime))
+        cstate.cleanup()
+        self.notifier.finished('commit', aborted=False)
+
+    def _calculate_commit_filelist(self, cinfo):
+        def _append_entry(xml, entry):
+            xml.append(xml.makeelement('entry', name=entry.get('name'),
+                                       md5=entry.get('md5')))
+
+        xml = fromstring('<directory/>')
+        for filename in cinfo.unchanged:
+            if self.status(filename) == 'A':
+                # skip added files
+                continue
+            _append_entry(xml, self._files.find(filename))
+        for filename in cinfo.added + cinfo.modified:
+            wc_filename = os.path.join(self.path, filename)
+            md5 = file_md5(wc_filename)
+            _append_entry(xml, {'name': filename, 'md5': md5})
+        xml_data = etree.tostring(xml, pretty_print=True)
+        return xml_data
+
+    def _commit_filelist(self, xml_data):
+        request = Osc.get_osc().get_reqobj()
+        path = "/source/%s/%s" % (self.project, self.name)
+        f = request.post(path, data=xml_data, cmd='sourcecommitfilelist')
+        return fromstring(f.read(), entry=File, directory=Directory)
+
+    def _read_send_files(self, directory):
+        if directory.get('error') != 'missing':
+            return []
+        send_filenames = []
+        for entry in directory:
+            send_filenames.append(entry.get('name'))
+        return send_filenames
+
+    def _commit_files(self, cstate, send_filenames):
+        for filename in send_filenames:
+            wc_filename = os.path.join(self.path, filename)
+            path = "/source/%s/%s/%s" % (self.project, self.name, filename)
+            lfile = RWLocalFile(wc_filename, wb_path=path, append=True)
+            self.notifier.transfer('upload', filename)
+            lfile.write_back(force=True, rev='repository')
+            cstate.processed(filename, ' ')
+            commit_filename = os.path.join(cstate.location, filename)
+            # move wcfile into transaction dir
+            os.rename(lfile.path, commit_filename)
+            self.notifier.processed(filename, ' ')
+
+    def is_commitable(self, rollback=False):
+        """Check if wc can be committed.
+
+        If rollback is True a pending transaction will be
+        rolled back (if possible).
+        Return True if a commit is possible. Otherwise
+        False is returned.
+
+        """
+        cstate = PackageCommitState.read_state(self.path)
+        if cstate is None:
+            return True
+        elif cstate.name == 'commit':
+            return True
+        elif rollback:
+            return PackageUpdateState.rollback(self.path)
+        return ustate.state == PackageUpdateState.STATE_DOWNLOADING
 
     def resolved(self, filename):
         """Remove conflicted state from filename.
