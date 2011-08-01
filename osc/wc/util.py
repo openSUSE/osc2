@@ -11,7 +11,7 @@ from tempfile import NamedTemporaryFile
 
 from lxml import etree, objectify
 
-from osc.source import File, Directory
+from osc.source import File, Directory, Linkinfo
 from osc.util.xml import fromstring
 
 __all__ = ['wc_is_project', 'wc_is_package', 'wc_read_project',
@@ -284,9 +284,18 @@ class XMLFileTracker(XMLEntryTracker):
                 self.set(filename, st)
         self.write()
 
+    def revision_data(self):
+        """Return a dict which contains the revision data."""
+        return {'rev': self._xml.get('rev'), 'srcmd5': self._xml.get('srcmd5')}
+
+    def is_link(self):
+        """Return True if package is a link."""
+        return self._xml.find('linkinfo') is not None
+
     @classmethod
     def _fromstring(cls, data):
-        return fromstring(data, entry=File, directory=Directory)
+        return fromstring(data, entry=File, directory=Directory,
+                          linkinfo=Linkinfo)
 
     @classmethod
     def filename(cls):
