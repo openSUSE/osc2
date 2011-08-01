@@ -38,6 +38,24 @@ class File(objectify.ObjectifiedElement):
         return RORemoteFile(path, mtime=mtime, **kwargs)
 
 
+class Linkinfo(objectify.ObjectifiedElement):
+    """Represents a linkinfo entry."""
+
+    def is_expanded(self):
+        """Return True package is expanded."""
+        lsrcmd5 = self.get('lsrcmd5')
+        xsrcmd5 = self.get('xsrcmd5')
+        return xsrcmd5 is None and lsrcmd5 is not None
+
+    def is_unexpanded(self):
+        """Return True if package is unexpanded."""
+        return not self.is_expanded()
+
+    def has_error(self):
+        """Return True if linkinfo has an error."""
+        return self.get('error') is not None
+
+
 class Project(object):
     """Class used to access /source/project data"""
     LIST_SCHEMA = ''
@@ -99,7 +117,8 @@ class Package(object):
         if not 'schema' in kwargs:
             kwargs['schema'] = Package.LIST_SCHEMA
         f = request.get(path, **kwargs)
-        directory = fromstring(f.read(), directory=Directory, entry=File)
+        directory = fromstring(f.read(), directory=Directory, entry=File,
+                               linkinfo=Linkinfo)
         # this is needed by the file class
         directory.set('project', self.project)
         return directory
