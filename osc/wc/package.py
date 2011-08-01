@@ -9,7 +9,7 @@ import subprocess
 from lxml import etree, objectify
 
 from osc.core import Osc
-from osc.source import File, Directory
+from osc.source import File, Directory, Linkinfo
 from osc.source import Package as SourcePackage
 from osc.remote import RWLocalFile
 from osc.util.xml import fromstring
@@ -77,8 +77,18 @@ class WCOutOfDateError(Exception):
 
     """
 
-    def __init__(self):
+    def __init__(self, local, remote, msg=''):
+        """Constructs a new WCOutOfDateError object.
+
+        local is the wc's current revision.
+        remote is the latest remote revision.
+        msg is an optional error str.
+
+        """
         super(WCOutOfDateError, self).__init__()
+        self.local = local
+        self.remote = remote
+        self.msg = msg
 
 
 class TransactionListener(object):
@@ -335,7 +345,8 @@ class XMLTransactionState(object):
         data_dir = os.path.join(trans_dir, _PKG_DATA)
         self.location = data_dir
         if xml_data:
-            self._xml = fromstring(xml_data, entry=File, directory=Directory)
+            self._xml = fromstring(xml_data, entry=File, directory=Directory,
+                                   linkinfo=Linkinfo)
         else:
             self.cleanup()
             os.mkdir(trans_dir)
@@ -934,6 +945,11 @@ class Package(object):
                 conflicts += [c for c in self.files() if self.status(c) == 'C']
                 if conflicts:
                     raise FileConflictError(conflicts)
+                remote = self.latest_revision()
+                local = self._files.revision_data().get('srcmd5')
+                if local != remote:
+                    msg = 'commit not possible. Please update first'
+                    raise WCOutOfDateError(local, remote, msg)
                 if not self.notifier.begin('commit', cinfo):
                     msg = 'listener aborted commit'
                     self.notifier.finished('commit', aborted=True,
@@ -1050,6 +1066,18 @@ class Package(object):
         elif rollback:
             return PackageUpdateState.rollback(self.path)
         return ustate.state == PackageUpdateState.STATE_DOWNLOADING
+
+    def latest_revision(self):
+        """Return the latest remote revision."""
+        spkg = SourcePackage(self.project, self.name)
+        directory = spkg.list(rev='latest')
+        if self._files.is_link():
+            if directory.linkinfo.has_error():
+                # FIXME: proper error handling
+                return 'latest'
+            elif self._files.linkinfo.is_expanded():
+                return directory.linkinfo.get('xsrcmd5')
+        return directory.get('srcmd5')
 
     def resolved(self, filename):
         """Remove conflicted state from filename.
