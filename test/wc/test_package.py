@@ -1087,6 +1087,8 @@ class TestPackage(OscTest):
         self.assertEqual(cinfo.modified, [])
         self.assertEqual(cinfo.conflicted, [])
 
+    @GET('http://localhost/source/prj/update_2?rev=latest',
+         file='commit_1_latest.xml')
     @POST('http://localhost/source/prj/update_2?cmd=sourcecommitfilelist',
           expfile='commit_1_lfiles.xml', file='commit_1_mfiles.xml')
     @PUT('http://localhost/source/prj/update_2/foo?rev=repository',
@@ -1112,6 +1114,8 @@ class TestPackage(OscTest):
         self.assertEqual(pkg.status('bar'), ' ')
         self.assertEqual(pkg.status('foobar'), ' ')
 
+    @GET('http://localhost/source/prj/update_11?rev=latest',
+         file='commit_2_latest.xml')
     @POST('http://localhost/source/prj/update_11?cmd=sourcecommitfilelist',
           expfile='commit_2_lfiles.xml', file='commit_2_mfiles.xml')
     @PUT('http://localhost/source/prj/update_11/foo?rev=repository',
@@ -1138,6 +1142,10 @@ class TestPackage(OscTest):
         self.assertEqual(pkg.status('bar'), '?')
         self.assertEqual(pkg.status('foobar'), '?')
 
+    @GET('http://localhost/source/prj/update_11?rev=latest',
+         file='commit_2_latest.xml')
+    @GET('http://localhost/source/prj/update_11?rev=latest',
+         file='commit_2_latest.xml')
     @POST('http://localhost/source/prj/update_11?cmd=sourcecommitfilelist',
           expfile='commit_3_lfiles.xml', file='commit_2_mfiles.xml')
     @PUT('http://localhost/source/prj/update_11/foo?rev=repository',
@@ -1177,6 +1185,8 @@ class TestPackage(OscTest):
         self.assertEqual(tl._processed.keys(), ['foo'])
         self.assertEqual(tl._processed['foo'], ' ')
 
+    @GET('http://localhost/source/prj/update_11?rev=latest',
+         file='commit_2_latest.xml')
     @POST('http://localhost/source/prj/update_11?cmd=sourcecommitfilelist',
           expfile='commit_4_lfiles.xml', file='commit_4_files.xml')
     def test_commit4(self):
@@ -1196,6 +1206,8 @@ class TestPackage(OscTest):
         self.assertEqual(pkg.status('bar'), '?')
         self.assertEqual(pkg.status('foobar'), 'D')
 
+    @GET('http://localhost/source/prj/update_11?rev=latest',
+         file='commit_2_latest.xml')
     @POST('http://localhost/source/prj/update_11?cmd=sourcecommitfilelist',
           expfile='commit_4_lfiles.xml', file='commit_4_files.xml')
     def test_commit5(self):
@@ -1224,6 +1236,8 @@ class TestPackage(OscTest):
         self.assertEqual(pkg.status('bar'), '?')
         self.assertEqual(pkg.status('foobar'), 'D')
 
+    @GET('http://localhost/source/prj/commit_6?rev=latest',
+         file='commit_6_latest.xml')
     @POST('http://localhost/source/prj/commit_6?cmd=sourcecommitfilelist',
           expfile='commit_6_lfiles1.xml', file='commit_6_mfiles1.xml')
     @PUT('http://localhost/source/prj/commit_6/foo?rev=repository',
