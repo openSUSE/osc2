@@ -7,6 +7,7 @@ instance.
 import os
 import errno
 import fcntl
+import shutil
 from tempfile import NamedTemporaryFile
 
 from lxml import etree, objectify
@@ -302,6 +303,177 @@ class XMLFileTracker(XMLEntryTracker):
         return '_files'
 
 
+class XMLTransactionState(object):
+    """Represents the state of a transaction"""
+
+    DIR = '_transaction'
+    FILENAME = os.path.join(DIR, 'state')
+
+    def __init__(self, path, name, initial_state, info=None,
+                 xml_data=None, **states):
+        """Constructs a new XMLTransactionState object.
+
+        path is the path to the package working copy.
+        name is the name of the transaction.
+        initial_state is the initial state of the transaction.
+        Either info or xml_data has to be specified otherwise
+        a ValueError is raised.
+
+        Keyword arguments:
+        info -- a FileUpdateInfo or FileCommitInfo object.
+        xml_data -- xml string.
+        states -- maps each wc file to its current state
+
+        """
+        if ((info is not None and xml_data)
+            or (info is None and xml_data is None)):
+            raise ValueError('either specify info or xml_data')
+        super(XMLTransactionState, self).__init__()
+        self._path = path
+        global _PKG_DATA
+        trans_dir = _storefile(self._path, XMLTransactionState.DIR)
+        data_dir = os.path.join(trans_dir, _PKG_DATA)
+        self.location = data_dir
+        if xml_data:
+            self._xml = fromstring(xml_data, entry=File, directory=Directory,
+                                   linkinfo=Linkinfo)
+        else:
+            self.cleanup()
+            os.mkdir(trans_dir)
+            os.mkdir(data_dir)
+            xml_data = ('<transaction name="%s" state="%s"/>'
+                % (name, initial_state))
+            self._xml = fromstring(xml_data)
+            self._xml.append(self._xml.makeelement('states'))
+            self._add_states(states)
+            self._xml.append(self._xml.makeelement('info'))
+            for listname in self._listnames():
+                self._add_list(listname, info)
+            self._write()
+
+    def _add_states(self, states):
+        states_elm = self._xml.find('states')
+        for filename, st in states.iteritems():
+            elm = states_elm.makeelement('state', filename=filename, name=st)
+            states_elm.append(elm)
+
+    def _add_list(self, listname, info):
+        info_elm = self._xml.find('info')
+        child = info_elm.makeelement(listname)
+        info_elm.append(child)
+        for filename in getattr(info, listname):
+            data = objectify.DataElement(filename)
+            elm = child.makeelement('file')
+            child.append(elm)
+            getattr(child, 'file').__setitem__(-1, data)
+
+    def _write(self):
+        objectify.deannotate(self._xml)
+        etree.cleanup_namespaces(self._xml)
+        xml_data = etree.tostring(self._xml, pretty_print=True)
+        _write_storefile(self._path, XMLTransactionState.FILENAME, xml_data)
+
+    def processed(self, filename, new_state=None):
+        """The file filename was processed.
+
+        new_state is the new state of filename. If new_state
+        is None filename won't be tracked anymore. Afterwards
+        filename is removed from the info list.
+        A ValueError is raised if filename is not part of
+        a info list.
+
+        """
+        # remove file from info
+        info_elm = self._xml.find('info')
+        elm = info_elm.find("//*[text() = '%s']" % filename)
+        if elm is None:
+            raise ValueError("file \"%s\" is not known" % filename)
+        elm.getparent().remove(elm)
+        # update states
+        elm = self._xml.find("//state[@filename = '%s']" % filename)
+        if elm is None:
+            self._add_states({filename: new_state})
+            elm = self._xml.find("//state[@filename = '%s']" % filename)
+        if new_state is None:
+            # remove node
+            elm.getparent().remove(elm)
+        else:
+            elm.set('name', new_state)
+        self._write()
+
+    @property
+    def name(self):
+        return self._xml.get('name')
+
+    @property
+    def state(self):
+        return self._xml.get('state')
+
+    @state.setter
+    def state(self, new_state):
+        self._xml.set('state', new_state)
+        self._write()
+
+    @property
+    def filestates(self):
+        states = {}
+        for st in self._xml.find('states').iterchildren():
+            states[st.get('filename')] = st.get('name')
+        return states
+
+    def _lists(self):
+        """Reconstructs info lists from xml data.
+
+        Return a listname -> list mapping/dict.
+
+        """
+        lists = {}
+        info_elm = self._xml.find('info')
+        for listname in self._listnames():
+            lists[listname] = []
+            for entry in info_elm.find(listname).iterchildren():
+                filename = entry.text
+                lists[listname].append(filename)
+        return lists
+
+    def cleanup(self):
+        """Remove _transaction dir"""
+        path = _storefile(self._path, XMLTransactionState.DIR)
+        if os.path.exists(path):
+            shutil.rmtree(path)
+
+    @classmethod
+    def read_state(cls, path):
+        """Tries to read the update state.
+
+        path is the path to the package working copy.
+        If the update state file does not exist None
+        is returned. Otherwise a XMLTransactionState subclass
+        instance is returned.
+
+        """
+        ret = None
+        try:
+            data = _read_storefile(path, XMLTransactionState.FILENAME)
+            ret = cls(path, xml_data=data)
+        except ValueError as e:
+            pass
+        return ret
+
+    @staticmethod
+    def rollback(path):
+        """Revert current transaction (if possible).
+
+        Return True if a rollback is possible (this also
+        indicates that the rollback itself was successfull).
+        Otherwise False is returned.
+        A ValueError is raised if the transaction names/types
+        mismatch.
+
+        """
+        raise NotImplementedError()
+
+
 def _storedir(path):
     """Return the storedir path"""
     global _STORE
@@ -560,6 +732,9 @@ def wc_init(path, ext_storedir=None):
         msg = "no permission to create a storedir (path: \"%s\")" % path
         raise ValueError(msg)
     if ext_storedir is not None:
+        # hmm should we check if path and ext_storedir have
+        # a commonprefix?
+        ext_storedir = os.path.relpath(ext_storedir, path)
         os.symlink(ext_storedir, storedir)
     else:
         os.mkdir(storedir)
