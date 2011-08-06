@@ -386,7 +386,7 @@ class TestPackage(OscTest):
         ustate = PackageUpdateState.read_state(path)
         self.assertIsNotNone(ustate)
         uinfo = ustate.uinfo
-        pkg = Package(path)
+        pkg = Package(path, finish_pending_transaction=False)
         pkg._download(ustate.location, uinfo.data, *uinfo.added)
         fname = os.path.join('foo_dl_state', '.osc', '_transaction',
                              'data', 'added')
@@ -734,7 +734,7 @@ class TestPackage(OscTest):
     def test_update13(self):
         """test update (resume update, state: STATE_UPDATING)"""
         path = self.fixture_file('update_13')
-        pkg = Package(path)
+        pkg = Package(path, finish_pending_transaction=False)
         self.assertEqual(pkg.status('foo'), 'M')
         self.assertEqual(pkg.status('bar'), 'D')
         self.assertEqual(pkg.status('foobar'), 'D')
@@ -752,10 +752,28 @@ class TestPackage(OscTest):
         self.assertEqual(pkg.status('bar'), '?')
         self.assertEqual(pkg.status('foobar'), '?')
 
+    def test_update13_1(self):
+        """test update (transaction is automatically finished)"""
+        path = self.fixture_file('update_13')
+        # finish pending transaction
+        pkg = Package(path, finish_pending_transaction=True)
+        # foo was merged
+        self._check_md5(path, 'foo', 'a0569b11c94568c8e273e6fea90d642f')
+        self._check_md5(path, 'foo', '0cd4f0c10ca24c7fbdbe9889651680b2',
+                        data=True)
+        self._not_exists(path, 'bar')
+        self._not_exists(path, 'bar', data=True)
+        # foobar was modified before marked for deletion
+        self._exists(path, 'foobar')
+        self._not_exists(path, 'foobar', data=True)
+        self.assertEqual(pkg.status('foo'), 'M')
+        self.assertEqual(pkg.status('bar'), '?')
+        self.assertEqual(pkg.status('foobar'), '?')
+
     def test_update14(self):
         """test update (pending commit transaction)"""
         path = self.fixture_file('commit_6_resume')
-        pkg = Package(path)
+        pkg = Package(path, finish_pending_transaction=False)
         self.assertRaises(PendingTransactionError, pkg.update)
 
     @GET('http://localhost/source/prj/commit_6?rev=latest',
@@ -763,7 +781,7 @@ class TestPackage(OscTest):
     def test_update15(self):
         """test update (rollback commit transaction)"""
         path = self.fixture_file('commit_6_uploading')
-        pkg = Package(path)
+        pkg = Package(path, finish_pending_transaction=False)
         self._not_exists(path, 'foo')
         pkg.update()
         self._exists(path, 'foo')
@@ -890,6 +908,22 @@ class TestPackage(OscTest):
         self._exists(path, '../update_5_files.xml')
         self.assertRaises(ValueError, pkg.add, '../update_5_files.xml')
 
+    def test_add4(self):
+        """test add (pending transaction (rollback possible))"""
+        path = self.fixture_file('commit_6_uploading')
+        pkg = Package(path, finish_pending_transaction=False)
+        self.assertEqual(pkg.status('unversioned'), '?')
+        pkg.add('unversioned')
+        self.assertEqual(pkg.status('unversioned'), 'A')
+
+    def test_add5(self):
+        """test add (pending transaction (rollback not possible))"""
+        path = self.fixture_file('commit_6_resume')
+        pkg = Package(path, finish_pending_transaction=False)
+        self.assertEqual(pkg.status('unversioned'), '?')
+        self.assertRaises(PendingTransactionError, pkg.add, 'unversioned')
+        self.assertEqual(pkg.status('unversioned'), '?')
+
     def test_remove1(self):
         """test remove unmodified file"""
         path = self.fixture_file('status1')
@@ -962,6 +996,23 @@ class TestPackage(OscTest):
         self.assertRaises(ValueError, pkg.remove, 'nonexistent')
         # disallow path like filenames
         self.assertRaises(ValueError, pkg.remove, '../update_7_files.xml')
+
+    def test_remove8(self):
+        """test remove (pending transaction (rollback possible))"""
+        path = self.fixture_file('commit_6_uploading')
+        pkg = Package(path, finish_pending_transaction=False)
+        # file is already marked for deletion
+        self.assertEqual(pkg.status('foobar'), 'D')
+        pkg.remove('foobar')
+        self.assertEqual(pkg.status('foobar'), 'D')
+
+    def test_remove9(self):
+        """test remove (pending transaction (rollback not possible))"""
+        path = self.fixture_file('commit_6_resume')
+        pkg = Package(path, finish_pending_transaction=False)
+        self.assertEqual(pkg.status('foobar'), 'D')
+        self.assertRaises(PendingTransactionError, pkg.remove, 'foobar')
+        self.assertEqual(pkg.status('foobar'), 'D')
 
     def test_calculate_commitinfo1(self):
         """test _calculate_commitinfo"""
@@ -1290,8 +1341,30 @@ class TestPackage(OscTest):
     def test_commit9(self):
         """test commit (resume commit, PackageCommitState.STATE_COMMITTING)"""
         path = self.fixture_file('commit_6_resume')
-        pkg = Package(path)
+        pkg = Package(path, finish_pending_transaction=False)
         pkg.commit('foo', 'bar', 'foobar', 'added')
+        self._check_md5(path, 'foo', '5fb9f8bed64fb741e760b0db312b7c5a',
+                        data=True)
+        self._exists(path, 'added')
+        self._exists(path, 'added', data=True)
+        self._check_md5(path, 'added', '8dee900466b680b0717524878e42bf04',
+                        data=True)
+        self._not_exists(path, 'bar')
+        self._not_exists(path, 'bar', data=True)
+        # foobar was modified before deletion
+        self._exists(path, 'foobar')
+        self._not_exists(path, 'foobar', data=True)
+        self.assertEqual(pkg.status('foo'), ' ')
+        self.assertEqual(pkg.status('bar'), '?')
+        self.assertEqual(pkg.status('foobar'), '?')
+        self.assertEqual(pkg.status('missing'), '!')
+        self.assertEqual(pkg.status('added'), ' ')
+
+    def test_commit9_1(self):
+        """test commit (finish pending transaction)"""
+        path = self.fixture_file('commit_6_resume')
+        # finish pending transaction
+        pkg = Package(path, finish_pending_transaction=True)
         self._check_md5(path, 'foo', '5fb9f8bed64fb741e760b0db312b7c5a',
                         data=True)
         self._exists(path, 'added')
@@ -1312,8 +1385,17 @@ class TestPackage(OscTest):
     def test_commit10(self):
         """test commit (pending update transaction)"""
         path = self.fixture_file('update_13')
-        pkg = Package(path)
+        pkg = Package(path, finish_pending_transaction=False)
         self.assertRaises(PendingTransactionError, pkg.commit)
+
+    def test_commit11(self):
+        """test commit (finish pending commit transaction)"""
+        path = self.fixture_file('commit_6_uploading')
+        self._not_exists(path, 'foo')
+        pkg = Package(path, finish_pending_transaction=True)
+        self._exists(path, 'foo')
+        self.assertEqual(pkg.status('foo'), 'M')
+        self._not_exists(path, 'some_tmp')
 
 if __name__ == '__main__':
     unittest.main()
