@@ -6,10 +6,11 @@ import stat
 
 from lxml import etree
 
+from osc.wc.base import (TransactionListener, FileConflictError,
+                         PendingTransactionError)
 from osc.wc.package import (Package, FileSkipHandler, PackageUpdateState,
                             FileUpdateInfo, file_md5, is_binaryfile,
-                            TransactionListener, FileConflictError,
-                            FileCommitPolicy, PendingTransactionError)
+                            FileCommitPolicy)
 from osc.wc.util import WCInconsistentError
 from osc.source import Package as SourcePackage
 from test.osctest import OscTest
@@ -20,8 +21,11 @@ def suite():
     return unittest.makeSuite(TestPackage)
 
 
+UPLOAD_REV = '<revision rev="repository"><srcmd5>empty</srcmd5></repository>'
+
+
 class TL(TransactionListener):
-    def __init__(self, abort=True):
+    def __init__(self, abort=False):
         self._begin = []
         self._finished = []
         self._transfer = []
@@ -43,7 +47,6 @@ class TL(TransactionListener):
 
 
 class TestPackage(OscTest):
-    UPLOAD_REV = '<revision rev="repository"><srcmd5>empty</srcmd5></repository>'
 
     def __init__(self, *args, **kwargs):
         kwargs['fixtures_dir'] = 'wc/test_package_fixtures'
@@ -54,20 +57,6 @@ class TestPackage(OscTest):
         if data:
             fname = os.path.join(path, '.osc', 'data', filename)
         self.assertEqual(file_md5(fname), md5)
-
-    def _exists(self, path, filename, store=False, data=False):
-        if store and data:
-            raise ValueError('store and data are mutually exclusive')
-        fname = os.path.join(path, filename)
-        if store:
-            fname = os.path.join(path, '.osc', filename)
-        elif data:
-            fname = os.path.join(path, '.osc', 'data', filename)
-        self.assertTrue(os.path.exists(fname))
-
-    def _not_exists(self, path, filename, store=False, data=False):
-        self.assertRaises(AssertionError, self._exists, path, filename,
-                          store, data)
 
     def test1(self):
         """init a flat package dir"""
@@ -330,8 +319,8 @@ class TestPackage(OscTest):
                                data, remote_xml)
         ustate = PackageUpdateState(path, uinfo=uinfo, file=' ')
         self.assertEqual(ustate.name, 'update')
-        self.assertEqual(ustate.state, PackageUpdateState.STATE_DOWNLOADING)
-        uinfo_new = ustate.uinfo
+        self.assertEqual(ustate.state, PackageUpdateState.STATE_PREPARE)
+        uinfo_new = ustate.info
         self.assertEqual(uinfo_new.unchanged, uinfo.unchanged)
         self.assertEqual(uinfo_new.added, uinfo.added)
         self.assertEqual(uinfo_new.deleted, [])
@@ -340,7 +329,7 @@ class TestPackage(OscTest):
         self.assertEqual(uinfo_new.skipped, [])
         xml = etree.tostring(uinfo_new.remote_xml, pretty_print=True)
         self.assertEqualFile(xml, 'foo_list1_ret.xml')
-        self.assertEqual(ustate.filestates, {'file': ' '})
+        self.assertEqual(ustate.entrystates, {'file': ' '})
         # change state
         ustate.state = PackageUpdateState.STATE_UPDATING
         ustate = None
@@ -348,7 +337,7 @@ class TestPackage(OscTest):
         ustate = PackageUpdateState.read_state(path)
         self.assertIsNotNone(ustate)
         self.assertEqual(ustate.state, PackageUpdateState.STATE_UPDATING)
-        uinfo_new = ustate.uinfo
+        uinfo_new = ustate.info
         self.assertEqual(uinfo_new.unchanged, uinfo.unchanged)
         self.assertEqual(uinfo_new.added, uinfo.added)
         self.assertEqual(uinfo_new.deleted, [])
@@ -359,12 +348,12 @@ class TestPackage(OscTest):
         self.assertEqualFile(xml, 'foo_list1_ret.xml')
         # test cleanup
         ustate = PackageUpdateState(path, uinfo=uinfo, file=' ')
-        self.assertEqual(ustate.state, PackageUpdateState.STATE_DOWNLOADING)
+        self.assertEqual(ustate.state, PackageUpdateState.STATE_PREPARE)
         # test processed
         self.assertRaises(ValueError, ustate.processed, 'non_existent')
         ustate.processed('added', ' ')
-        self.assertEqual(ustate.filestates, {'file': ' ', 'added': ' '})
-        uinfo = ustate.uinfo
+        self.assertEqual(ustate.entrystates, {'file': ' ', 'added': ' '})
+        uinfo = ustate.info
         self.assertEqual(uinfo.unchanged, ['file'])
         self.assertEqual(uinfo.added, [])
         # check if processed file was really removed
@@ -373,8 +362,8 @@ class TestPackage(OscTest):
         self.assertEqual(uinfo.added, [])
         # test processed (remove from states)
         ustate.processed('file', None)
-        self.assertEqual(ustate.filestates, {'added': ' '})
-        uinfo = ustate.uinfo
+        self.assertEqual(ustate.entrystates, {'added': ' '})
+        uinfo = ustate.info
         self.assertEqual(uinfo.unchanged, [])
         self.assertEqual(uinfo.added, [])
 
@@ -385,7 +374,7 @@ class TestPackage(OscTest):
         path = self.fixture_file('foo_dl_state')
         ustate = PackageUpdateState.read_state(path)
         self.assertIsNotNone(ustate)
-        uinfo = ustate.uinfo
+        uinfo = ustate.info
         pkg = Package(path, finish_pending_transaction=False)
         pkg._download(ustate.location, uinfo.data, *uinfo.added)
         fname = os.path.join('foo_dl_state', '.osc', '_transaction',
@@ -592,12 +581,11 @@ class TestPackage(OscTest):
         self.assertEqual(pkg.status('exists'), '?')
         self.assertRaises(FileConflictError, pkg.update)
 
-    @GET('http://localhost/source/foo/status1?rev=latest',
-         file='status1_list1.xml')
     def test_update8(self):
         """test update (raise FileConflictException)"""
         path = self.fixture_file('status1')
         pkg = Package(path)
+        # is_updateable returns False because there are conflicted files
         self.assertRaises(FileConflictError, pkg.update)
 
     @GET('http://localhost/source/prj/update_9?rev=latest',
