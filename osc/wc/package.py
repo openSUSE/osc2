@@ -743,7 +743,7 @@ class Package(WorkingCopy):
     def _commit_filelist(self, xml_data):
         request = Osc.get_osc().get_reqobj()
         path = "/source/%s/%s" % (self.project, self.name)
-        f = request.post(path, data=xml_data, cmd='sourcecommitfilelist')
+        f = request.post(path, data=xml_data, cmd='commitfilelist')
         return fromstring(f.read(), entry=File, directory=Directory)
 
     def _read_send_files(self, directory):
