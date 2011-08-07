@@ -145,7 +145,7 @@ class MockUrllib2Request(unittest.TestCase):
         urllib2.build_opener = build_opener
         self._tmp_dir = tempfile.mkdtemp(prefix='osc_test')
         self._tmp_fixtures = os.path.join(self._tmp_dir, 'fixtures')
-        shutil.copytree(self._fixtures_dir, self._tmp_fixtures)
+        shutil.copytree(self._fixtures_dir, self._tmp_fixtures, symlinks=True)
 
     def tearDown(self):
         super(MockUrllib2Request, self).tearDown()
