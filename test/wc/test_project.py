@@ -3,10 +3,12 @@ import unittest
 import tempfile
 import shutil
 
+from osc.wc.base import FileConflictError
 from osc.wc.project import Project
 from osc.wc.util import WCInconsistentError
 from test.osctest import OscTest
-from test.httptest import GET
+from test.httptest import GET, PUT, POST, DELETE
+from test.wc.test_package import TL, UPLOAD_REV
 
 
 def suite():
@@ -14,6 +16,7 @@ def suite():
 
 
 class TestProject(OscTest):
+
     def __init__(self, *args, **kwargs):
         kwargs['fixtures_dir'] = 'wc/test_project_fixtures'
         super(TestProject, self).__init__(*args, **kwargs)
@@ -88,7 +91,7 @@ class TestProject(OscTest):
         uinfo = prj._calculate_updateinfo()
         self.assertEqual(uinfo.candidates, ['foo', 'abc'])
         self.assertEqual(uinfo.added, ['osc'])
-        self.assertEqual(uinfo.deleted, ['del'])
+        self.assertEqual(uinfo.deleted, ['del', 'foo_modified'])
         self.assertEqual(uinfo.conflicted, ['xxx'])
 
     @GET('http://localhost/source/prj2', file='prj2_list2.xml')
@@ -97,11 +100,23 @@ class TestProject(OscTest):
         path = self.fixture_file('prj2')
         prj = Project(path)
         uinfo = prj._calculate_updateinfo()
-        self.assertEqual(uinfo.candidates, ['foo'])
+        self.assertEqual(uinfo.candidates, ['foo', 'foo_modified'])
         self.assertEqual(uinfo.added, ['osc'])
         self.assertEqual(uinfo.deleted, ['abc', 'xxx', 'del'])
         # local state: A
         self.assertEqual(uinfo.conflicted, ['bar'])
+
+    @GET('http://localhost/source/prj2', file='prj2_list2.xml')
+    def test8_1(self):
+        """test _calculate_updateinfo 3 (specify packages)"""
+        path = self.fixture_file('prj2')
+        prj = Project(path)
+        uinfo = prj._calculate_updateinfo('foo', 'osc', 'del')
+        self.assertEqual(uinfo.candidates, ['foo'])
+        self.assertEqual(uinfo.added, ['osc'])
+        self.assertEqual(uinfo.deleted, ['del'])
+        # no conflicts because bar shouldn't be added/updated
+        self.assertEqual(uinfo.conflicted, [])
 
     @GET('http://localhost/source/prj2', text='<directory count="0"/>')
     def test9(self):
@@ -112,7 +127,9 @@ class TestProject(OscTest):
         uinfo = prj._calculate_updateinfo()
         self.assertEqual(uinfo.candidates, [])
         self.assertEqual(uinfo.added, [])
-        self.assertEqual(uinfo.deleted, ['foo', 'abc', 'xxx', 'del'])
+        self.assertEqual(uinfo.deleted, ['foo', 'abc', 'xxx', 'del',
+                                         'foo_modified'])
+        self.assertEqual(uinfo.conflicted, [])
 
     def test10(self):
         """test add"""
@@ -185,6 +202,267 @@ class TestProject(OscTest):
         path = self.fixture_file('project')
         prj = Project(path)
         self.assertRaises(ValueError, prj.remove, 'nonexistent')
+
+    @GET('http://localhost/source/prj2', file='prj2_list2.xml')
+    @GET('http://localhost/source/prj2/foo?rev=latest',
+         file='foo_list1.xml')
+    @GET(('http://localhost/source/prj2/foo/added'
+          '?rev=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), file='foo_added_file')
+    def test_update1(self):
+        """test update"""
+        path = self.fixture_file('prj2')
+        prj = Project(path)
+        self.assertEqual(prj._status('foo'), ' ')
+        prj.update('foo')
+        self.assertEqual(prj._status('foo'), ' ')
+
+    @GET('http://localhost/source/prj2', file='prj2_list3.xml')
+    def test_update2(self):
+        """test update (delete package; local state 'D')"""
+        path = self.fixture_file('prj2')
+        self._exists(path, 'abc')
+        self._exists(path, 'abc', 'modified')
+        self._exists(path, 'abc', 'untracked')
+        self._exists(path, 'abc', '.osc')
+        self._exists(path, '.osc', 'data', 'abc')
+        prj = Project(path)
+        self.assertEqual(prj._status('abc'), 'D')
+        prj.update('abc')
+        self.assertEqual(prj._status('abc'), '?')
+        self._exists(path, 'abc')
+        self._exists(path, 'abc', 'modified')
+        self._exists(path, 'abc', 'untracked')
+        self._not_exists(path, 'abc', '.osc')
+        self._not_exists(path, '.osc', 'data', 'abc')
+
+    @GET('http://localhost/source/prj2', file='prj2_list3.xml')
+    def test_update3(self):
+        """test update (delete package; local state '!')"""
+        path = self.fixture_file('prj2')
+        self._not_exists(path, 'xxx')
+        prj = Project(path)
+        prj.update('xxx')
+        self.assertEqual(prj._status('xxx'), '?')
+        self._not_exists(path, '.osc', 'data', 'xxx')
+
+    @GET('http://localhost/source/prj2', file='prj2_list3.xml')
+    def test_update4(self):
+        """test update (delete package: local state ' ')"""
+        path = self.fixture_file('prj2')
+        tl = TL(abort=False)
+        self._exists(path, 'foo')
+        self._exists(path, '.osc', 'data', 'foo')
+        prj = Project(path, transaction_listener=[tl])
+        self.assertEqual(prj._status('foo'), ' ')
+        prj.update('foo')
+        self.assertEqual(prj._status('foo'), '?')
+        self._not_exists(path, 'foo')
+        self._not_exists(path, '.osc', 'data', 'foo')
+        # check transaction listener
+        self.assertEqual(tl._begin, ['prj_update', 'update'])
+        self.assertEqual(tl._finished, ['update', 'prj_update'])
+        self.assertEqual(tl._transfer, [])
+        self.assertEqual(tl._processed.keys(), ['file'])
+        self.assertEqual(tl._processed['file'], None)
+
+    @GET('http://localhost/source/prj1', file='prj1_list.xml')
+    @GET('http://localhost/source/prj1', file='prj1_list.xml')
+    @GET('http://localhost/source/prj1/foo?rev=latest', file='foo_list2.xml')
+    @GET(('http://localhost/source/prj1/foo/file'
+          '?rev=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaf'), file='foo_file')
+    def test_update5(self):
+        """test update (add package)"""
+        path = self.fixture_file('prj1')
+        tl = TL(abort=False)
+        tl_abort = TL(abort=True)
+        prj = Project(path, transaction_listener=[tl, tl_abort])
+        self._not_exists(path, 'foo')
+        self.assertEqual(prj._status('foo'), '?')
+        prj.update('foo')
+        # no abort this time
+        tl = TL(abort=False)
+        prj = Project(path, transaction_listener=[tl])
+        self._not_exists(path, 'foo')
+        self.assertEqual(prj._status('foo'), '?')
+        prj.update('foo')
+        self.assertEqual(prj._status('foo'), ' ')
+        self._exists(path, 'foo')
+        self._exists(path, 'foo', 'file')
+        self._exists(path, '.osc', 'data', 'foo')
+        # check transaction listener
+        self.assertEqual(tl._begin, ['prj_update', 'update'])
+        self.assertEqual(tl._finished, ['update', 'prj_update'])
+        self.assertEqual(tl._transfer, [('download', 'file')])
+        self.assertEqual(tl._processed.keys(), ['file'])
+        self.assertEqual(tl._processed['file'], ' ')
+ 
+    def test_update6(self):
+        """test update (finish pending add transaction)"""
+        path = self.fixture_file('prj1_update_resume')
+        prj = Project(path, finish_pending_transaction=False)
+        self._not_exists(path, 'foo')
+        self.assertEqual(prj._status('foo'), '?')
+        prj.update('foo')
+        self.assertEqual(prj._status('foo'), ' ')
+        self._exists(path, 'foo')
+        self._exists(path, 'foo', 'file')
+        self._exists(path, '.osc', 'data', 'foo')
+
+    def test_update7(self):
+        """test update (finish pending add transaction auto)"""
+        path = self.fixture_file('prj1_update_resume')
+        self._not_exists(path, 'foo')
+        prj = Project(path, finish_pending_transaction=True)
+        self.assertEqual(prj._status('foo'), ' ')
+        self._exists(path, 'foo')
+        self._exists(path, 'foo', 'file')
+        self._exists(path, '.osc', 'data', 'foo')
+
+    @GET('http://localhost/source/prj3', file='prj2_list3.xml')
+    def test_update8(self):
+        """test update (package with a conflicted file)"""
+        path = self.fixture_file('prj3')
+        prj = Project(path)
+        pkg = prj.package('conflict')
+        self.assertEqual(pkg.status('conflict'), 'C')
+        self.assertEqual(prj._status('conflict'), ' ')
+        # Note: package conflict would be deleted (if update were possible)
+        self.assertRaises(FileConflictError, prj.update, 'conflict')
+        self.assertEqual(prj._status('conflict'), ' ')
+        pkg = prj.package('conflict')
+        self.assertEqual(pkg.status('conflict'), 'C')
+
+    def test_commitinfo1(self):
+        """test commitinfo (complete project)"""
+        path = self.fixture_file('prj2')
+        prj = Project(path)
+        self.assertEqual(prj._status('foo'), ' ')
+        self.assertEqual(prj._status('bar'), 'A')
+        self.assertEqual(prj._status('abc'), 'D')
+        self.assertEqual(prj._status('xxx'), '!')
+        self.assertEqual(prj._status('del'), 'D')
+        cinfo = prj._calculate_commitinfo()
+        self.assertEqual(cinfo.unchanged, ['foo'])
+        self.assertEqual(cinfo.added, ['bar'])
+        self.assertEqual(cinfo.deleted, ['abc', 'del'])
+        self.assertEqual(cinfo.modified, ['foo_modified'])
+        self.assertEqual(cinfo.conflicted, ['xxx'])
+
+    def test_commitinfo2(self):
+        """test commitinfo (only specified packages)"""
+        path = self.fixture_file('prj2')
+        prj = Project(path)
+        self.assertEqual(prj._status('foo'), ' ')
+        self.assertEqual(prj._status('foo_modified'), ' ')
+        cinfo = prj._calculate_commitinfo('foo', 'foo_modified')
+        self.assertEqual(cinfo.unchanged, ['foo'])
+        self.assertEqual(cinfo.added, [])
+        self.assertEqual(cinfo.deleted, [])
+        self.assertEqual(cinfo.modified, ['foo_modified'])
+        self.assertEqual(cinfo.conflicted, [])
+
+    @GET('http://localhost/source/prj2/foo_modified?rev=latest',
+         file='commit_1_latest.xml')
+    @POST('http://localhost/source/prj2/foo_modified?cmd=sourcecommitfilelist',
+          expfile='commit_1_lfiles.xml', file='commit_1_mfiles.xml')
+    @PUT('http://localhost/source/prj2/foo_modified/file?rev=repository',
+         expfile='commit_1_file', text=UPLOAD_REV)
+    @POST('http://localhost/source/prj2/foo_modified?cmd=sourcecommitfilelist',
+          expfile='commit_1_lfiles.xml', file='commit_1_files.xml')
+    def test_commit1(self):
+        """test commit (local state: ' ')"""
+        path = self.fixture_file('prj2')
+        prj = Project(path)
+        pkg = prj.package('foo_modified')
+        self.assertEqual(pkg.status('file'), 'M')
+        self.assertEqual(prj._status('foo'), ' ')
+        prj.commit('foo_modified')
+        self.assertEqual(prj._status('foo'), ' ')
+        pkg = prj.package('foo_modified')
+        self.assertEqual(pkg.status('file'), ' ')
+
+    @GET('http://localhost/source/prj2/bar/_meta', text='<OK/>', code=404)
+    @PUT('http://localhost/source/prj2/bar/_meta', text='<OK/>',
+         expfile='commit_2_meta.xml')
+    @GET('http://localhost/source/prj2/bar?rev=latest',
+         file='commit_2_latest.xml')
+    @POST('http://localhost/source/prj2/bar?cmd=sourcecommitfilelist',
+          expfile='commit_2_lfiles.xml', file='commit_2_mfiles.xml')
+    @PUT('http://localhost/source/prj2/bar/add?rev=repository',
+         expfile='commit_2_add', text=UPLOAD_REV)
+    @POST('http://localhost/source/prj2/bar?cmd=sourcecommitfilelist',
+          expfile='commit_2_lfiles.xml', file='commit_2_files.xml')
+    def test_commit2(self):
+        """test commit (local state: 'A')"""
+        path = self.fixture_file('prj2')
+        prj = Project(path)
+        pkg = prj.package('bar')
+        self.assertEqual(pkg.status('add'), 'A')
+        self.assertEqual(prj._status('bar'), 'A')
+        prj.commit('bar')
+        self.assertEqual(prj._status('bar'), ' ')
+        pkg = prj.package('bar')
+        self.assertEqual(pkg.status('add'), ' ')
+        self._exists(path, '.osc', 'data', 'bar')
+
+    @DELETE('http://localhost/source/prj2/abc', text='<ok/>')
+    def test_commit3(self):
+        """test commit (local state: 'D')"""
+        path = self.fixture_file('prj2')
+        prj = Project(path)
+        pkg = prj.package('abc')
+        self.assertEqual(pkg.status('modified'), 'D')
+        self.assertEqual(pkg.status('untracked'), '?')
+        self.assertEqual(prj._status('abc'), 'D')
+        prj.commit('abc')
+        self.assertEqual(prj._status('abc'), '?')
+        self._exists(path, 'abc')
+        self._exists(path, 'abc', 'modified')
+        self._exists(path, 'abc', 'untracked')
+        self._not_exists(path, 'abc', '.osc')
+        self._not_exists(path, '.osc', 'data', 'abc')
+
+    @GET('http://localhost/source/prj2/bar/_meta', file='commit_2_meta.xml')
+    @GET('http://localhost/source/prj2/bar?rev=latest',
+         file='commit_2_latest.xml')
+    @POST('http://localhost/source/prj2/bar?cmd=sourcecommitfilelist',
+          expfile='commit_2_lfiles.xml', file='commit_2_mfiles.xml')
+    @PUT('http://localhost/source/prj2/bar/add?rev=repository',
+         expfile='commit_2_add', text=UPLOAD_REV)
+    @POST('http://localhost/source/prj2/bar?cmd=sourcecommitfilelist',
+          expfile='commit_2_lfiles.xml', file='commit_2_files.xml')
+    def test_commit4(self):
+        """test commit (same as test_commit4 but remote package exists)"""
+        path = self.fixture_file('prj2')
+        prj = Project(path)
+        pkg = prj.package('bar')
+        self.assertEqual(pkg.status('add'), 'A')
+        self.assertEqual(prj._status('bar'), 'A')
+        prj.commit('bar')
+        self.assertEqual(prj._status('bar'), ' ')
+        pkg = prj.package('bar')
+        self.assertEqual(pkg.status('add'), ' ')
+        self._exists(path, '.osc', 'data', 'bar')
+
+    def test_commit5(self):
+        """test commit (finish pending transaction (delete))"""
+        path = self.fixture_file('prj2_commit_resume')
+        prj = Project(path, finish_pending_transaction=False)
+        self.assertEqual(prj._status('abc'), 'D')
+        prj.commit('abc')
+        self.assertEqual(prj._status('abc'), '?')
+
+    def test_commit6(self):
+        """test commit (package with a conflicted file)"""
+        path = self.fixture_file('prj3')
+        prj = Project(path)
+        pkg = prj.package('conflict')
+        self.assertEqual(pkg.status('conflict'), 'C')
+        self.assertEqual(prj._status('conflict'), ' ')
+        self.assertRaises(FileConflictError, prj.commit, 'conflict')
+        self.assertEqual(prj._status('conflict'), ' ')
+        pkg = prj.package('conflict')
+        self.assertEqual(pkg.status('conflict'), 'C')
 
 if __name__ == '__main__':
     unittest.main()

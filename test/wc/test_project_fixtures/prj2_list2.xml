@@ -2,4 +2,5 @@
   <entry name="osc"/>
   <entry name="foo"/>
   <entry name="bar"/>
+  <entry name="foo_modified"/>
 </directory>
