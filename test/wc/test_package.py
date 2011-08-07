@@ -1128,11 +1128,11 @@ class TestPackage(OscTest):
 
     @GET('http://localhost/source/prj/update_2?rev=latest',
          file='commit_1_latest.xml')
-    @POST('http://localhost/source/prj/update_2?cmd=sourcecommitfilelist',
+    @POST('http://localhost/source/prj/update_2?cmd=commitfilelist',
           expfile='commit_1_lfiles.xml', file='commit_1_mfiles.xml')
     @PUT('http://localhost/source/prj/update_2/foo?rev=repository',
          expfile='commit_1_foo', text=UPLOAD_REV)
-    @POST('http://localhost/source/prj/update_2?cmd=sourcecommitfilelist',
+    @POST('http://localhost/source/prj/update_2?cmd=commitfilelist',
           expfile='commit_1_lfiles.xml', file='commit_1_files.xml')
     def test_commit1(self):
         """test commit (modified)"""
@@ -1155,11 +1155,11 @@ class TestPackage(OscTest):
 
     @GET('http://localhost/source/prj/update_11?rev=latest',
          file='commit_2_latest.xml')
-    @POST('http://localhost/source/prj/update_11?cmd=sourcecommitfilelist',
+    @POST('http://localhost/source/prj/update_11?cmd=commitfilelist',
           expfile='commit_2_lfiles.xml', file='commit_2_mfiles.xml')
     @PUT('http://localhost/source/prj/update_11/foo?rev=repository',
          expfile='commit_2_foo', text=UPLOAD_REV)
-    @POST('http://localhost/source/prj/update_11?cmd=sourcecommitfilelist',
+    @POST('http://localhost/source/prj/update_11?cmd=commitfilelist',
           expfile='commit_2_lfiles.xml', file='commit_2_files.xml')
     def test_commit2(self):
         """test commit (modified + deleted)"""
@@ -1185,11 +1185,11 @@ class TestPackage(OscTest):
          file='commit_2_latest.xml')
     @GET('http://localhost/source/prj/update_11?rev=latest',
          file='commit_2_latest.xml')
-    @POST('http://localhost/source/prj/update_11?cmd=sourcecommitfilelist',
+    @POST('http://localhost/source/prj/update_11?cmd=commitfilelist',
           expfile='commit_3_lfiles.xml', file='commit_2_mfiles.xml')
     @PUT('http://localhost/source/prj/update_11/foo?rev=repository',
          expfile='commit_2_foo', text=UPLOAD_REV)
-    @POST('http://localhost/source/prj/update_11?cmd=sourcecommitfilelist',
+    @POST('http://localhost/source/prj/update_11?cmd=commitfilelist',
           expfile='commit_3_lfiles.xml', file='commit_3_files.xml')
     def test_commit3(self):
         """test commit (only commit modified file)"""
@@ -1226,7 +1226,7 @@ class TestPackage(OscTest):
 
     @GET('http://localhost/source/prj/update_11?rev=latest',
          file='commit_2_latest.xml')
-    @POST('http://localhost/source/prj/update_11?cmd=sourcecommitfilelist',
+    @POST('http://localhost/source/prj/update_11?cmd=commitfilelist',
           expfile='commit_4_lfiles.xml', file='commit_4_files.xml')
     def test_commit4(self):
         """test commit (only commit deleted file bar)"""
@@ -1247,7 +1247,7 @@ class TestPackage(OscTest):
 
     @GET('http://localhost/source/prj/update_11?rev=latest',
          file='commit_2_latest.xml')
-    @POST('http://localhost/source/prj/update_11?cmd=sourcecommitfilelist',
+    @POST('http://localhost/source/prj/update_11?cmd=commitfilelist',
           expfile='commit_4_lfiles.xml', file='commit_4_files.xml')
     def test_commit5(self):
         """test commit (only commit deleted file bar)"""
@@ -1277,13 +1277,13 @@ class TestPackage(OscTest):
 
     @GET('http://localhost/source/prj/commit_6?rev=latest',
          file='commit_6_latest.xml')
-    @POST('http://localhost/source/prj/commit_6?cmd=sourcecommitfilelist',
+    @POST('http://localhost/source/prj/commit_6?cmd=commitfilelist',
           expfile='commit_6_lfiles1.xml', file='commit_6_mfiles1.xml')
     @PUT('http://localhost/source/prj/commit_6/foo?rev=repository',
          expfile='commit_6_foo', text=UPLOAD_REV)
     @PUT('http://localhost/source/prj/commit_6/added?rev=repository',
          expfile='commit_6_added', text=UPLOAD_REV)
-    @POST('http://localhost/source/prj/commit_6?cmd=sourcecommitfilelist',
+    @POST('http://localhost/source/prj/commit_6?cmd=commitfilelist',
           expfile='commit_6_lfiles1.xml', file='commit_6_files1.xml')
     def test_commit6(self):
         """test commit (commit added, modified and deleted files)."""
