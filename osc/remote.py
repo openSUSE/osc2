@@ -19,6 +19,7 @@ from cStringIO import StringIO
 from lxml import etree, objectify
 
 from osc.core import Osc
+from osc.httprequest import HTTPError
 from osc.util.xml import ElementClassLookup, get_parser, fromstring
 from osc.util.io import copy_file, iter_read
 
@@ -208,8 +209,9 @@ class RemoteModel(object):
     def find(cls, path, method='GET', **kwargs):
         """Get the remote model from the server.
 
+        path is the url path.
+
         Keyword arguments:
-        path -- the url path (default: '')
         method -- the http method (default: 'GET')
         kwargs -- parameters for the http request (like query parameters,
                   schema etc.)
@@ -219,6 +221,23 @@ class RemoteModel(object):
         http_method = _get_http_method(request, method)
         xml_data = http_method(path, **kwargs).read()
         return cls(xml_data=xml_data)
+
+    @classmethod
+    def exists(cls, *args, **kwargs):
+        """Check if the remote resource exists.
+
+        *args and **kwargs are the arguments.
+        For details have a look at the subclass'
+        find method.
+
+        """
+        try:
+            cls.find(*args, **kwargs)
+            return True
+        except HTTPError as e:
+            if e.code == 404:
+                return False
+            raise
 
 
 class RemoteProject(RemoteModel):
