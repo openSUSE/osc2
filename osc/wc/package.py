@@ -14,6 +14,9 @@ from osc.source import Package as SourcePackage
 from osc.remote import RWLocalFile
 from osc.util.xml import fromstring
 from osc.util.io import copy_file
+from osc.wc.base import (WorkingCopy, UpdateStateMixin, CommitStateMixin,
+                         FileConflictError, PendingTransactionError,
+                         no_pending_transaction)
 from osc.wc.util import (wc_read_package, wc_read_project, wc_read_apiurl,
                          wc_init, wc_lock, wc_write_package, wc_write_project,
                          wc_write_apiurl, wc_write_files, wc_read_files,
@@ -55,37 +58,6 @@ def is_binaryfile(filename):
     return '\0' in data
 
 
-def no_pending_transaction(meth):
-    """Raise PendingTransactionError if a pending transaction exists.
-
-    The exception is only raised if a rollback is not
-    possible.
-    Otherwise meth is returned.
-    Can be used to decorate methods which should not be executed
-    if a pending transaction exists.
-
-    """
-    def wrapper(self, *args, **kwargs):
-        state = self._pending_transaction()
-        if state is not None and not state.rollback(self.path):
-            raise PendingTransactionError(state.name)
-        return meth(self, *args, **kwargs)
-    return wrapper
-
-
-class FileConflictError(Exception):
-    """Exception raises if an operation can't be executed due to conflicts."""
-
-    def __init__(self, conflicts):
-        """Construct a new FileConflictError object.
-
-        conflicts is a list of conflicted files.
-
-        """
-        super(FileConflictError, self).__init__()
-        self.conflicts = conflicts
-
-
 class WCOutOfDateError(Exception):
     """Exception raised if the wc is out of date.
 
@@ -106,87 +78,6 @@ class WCOutOfDateError(Exception):
         self.local = local
         self.remote = remote
         self.msg = msg
-
-
-class TransactionListener(object):
-    """Notify a client about a transaction.
-
-    This way clients can examine the current status of
-    update and commit.
-
-    """
-    def begin(self, name, uinfo):
-        """Signal the beginning of a transaction.
-
-        name is the name of the transaction.
-        uinfo is an instance of class UpdateInfo or
-        FileUpdateInfo.
-        If this method returns False the transaction
-        won't be executed.
-
-        """
-        raise NotImplementedError()
-
-    def finished(self, name, aborted=False, abort_reason=''):
-        """Transaction finished.
-
-        name is the name of the transaction.
-        aborted indicates if the transaction was
-        aborted by some listener.
-        abort_reason might contain a str which
-        describes why the transaction was aborted.
-
-        """
-        raise NotImplementedError()
-
-    def transfer(self, transfer_type, filename):
-        """Transfer filename.
-
-        transfer_type is either 'download' or
-        'upload'.
-
-        """
-        raise NotImplementedError()
-
-    def processed(self, filename, new_state):
-        """Operation was performed on file filename.
-
-        new_state is the new state of filename.
-        new_state == None indicates that filename was
-        removed from the wc.
-
-        """
-        raise NotImplementedError()
-
-
-class TransactionNotifier(object):
-    """Notify all transaction listeners."""
-
-    def __init__(self, listeners):
-        super(TransactionNotifier, self).__init__()
-        self._listeners = listeners
-
-    def _notify(self, method, *args, **kwargs):
-        rets = []
-        for listener in self._listeners:
-            meth = getattr(listener, method)
-            rets.append(meth(*args, **kwargs))
-        return rets
-
-    def begin(self, *args, **kwargs):
-        """Return True if the transaction can start - otherwise False."""
-        rets = self._notify('begin', *args, **kwargs)
-        falses = [ret for ret in rets if ret is False]
-        return len(falses) == 0
-
-    def finished(self, *args, **kwargs):
-        self._notify('finished', *args, **kwargs)
-
-    def transfer(self, *args, **kwargs):
-        self._notify('transfer', *args, **kwargs)
-
-    def processed(self, *args, **kwargs):
-        self._notify('processed', *args, **kwargs)
 
 
 class Merge(object):
@@ -318,24 +209,10 @@ class FileCommitPolicy(object):
         raise NotImplementedError()
 
 
-class PendingTransactionError(Exception):
-    """Raised if a transaction was aborted and no rollback is possible."""
-
-    def __init__(self, name):
-        """Constructs a new PendingTransactionError object.
-
-        name is the name of the pending transaction.
-
-        """
-        self.name = name
-
-
-class PackageUpdateState(XMLTransactionState):
-    STATE_DOWNLOADING = '1'
-    STATE_UPDATING = '2'
+class PackageUpdateState(XMLTransactionState, UpdateStateMixin):
 
     def __init__(self, path, uinfo=None, xml_data=None, **states):
-        initial_state = PackageUpdateState.STATE_DOWNLOADING
+        initial_state = UpdateStateMixin.STATE_PREPARE
         super(PackageUpdateState, self).__init__(path, 'update', initial_state,
                                                  uinfo, xml_data, **states)
         if xml_data is None:
@@ -346,7 +223,7 @@ class PackageUpdateState(XMLTransactionState):
                 'conflicted', 'skipped')
 
     @property
-    def uinfo(self):
+    def info(self):
         """Return the FileUpdateInfo object."""
         lists = self._lists()
         directory = self._xml.find('directory')
@@ -366,18 +243,16 @@ class PackageUpdateState(XMLTransactionState):
         ustate = PackageUpdateState.read_state(path)
         if ustate.name != 'update':
             raise ValueError("no update transaction")
-        if ustate.state == PackageUpdateState.STATE_DOWNLOADING:
+        if ustate.state == UpdateStateMixin.STATE_PREPARE:
             ustate.cleanup()
             return True
         return False
 
 
-class PackageCommitState(XMLTransactionState):
-    STATE_UPLOADING = '10'
-    STATE_COMMITTING = '11'
+class PackageCommitState(XMLTransactionState, CommitStateMixin):
 
     def __init__(self, path, cinfo=None, xml_data=None, **states):
-        initial_state = PackageCommitState.STATE_UPLOADING
+        initial_state = CommitStateMixin.STATE_TRANSFER
         super(PackageCommitState, self).__init__(path, 'commit', initial_state,
                                                  cinfo, xml_data, **states)
 
@@ -394,7 +269,7 @@ class PackageCommitState(XMLTransactionState):
         return self._xml.find('directory')
 
     @property
-    def cinfo(self):
+    def info(self):
         """Return the FileCommitInfo object."""
         lists = self._lists()
         return FileCommitInfo(**lists)
@@ -404,9 +279,9 @@ class PackageCommitState(XMLTransactionState):
         cstate = PackageCommitState.read_state(path)
         if cstate.name != 'commit':
             raise ValueError("no commit transaction")
-        if cstate.state == PackageCommitState.STATE_COMMITTING:
+        if cstate.state == CommitStateMixin.STATE_COMMITTING:
             return False
-        states = cstate.filestates
+        states = cstate.entrystates
         for filename in os.listdir(cstate.location):
             wc_filename = os.path.join(path, filename)
             commit_filename = os.path.join(cstate.location, filename)
@@ -418,12 +293,11 @@ class PackageCommitState(XMLTransactionState):
         return True
 
 
-class Package(object):
+class Package(WorkingCopy):
     """Represents a package working copy."""
 
     def __init__(self, path, skip_handlers=[], commit_policies=[],
-                 merge_class=Merge, transaction_listener=[],
-                 finish_pending_transaction=True):
+                 merge_class=Merge, **kwargs):
         """Constructs a new package object.
 
         path is the path to the working copy.
@@ -437,27 +311,23 @@ class Package(object):
                          (default: [])
         merge_class -- class which is used for a file merge
                        (default: Merge)
-        transaction_listener -- list of TransactionListeners (default: [])
-        finish_pending_transaction -- finish a pending transaction (if
-                                      one exists) (default: True)
+        **kwargs -- see class WorkingCopy for the details
 
         """
-        super(Package, self).__init__()
         (meta, xml_data, pkg_data) = self.wc_check(path)
         if meta or xml_data or pkg_data:
             raise WCInconsistentError(path, meta, xml_data, pkg_data)
-        self.path = path
-        self.apiurl = wc_read_apiurl(self.path)
-        self.project = wc_read_project(self.path)
-        self.name = wc_read_package(self.path)
+        self.apiurl = wc_read_apiurl(path)
+        self.project = wc_read_project(path)
+        self.name = wc_read_package(path)
         self.skip_handlers = skip_handlers
         self.commit_policies = commit_policies
         self.merge_class = merge_class
-        self.notifier = TransactionNotifier(transaction_listener)
-        with wc_lock(self.path) as lock:
-            self._files = wc_read_files(self.path)
-        if finish_pending_transaction:
-            self.finish_pending_transaction()
+        with wc_lock(path) as lock:
+            self._files = wc_read_files(path)
+        # call super at the end due to finish_pending_transaction
+        super(Package, self).__init__(path, PackageUpdateState,
+                                      PackageCommitState, **kwargs)
 
     def files(self):
         """Return list of filenames which are tracked."""
@@ -496,6 +366,9 @@ class Package(object):
         elif st == ' ' and entry.get('md5') != file_md5(fname):
             return 'M'
         return st
+
+    def has_conflicts(self):
+        return [c for c in self.files() if self.status(c) == 'C']
 
     def _calculate_updateinfo(self, revision=''):
         unchanged = []
@@ -573,35 +446,31 @@ class Package(object):
                 else:
                     uinfo.added.append(unskip)
 
-    def update(self, revision='latest', finish_only=False):
+    def update(self, revision='latest'):
         """Update working copy.
 
         Keyword arguments:
         revision -- the update revision (default: latest)
-        finish_only -- only finish a pending commit transaction
-                       (if one exists) (default: False)
 
         """
         with wc_lock(self.path) as lock:
             ustate = PackageUpdateState.read_state(self.path)
             if not self.is_updateable(rollback=True):
+                if self.has_conflicts():
+                    raise FileConflictError(self.has_conflicts())
                 # commit can be the only pending transaction
                 raise PendingTransactionError('commit')
             elif (ustate is not None
-                and ustate.state == PackageUpdateState.STATE_UPDATING):
+                and ustate.state == UpdateStateMixin.STATE_UPDATING):
                 self._update(ustate)
-            elif not finish_only:
+            else:
                 uinfo = self._calculate_updateinfo(revision=revision)
                 self._calculate_skips(uinfo)
-                # check for real conflicts
                 conflicts = uinfo.conflicted
-                conflicts += [c for c in self.files() if self.status(c) == 'C']
                 if conflicts:
+                    # these are _only_ update conflicts
                     raise FileConflictError(conflicts)
-                if not self.notifier.begin('update', uinfo):
-                    msg = 'listener aborted update'
-                    self.notifier.finished('update', aborted=True,
-                                           abort_reason=msg)
+                if not self._transaction_begin('update', uinfo):
                     return
                 # TODO: if ustate is not None check if we can reuse
                 #       existing files
@@ -611,11 +480,11 @@ class Package(object):
                 self._update(ustate)
 
     def _update(self, ustate):
-        if ustate.state == PackageUpdateState.STATE_DOWNLOADING:
-            uinfo = ustate.uinfo
+        if ustate.state == UpdateStateMixin.STATE_PREPARE:
+            uinfo = ustate.info
             self._download(ustate.location, uinfo.data, *uinfo.added)
             self._download(ustate.location, uinfo.data, *uinfo.modified)
-            ustate.state = PackageUpdateState.STATE_UPDATING
+            ustate.state = UpdateStateMixin.STATE_UPDATING
         self._perform_merges(ustate)
         self._perform_adds(ustate)
         self._perform_deletes(ustate)
@@ -625,13 +494,13 @@ class Package(object):
             new_filename = os.path.join(ustate.location, filename)
             store_filename = wc_pkg_data_filename(self.path, filename)
             os.rename(new_filename, store_filename)
-        self._files.merge(ustate.filestates, ustate.uinfo.remote_xml)
+        self._files.merge(ustate.entrystates, ustate.info.remote_xml)
         ustate.cleanup()
         self.notifier.finished('update', aborted=False)
 
     def _perform_merges(self, ustate):
-        uinfo = ustate.uinfo
-        filestates = ustate.filestates
+        uinfo = ustate.info
+        filestates = ustate.entrystates
         for filename in uinfo.modified:
             wc_filename = os.path.join(self.path, filename)
             old_filename = wc_pkg_data_filename(self.path, filename)
@@ -660,10 +529,10 @@ class Package(object):
                 ustate.processed(filename, 'C')
             # copy over new storefile
             os.rename(your_filename, old_filename)
-            self.notifier.processed(filename, ustate.filestates[filename])
+            self.notifier.processed(filename, ustate.entrystates[filename])
 
     def _perform_adds(self, ustate):
-        uinfo = ustate.uinfo
+        uinfo = ustate.info
         for filename in uinfo.added:
             wc_filename = os.path.join(self.path, filename)
             store_filename = wc_pkg_data_filename(self.path, filename)
@@ -680,7 +549,7 @@ class Package(object):
         self._perform_deletes_or_skips(ustate, 'skipped', 'S')
 
     def _perform_deletes_or_skips(self, ustate, listname, new_state):
-        uinfo = ustate.uinfo
+        uinfo = ustate.info
         for filename in getattr(uinfo, listname):
             wc_filename = os.path.join(self.path, filename)
             store_filename = wc_pkg_data_filename(self.path, filename)
@@ -702,23 +571,10 @@ class Package(object):
             self.notifier.transfer('download', filename)
             f.write_to(path)
 
-    def is_updateable(self, rollback=False):
-        """Check if wc can be updated.
-
-        If rollback is True a pending transaction will be
-        rolled back (if possible).
-        Return True if an update is possible. Otherwise
-        False is returned.
-
-        """
-        ustate = self._pending_transaction()
-        if ustate is None:
-            return True
-        elif ustate.name == 'update':
-            return True
-        elif rollback:
-            return PackageCommitState.rollback(self.path)
-        return ustate.state == PackageCommitState.STATE_UPLOADING
+    def is_modified(self):
+        cinfo = self._calculate_commitinfo()
+        return (cinfo.added or cinfo.deleted
+                or cinfo.modified or cinfo.conflicted)
 
     def _calculate_commitinfo(self, *filenames):
         unchanged = []
@@ -783,51 +639,48 @@ class Package(object):
                     cinfo_list = getattr(cinfo, listname)
                     cinfo_list.append(filename)
 
-    def commit(self, *filenames, **kwargs):
+    def commit(self, *filenames):
         """Commit working copy.
 
         If no filenames are specified all tracked files
         are committed.
 
         Keyword arguments:
-        finish_only -- only finish a pending commit transaction
-                       (if one exists) (default: False)
 
         """
-        finish_only = kwargs.get('finish_only', False)
         with wc_lock(self.path) as lock:
             cstate = self._pending_transaction()
             if not self.is_commitable(rollback=True):
+                if self.has_conflicts():
+                    raise FileConflictError(self.has_conflicts())
                 # update can be the only pending transaction
                 raise PendingTransactionError('update')
             elif (cstate is not None
-                and cstate.state == PackageCommitState.STATE_COMMITTING):
+                and cstate.state == CommitStateMixin.STATE_COMMITTING):
                 self._commit(cstate)
-            elif not finish_only:
+            else:
                 cinfo = self._calculate_commitinfo(*filenames)
                 self._apply_commit_policies(cinfo)
                 conflicts = cinfo.conflicted
-                conflicts += [c for c in self.files() if self.status(c) == 'C']
                 if conflicts:
+                    # conflicts shouldn't contain real conflicts because
+                    # otherwise is_commitable returns False
                     raise FileConflictError(conflicts)
                 remote = self.latest_revision()
                 local = self._files.revision_data().get('srcmd5')
                 if local != remote:
                     msg = 'commit not possible. Please update first'
                     raise WCOutOfDateError(local, remote, msg)
-                if not self.notifier.begin('commit', cinfo):
-                    msg = 'listener aborted commit'
-                    self.notifier.finished('commit', aborted=True,
-                                           abort_reason=msg)
+                if not self._transaction_begin('commit', cinfo):
                     return
                 states = dict([(f, self.status(f)) for f in self.files()])
                 cstate = PackageCommitState(self.path, cinfo=cinfo, **states)
                 self._commit(cstate)
 
     def _commit(self, cstate):
-        cinfo = cstate.cinfo
+        cinfo = cstate.info
         # FIXME: validation
-        if cstate.state == PackageCommitState.STATE_UPLOADING:
+        if cstate.state == CommitStateMixin.STATE_TRANSFER:
             cfilelist = self._calculate_commit_filelist(cinfo)
             missing = self._commit_filelist(cfilelist)
             send_filenames = self._read_send_files(missing)
@@ -837,7 +690,7 @@ class Package(object):
             else:
                 filelist = missing
             cstate.append_filelist(filelist)
-            cstate.state = PackageCommitState.STATE_COMMITTING
+            cstate.state = CommitStateMixin.STATE_COMMITTING
         # only local changes left
         for filename in cinfo.deleted:
             store_filename = wc_pkg_data_filename(self.path, filename)
@@ -855,7 +708,7 @@ class Package(object):
                 os.unlink(store_filename)
             copy_file(commit_filename, wc_filename)
             os.rename(commit_filename, store_filename)
-        self._files.merge(cstate.filestates, cstate.filelist)
+        self._files.merge(cstate.entrystates, cstate.filelist)
         # fixup mtimes
         for filename in self.files():
             if self.status(filename) != ' ':
@@ -914,53 +767,6 @@ class Package(object):
             os.rename(lfile.path, commit_filename)
             self.notifier.processed(filename, ' ')
 
-    def is_commitable(self, rollback=False):
-        """Check if wc can be committed.
-
-        If rollback is True a pending transaction will be
-        rolled back (if possible).
-        Return True if a commit is possible. Otherwise
-        False is returned.
-
-        """
-        cstate = self._pending_transaction()
-        if cstate is None:
-            return True
-        elif cstate.name == 'commit':
-            return True
-        elif rollback:
-            return PackageUpdateState.rollback(self.path)
-        return cstate.state == PackageUpdateState.STATE_DOWNLOADING
-
-    def _pending_transaction(self):
-        """Return a XMLTransactionState subclass instance.
-
-        If no pending transaction exists None is returned.
-
-        """
-        cstate = PackageCommitState.read_state(self.path)
-        if cstate is None:
-            return None
-        elif cstate.name == 'update':
-            return PackageUpdateState.read_state(self.path)
-        return cstate
-
-    def finish_pending_transaction(self):
-        """Finish a pending transaction (if one exists).
-
-        Either the transaction is finished or a rollback is
-        done.
-
-        """
-        state = self._pending_transaction()
-        if state is None:
-            return
-        elif not state.rollback(self.path):
-            if state.name == 'commit':
-                self.commit(finish_only=True)
-            elif state.name == 'update':
-                self.update(finish_only=True)
-
     def latest_revision(self):
         """Return the latest remote revision."""
         spkg = SourcePackage(self.project, self.name)
@@ -990,7 +796,6 @@ class Package(object):
             raise ValueError("file \"%s\" has no conflicts" % filename)
         self._files.set(filename, ' ')
 
-    @no_pending_transaction
     def revert(self, filename):
         """Revert filename.
 
@@ -998,6 +803,7 @@ class Package(object):
         ValueError is raised.
 
         """
+        super(Package, self).revert(filename)
         with wc_lock(self.path) as lock:
             self._revert(filename)
 
@@ -1022,7 +828,6 @@ class Package(object):
             copy_file(store_filename, wc_filename)
         self._files.write()
 
-    @no_pending_transaction
     def add(self, filename):
         """Add filename to working copy.
 
@@ -1031,6 +836,7 @@ class Package(object):
         or is no file or if it is already tracked.
 
         """
+        super(Package, self).add(filename)
         with wc_lock(self.path) as lock:
             self._add(filename)
 
@@ -1051,7 +857,6 @@ class Package(object):
             raise ValueError(msg)
         self._files.write()
 
-    @no_pending_transaction
     def remove(self, filename):
         """Remove file from the working copy.
 
@@ -1062,6 +867,7 @@ class Package(object):
         is skipped (has state 'S').
 
         """
+        super(Package, self).remove(filename)
         with wc_lock(self.path) as lock:
             self._remove(filename)
 
@@ -1109,7 +915,7 @@ class Package(object):
         return (missing, '', pkg_data)
 
     @staticmethod
-    def init(path, project, package, apiurl, ext_storedir=None):
+    def init(path, project, package, apiurl, ext_storedir=None, **kwargs):
         """Initializes a directory as a package working copy.
 
         path is a path to a directory, project is the name
@@ -1120,6 +926,8 @@ class Package(object):
         ext_storedir -- path to the storedir (default: None).
                         If not specified a "flat" package is created,
                         otherwise path/.osc is a symlink to storedir.
+        kwargs -- optional keyword args which are passed to Package's
+                  __init__ method
 
         """
         wc_init(path, ext_storedir=ext_storedir)
@@ -1127,4 +935,4 @@ class Package(object):
         wc_write_package(path, package)
         wc_write_apiurl(path, apiurl)
         wc_write_files(path, '<directory/>')
-        return Package(path)
+        return Package(path, **kwargs)
