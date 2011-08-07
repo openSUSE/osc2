@@ -8,7 +8,7 @@ from lxml import etree
 from osc.remote import (RemoteProject, RemotePackage, Request,
                         RORemoteFile, RWRemoteFile, RWLocalFile)
 from test.osctest import OscTest
-from test.httptest import GET, PUT, POST
+from test.httptest import GET, PUT, POST, DELETE
 
 
 def suite():
@@ -136,6 +136,16 @@ class TestRemoteModel(OscTest):
         """test exists method"""
         self.assertFalse(RemoteProject.exists('bar'))
 
+    @DELETE('http://localhost/source/foo', text='<OK/>')
+    def test_project11(self):
+        """test delete method"""
+        self.assertTrue(RemoteProject.delete('foo'))
+
+    @DELETE('http://localhost/source/foo', text='<OK/>', code=404)
+    def test_project11(self):
+        """test delete method"""
+        self.assertFalse(RemoteProject.delete('foo'))
+
     @GET('http://localhost/source/openSUSE%3ATools/osc/_meta',
          file='package.xml')
     def test_package1(self):
@@ -251,6 +261,16 @@ class TestRemoteModel(OscTest):
         """test exists method"""
         self.assertFalse(RemotePackage.exists('newprj', 'foo'))
 
+    @DELETE('http://localhost/source/foo/bar', text='<OK/>')
+    def test_package11(self):
+        """test delete method"""
+        self.assertTrue(RemotePackage.delete('foo', 'bar'))
+
+    @DELETE('http://localhost/source/foo/bar', text='<OK/>', code=404)
+    def test_package11(self):
+        """test delete method"""
+        self.assertFalse(RemotePackage.delete('foo', 'bar'))
+
     @GET('http://localhost/request/123', file='request.xml')
     def test_request1(self):
         """get a request"""
@@ -316,12 +336,13 @@ class TestRemoteModel(OscTest):
         req = Request()
         req.add_action(type='submit')
         req.store()
+        Request.SCHEMA = ''
 
     @GET('http://localhost/request/456', text='<invalid />')
     @POST('http://localhost/request?cmd=create',
           text='<invalid />',
           expfile='request_simple_create.xml')
-    def test_request3(self):
+    def test_request4(self):
         """test request validation (incoming + outgoing)"""
         Request.SCHEMA = self.fixture_file('request_simple.xsd')
         self.assertRaises(etree.DocumentInvalid, Request.find, '456')
@@ -336,6 +357,27 @@ class TestRemoteModel(OscTest):
         req.validate()
         # we get an invalid response
         self.assertRaises(etree.DocumentInvalid, req.store)
+        Request.SCHEMA = ''
+
+    @GET('http://localhost/request/123', file='request.xml')
+    def test_request5(self):
+        """test exists method"""
+        self.assertTrue(Request.exists('123'))
+
+    @GET('http://localhost/request/123', file='request.xml', code=404)
+    def test_request6(self):
+        """test exists method"""
+        self.assertFalse(Request.exists('123'))
+
+    @DELETE('http://localhost/request/123', text='<OK/>')
+    def test_request7(self):
+        """test delete method"""
+        self.assertTrue(Request.delete('123'))
+
+    @DELETE('http://localhost/request/123', text='<OK/>', code=404)
+    def test_request8(self):
+        """test delete method"""
+        self.assertFalse(Request.delete('123'))
 
     @GET('http://localhost/source/project/package/fname', file='remotefile1')
     def test_remotefile1(self):
