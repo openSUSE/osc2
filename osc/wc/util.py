@@ -12,6 +12,7 @@ from tempfile import NamedTemporaryFile
 
 from lxml import etree, objectify
 
+from osc.wc.base import AbstractTransactionState
 from osc.source import File, Directory, Linkinfo
 from osc.util.xml import fromstring
 
@@ -262,6 +263,19 @@ class XMLPackageTracker(XMLEntryTracker):
     def filename(cls):
         return '_packages'
 
+    def merge(self, new_states):
+        for package, st in new_states.iteritems():
+            if self.find(package) is None:
+                self.add(package, st)
+            else:
+                self.set(package, st)
+        delete = []
+        for package in self._xml.findall(self._tag):
+            name = package.get('name')
+            if not name in new_states.keys():
+                self.remove(name)
+        self.write()
+
 
 class XMLFileTracker(XMLEntryTracker):
     """Represents the _files file."""
@@ -303,19 +317,13 @@ class XMLFileTracker(XMLEntryTracker):
         return '_files'
 
 
-class XMLTransactionState(object):
+class XMLTransactionState(AbstractTransactionState):
     """Represents the state of a transaction"""
-
-    DIR = '_transaction'
-    FILENAME = os.path.join(DIR, 'state')
 
     def __init__(self, path, name, initial_state, info=None,
                  xml_data=None, **states):
         """Constructs a new XMLTransactionState object.
 
-        path is the path to the package working copy.
-        name is the name of the transaction.
-        initial_state is the initial state of the transaction.
         Either info or xml_data has to be specified otherwise
         a ValueError is raised.
 
@@ -328,12 +336,11 @@ class XMLTransactionState(object):
         if ((info is not None and xml_data)
             or (info is None and xml_data is None)):
             raise ValueError('either specify info or xml_data')
-        super(XMLTransactionState, self).__init__()
-        self._path = path
+        super(XMLTransactionState, self).__init__(path)
         global _PKG_DATA
         trans_dir = _storefile(self._path, XMLTransactionState.DIR)
         data_dir = os.path.join(trans_dir, _PKG_DATA)
-        self.location = data_dir
+        self._location = data_dir
         if xml_data:
             self._xml = fromstring(xml_data, entry=File, directory=Directory,
                                    linkinfo=Linkinfo)
@@ -353,16 +360,16 @@ class XMLTransactionState(object):
 
     def _add_states(self, states):
         states_elm = self._xml.find('states')
-        for filename, st in states.iteritems():
-            elm = states_elm.makeelement('state', filename=filename, name=st)
+        for entry, st in states.iteritems():
+            elm = states_elm.makeelement('state', entry=entry, name=st)
             states_elm.append(elm)
 
     def _add_list(self, listname, info):
         info_elm = self._xml.find('info')
         child = info_elm.makeelement(listname)
         info_elm.append(child)
-        for filename in getattr(info, listname):
-            data = objectify.DataElement(filename)
+        for entry in getattr(info, listname):
+            data = objectify.DataElement(entry)
             elm = child.makeelement('file')
             child.append(elm)
             getattr(child, 'file').__setitem__(-1, data)
@@ -373,33 +380,28 @@ class XMLTransactionState(object):
         xml_data = etree.tostring(self._xml, pretty_print=True)
         _write_storefile(self._path, XMLTransactionState.FILENAME, xml_data)
 
-    def processed(self, filename, new_state=None):
-        """The file filename was processed.
-
-        new_state is the new state of filename. If new_state
-        is None filename won't be tracked anymore. Afterwards
-        filename is removed from the info list.
-        A ValueError is raised if filename is not part of
-        a info list.
-
-        """
+    def processed(self, entry, new_state=None):
         # remove file from info
         info_elm = self._xml.find('info')
-        elm = info_elm.find("//*[text() = '%s']" % filename)
+        elm = info_elm.find("//*[text() = '%s']" % entry)
         if elm is None:
-            raise ValueError("file \"%s\" is not known" % filename)
+            raise ValueError("file \"%s\" is not known" % entry)
         elm.getparent().remove(elm)
         # update states
-        elm = self._xml.find("//state[@filename = '%s']" % filename)
+        elm = self._xml.find("//state[@entry = '%s']" % entry)
         if elm is None:
-            self._add_states({filename: new_state})
-            elm = self._xml.find("//state[@filename = '%s']" % filename)
+            self._add_states({entry: new_state})
+            elm = self._xml.find("//state[@entry = '%s']" % entry)
         if new_state is None:
             # remove node
             elm.getparent().remove(elm)
         else:
             elm.set('name', new_state)
         self._write()
+
+    @property
+    def location(self):
+        return self._location
 
     @property
     def name(self):
@@ -415,10 +417,10 @@ class XMLTransactionState(object):
         self._write()
 
     @property
-    def filestates(self):
+    def entrystates(self):
         states = {}
         for st in self._xml.find('states').iterchildren():
-            states[st.get('filename')] = st.get('name')
+            states[st.get('entry')] = st.get('name')
         return states
 
     def _lists(self):
@@ -432,9 +434,21 @@ class XMLTransactionState(object):
         for listname in self._listnames():
             lists[listname] = []
             for entry in info_elm.find(listname).iterchildren():
-                filename = entry.text
-                lists[listname].append(filename)
+                entry = entry.text
+                lists[listname].append(entry)
         return lists
+
+    def clear_info(self, entry):
+        """Remove all entries but entry from info lists."""
+        info_elm = self._xml.find('info')
+        for listname in self._listnames():
+            delete = []
+            for entry_elm in info_elm.find(listname).iterchildren():
+                if entry_elm.text != entry:
+                    delete.append(entry_elm)
+            for entry_elm in delete:
+                entry_elm.getparent().remove(entry_elm)
+        self._write()
 
     def cleanup(self):
         """Remove _transaction dir"""
@@ -459,19 +473,6 @@ class XMLTransactionState(object):
         except ValueError as e:
             pass
         return ret
-
-    @staticmethod
-    def rollback(path):
-        """Revert current transaction (if possible).
-
-        Return True if a rollback is possible (this also
-        indicates that the rollback itself was successfull).
-        Otherwise False is returned.
-        A ValueError is raised if the transaction names/types
-        mismatch.
-
-        """
-        raise NotImplementedError()
 
 
 def _storedir(path):
