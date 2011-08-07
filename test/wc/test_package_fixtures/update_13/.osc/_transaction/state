@@ -1,8 +1,8 @@
 <transaction name="update" state="2">
   <states>
-    <state name="D" filename="foobar"/>
-    <state name="M" filename="foo"/>
-    <state name="D" filename="bar"/>
+    <state name="D" entry="foobar"/>
+    <state name="M" entry="foo"/>
+    <state name="D" entry="bar"/>
   </states>
   <info>
     <unchanged/>

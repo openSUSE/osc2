@@ -1,10 +1,10 @@
 <transaction name="commit" state="11">
   <states>
-    <state name="D" filename="foobar"/>
-    <state name=" " filename="added"/>
-    <state name="D" filename="bar"/>
-    <state name=" " filename="foo"/>
-    <state name="!" filename="missing"/>
+    <state name="D" entry="foobar"/>
+    <state name=" " entry="added"/>
+    <state name="D" entry="bar"/>
+    <state name=" " entry="foo"/>
+    <state name="!" entry="missing"/>
   </states>
   <info>
     <unchanged>

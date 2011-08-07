@@ -1,6 +1,6 @@
 <transaction name="update" state="1">
   <states>
-    <state name=" " filename="file"/>
+    <state name=" " entry="file"/>
   </states>
   <info>
     <unchanged>
