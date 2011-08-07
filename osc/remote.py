@@ -233,15 +233,41 @@ class RemoteModel(object):
         """
         try:
             cls.find(*args, **kwargs)
-            return True
         except HTTPError as e:
             if e.code == 404:
                 return False
             raise
+        return True
+
+    @classmethod
+    def delete(cls, path, method='DELETE', **kwargs):
+        """Delete a remote resource.
+
+        path is the url path.
+        Return True if the resource was successfully deleted.
+        If the resource do not exist anymore (code 404) False
+        is returned.
+
+        Keyword arguments:
+        method -- the http method (default: 'DELETE')
+        kwargs -- parameters for the http request (like query parameters,
+                  schema etc.)
+
+        """
+        request = Osc.get_osc().get_reqobj()
+        http_method = _get_http_method(request, method)
+        try:
+            http_method(path, **kwargs).read()
+        except HTTPError as e:
+            if e.code == 404:
+                return False
+            raise
+        return True
 
 
 class RemoteProject(RemoteModel):
     PATH = '/source/%(project)s/_meta'
+    DELETE_PATH = '/source/%(project)s'
     SCHEMA = ''
     # used to validate the response after the xml is stored
     PUT_RESPONSE_SCHEMA = ''
@@ -264,9 +290,15 @@ class RemoteProject(RemoteModel):
         path = RemoteProject.PATH % {'project': self.get('name')}
         return super(RemoteProject, self).store(path, method='PUT', **kwargs)
 
+    @classmethod
+    def delete(cls, project, **kwargs):
+        path = RemoteProject.DELETE_PATH % {'project': project}
+        return super(RemoteProject, cls).delete(path, **kwargs)
+
 
 class RemotePackage(RemoteModel):
     PATH = '/source/%(project)s/%(package)s/_meta'
+    DELETE_PATH = '/source/%(project)s/%(package)s'
     SCHEMA = ''
     # used to validate the response after the xml is stored
     PUT_RESPONSE_SCHEMA = ''
@@ -293,6 +325,12 @@ class RemotePackage(RemoteModel):
                                      'package': self.get('name')}
         return super(RemotePackage, self).store(path, method='PUT', **kwargs)
 
+    @classmethod
+    def delete(cls, project, package, **kwargs):
+        path = RemotePackage.DELETE_PATH % {'project': project,
+                                            'package': package}
+        return super(RemotePackage, cls).delete(path, **kwargs)
+
 
 class Request(RemoteModel):
     GET_PATH = '/request/%(reqid)s'
@@ -314,6 +352,11 @@ class Request(RemoteModel):
         f = super(Request, self).store(path, method='POST',
                                        cmd='create', **kwargs)
         self._read_xml_data(f.read())
+
+    @classmethod
+    def delete(cls, reqid, **kwargs):
+        path = Request.GET_PATH % {'reqid': reqid}
+        return super(Request, cls).delete(path, **kwargs)
 
 
 class RORemoteFile(object):
