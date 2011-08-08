@@ -478,7 +478,16 @@ class TestProject(OscTest):
     def test_commit7(self):
         """test commit (local state: 'A')"""
         path = self.fixture_file('prj1')
-        prj = Project(path)
+        tl = TL(abort=False)
+        tl_abort = TL(abort=True)
+        prj = Project(path, transaction_listener=[tl, tl_abort])
+        pkg = prj.package('added')
+        self.assertEqual(pkg.status('foo'), 'A')
+        self.assertEqual(prj._status('added'), 'A')
+        prj.commit('added')
+        # this time no abort
+        tl = TL(abort=False)
+        prj = Project(path, transaction_listener=[tl])
         pkg = prj.package('added')
         self.assertEqual(pkg.status('foo'), 'A')
         self.assertEqual(prj._status('added'), 'A')
@@ -487,18 +496,30 @@ class TestProject(OscTest):
         pkg = prj.package('added')
         self.assertEqual(pkg.status('foo'), ' ')
         self._exists(path, '.osc', 'data', 'added')
+        # check transaction listener
+        self.assertEqual(tl._begin, ['prj_commit', 'commit'])
+        self.assertEqual(tl._finished, ['commit', 'prj_commit'])
+        self.assertEqual(tl._transfer, [('upload', 'foo')])
+        self.assertEqual(tl._processed.keys(), ['foo'])
+        self.assertEqual(tl._processed['foo'], ' ')
 
     @DELETE('http://apiurl/source/prj1/missing', text='<ok/>')
     def test_commit8(self):
         """test commit delete (local state: 'D' (wc doesn't exist))"""
         path = self.fixture_file('prj1')
-        prj = Project(path)
+        tl = TL(abort=False)
+        prj = Project(path, transaction_listener=[tl])
         self._not_exists(path, 'missing')
         self._exists(path, '.osc', 'data', 'missing')
         self.assertEqual(prj._status('missing'), 'D')
         prj.commit('missing')
         self.assertEqual(prj._status('missing'), '?')
         self._not_exists(path, '.osc', 'data', 'missing')
+        # check transaction listener
+        self.assertEqual(tl._begin, ['prj_commit'])
+        self.assertEqual(tl._finished, ['prj_commit'])
+        self.assertEqual(tl._transfer, [])
+        self.assertEqual(tl._processed, {})
 
 if __name__ == '__main__':
     unittest.main()
