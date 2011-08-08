@@ -161,5 +161,33 @@ class TestHTTPRequest(OscTest):
         else:
             raise AssertionError()
 
+    @GET('http://apiurl/source', text='foobar')
+    def test15(self):
+        """test optional apiurl (GET)"""
+        r = Urllib2HTTPRequest('http://localhost', True, '', '', '', False)
+        resp = r.get('/source', apiurl='http://apiurl')
+        self.assertEqual(resp.read(), 'foobar')
+
+    @DELETE('http://api/source', text='foobar')
+    def test16(self):
+        """test optional apiurl (DELETE)"""
+        r = Urllib2HTTPRequest('http://localhost', True, '', '', '', False)
+        resp = r.delete('/source', apiurl='http://api')
+        self.assertEqual(resp.read(), 'foobar')
+
+    @POST('http://apiurl/source', exp='foo', text='foobar')
+    def test17(self):
+        """test optional apiurl (POST)"""
+        r = Urllib2HTTPRequest('http://localhost', True, '', '', '', False)
+        resp = r.post('/source', data='foo', apiurl='http://apiurl')
+        self.assertEqual(resp.read(), 'foobar')
+
+    @PUT('http://url/source', exp='foo', text='foobar')
+    def test18(self):
+        """test optional apiurl (PUT)"""
+        r = Urllib2HTTPRequest('http://localhost', True, '', '', '', False)
+        resp = r.put('/source', data='foo', apiurl='http://url')
+        self.assertEqual(resp.read(), 'foobar')
+
 if __name__ == '__main__':
     unittest.main()
