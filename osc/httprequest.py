@@ -119,31 +119,33 @@ class AbstractHTTPRequest(object):
         self.apiurl = apiurl
         self.validate = validate
 
-    def get(self, path, schema='', **query):
+    def get(self, path, apiurl='', schema='', **query):
         """Issues a http request to apiurl/path.
 
         The path parameter specified the path of the url.
         Keyword arguments:
+        apiurl -- use this url instead of the default apiurl
         schema -- path to schema file (default '')
         query -- optional query parameters
 
         """
         raise NotImplementedError()
 
-    def put(self, path, data=None, filename='', schema='', **query):
+    def put(self, path, data=None, filename='', apiurl='', schema='', **query):
         """Issues a http PUT request to apiurl/path.
 
         Either data or file mustn't be None.
         Keyword arguments:
         data -- a str or file-like object which should be PUTed (default None)
         filename -- path to a file which should be PUTed (default None)
+        apiurl -- use this url instead of the default apiurl
         schema -- path to schema file (default '')
         query -- optional query parameters
 
         """
         raise NotImplementedError()
 
-    def post(self, path, data=None, filename='', urlencoded=False,
+    def post(self, path, data=None, filename='', urlencoded=False, apiurl='',
              schema='', **query):
         """Issues a http POST request to apiurl/path.
 
@@ -151,6 +153,7 @@ class AbstractHTTPRequest(object):
         Keyword arguments:
         data -- a str or file-like object which should be POSTed (default None)
         filename -- path to a file which should be POSTed (default None)
+        apiurl -- use this url instead of the default apiurl
         schema -- path to schema file (default '')
         urlencoded -- used to indicate if the data has to be urlencoded or not;
                       if set to True the requests's Content-Type is
@@ -161,11 +164,12 @@ class AbstractHTTPRequest(object):
         """
         raise NotImplementedError()
 
-    def delete(self, path, schema='', **query):
+    def delete(self, path, apiurl='', schema='', **query):
         """Issues a http DELETE request to apiurl/path.
 
         Keyword arguments:
         schema -- path to schema file (default '')
+        apiurl -- use this url instead of the default apiurl
         query -- optional query parameters
 
         """
@@ -274,12 +278,14 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
         authhandler.add_password(None, self.apiurl, username, password)
         return authhandler
 
-    def _build_request(self, method, path, **query):
+    def _build_request(self, method, path, apiurl, **query):
         quoted_path = '/'.join([urllib.quote_plus(p) for p in path.split('/')])
         quoted_query = '&'.join([urllib.quote_plus(k) + '=' +
                                  urllib.quote_plus(v)
                                  for k, v in query.iteritems() if v])
-        scheme, host = urlparse.urlsplit(self.apiurl)[0:2]
+        if not apiurl:
+            apiurl = self.apiurl
+        scheme, host = urlparse.urlsplit(apiurl)[0:2]
         url = urlparse.urlunsplit((scheme, host, quoted_path, quoted_query,
                                    ''))
         request = urllib2.Request(url)
@@ -308,8 +314,8 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
     def _new_response(self, resp):
         return Urllib2HTTPResponse(resp)
 
-    def _send_request(self, method, path, schema, **query):
-        request = self._build_request(method, path, **query)
+    def _send_request(self, method, path, apiurl, schema, **query):
+        request = self._build_request(method, path, apiurl, **query)
         self._logger.info(request.get_full_url())
         try:
             f = urllib2.urlopen(request)
@@ -359,19 +365,19 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
         elif filename and not os.path.isfile(filename):
             raise ValueError("filename %s does not exist" % filename)
 
-    def get(self, path, schema='', **query):
-        return self._send_request('GET', path, schema, **query)
+    def get(self, path, apiurl='', schema='', **query):
+        return self._send_request('GET', path, apiurl, schema, **query)
 
-    def delete(self, path, schema='', **query):
-        return self._send_request('DELETE', path, schema, **query)
+    def delete(self, path, apiurl='', schema='', **query):
+        return self._send_request('DELETE', path, apiurl, schema, **query)
 
-    def put(self, path, data=None, filename='', schema='', **query):
+    def put(self, path, data=None, filename='', apiurl='', schema='', **query):
         self._check_put_post_args(data, filename)
-        request = self._build_request('PUT', path, **query)
+        request = self._build_request('PUT', path, apiurl, **query)
         return self._send_data(request, data, filename, schema, False)
 
-    def post(self, path, data=None, filename='', schema='',
+    def post(self, path, data=None, filename='', apiurl='', schema='',
              urlencoded=False, **query):
         self._check_put_post_args(data, filename)
-        request = self._build_request('POST', path, **query)
+        request = self._build_request('POST', path, apiurl, **query)
         return self._send_data(request, data, filename, schema, urlencoded)
