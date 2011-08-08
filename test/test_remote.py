@@ -218,7 +218,7 @@ class TestRemoteModel(OscTest):
         pkg = RemotePackage('newprj', 'bar')
         pkg.store()
         RemotePackage.SCHEMA = ''
-        RemotePackage.PUT_RESPONSE_VALIDATION = ''
+        RemotePackage.PUT_RESPONSE_SCHEMA = ''
 
     def test_package6(self):
         """test package validation (invalid model)"""
@@ -248,7 +248,7 @@ class TestRemoteModel(OscTest):
         pkg.validate()
         self.assertRaises(etree.DocumentInvalid, pkg.store)
         RemotePackage.SCHEMA = ''
-        RemotePackage.PUT_RESPONSE_VALIDATION = ''
+        RemotePackage.PUT_RESPONSE_SCHEMA = ''
 
     @GET('http://localhost/source/newprj/bar/_meta', file='package.xml')
     def test_package9(self):
