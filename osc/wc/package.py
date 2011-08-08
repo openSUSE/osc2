@@ -378,7 +378,7 @@ class Package(WorkingCopy):
         conflicted = []
         skipped = []
         spkg = SourcePackage(self.project, self.name)
-        remote_files = spkg.list(rev=revision)
+        remote_files = spkg.list(rev=revision, apiurl=self.apiurl)
         local_files = self.files()
         data = {}
         for rfile in remote_files:
@@ -567,7 +567,7 @@ class Package(WorkingCopy):
     def _download(self, location, data, *filenames):
         for filename in filenames:
             path = os.path.join(location, filename)
-            f = data[filename].file()
+            f = data[filename].file(apiurl=self.apiurl)
             self.notifier.transfer('download', filename)
             f.write_to(path)
 
@@ -743,7 +743,8 @@ class Package(WorkingCopy):
     def _commit_filelist(self, xml_data):
         request = Osc.get_osc().get_reqobj()
         path = "/source/%s/%s" % (self.project, self.name)
-        f = request.post(path, data=xml_data, cmd='commitfilelist')
+        f = request.post(path, data=xml_data, apiurl=self.apiurl,
+                         cmd='commitfilelist')
         return fromstring(f.read(), entry=File, directory=Directory)
 
     def _read_send_files(self, directory):
@@ -760,7 +761,7 @@ class Package(WorkingCopy):
             path = "/source/%s/%s/%s" % (self.project, self.name, filename)
             lfile = RWLocalFile(wc_filename, wb_path=path, append=True)
             self.notifier.transfer('upload', filename)
-            lfile.write_back(force=True, rev='repository')
+            lfile.write_back(force=True, rev='repository', apiurl=self.apiurl)
             cstate.processed(filename, ' ')
             commit_filename = os.path.join(cstate.location, filename)
             # move wcfile into transaction dir
@@ -770,7 +771,7 @@ class Package(WorkingCopy):
     def latest_revision(self):
         """Return the latest remote revision."""
         spkg = SourcePackage(self.project, self.name)
-        directory = spkg.list(rev='latest')
+        directory = spkg.list(rev='latest', apiurl=self.apiurl)
         if self._files.is_link():
             if directory.linkinfo.has_error():
                 # FIXME: proper error handling

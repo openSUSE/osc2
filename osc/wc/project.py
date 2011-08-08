@@ -195,7 +195,7 @@ class Project(WorkingCopy):
         candidates = []
         conflicted = []
         sprj = SourceProject(self.name)
-        remote_pkgs = [pkg.name for pkg in sprj.list()]
+        remote_pkgs = [pkg.name for pkg in sprj.list(apiurl=self.apiurl)]
         local_pkgs = self.packages()
         for package in remote_pkgs:
             if package in local_pkgs:
@@ -421,9 +421,11 @@ class Project(WorkingCopy):
         for package in cinfo.added:
             if cstate.state == CommitStateMixin.STATE_TRANSFER:
                 # check if package was created in the meantime
-                if not RemotePackage.exists(self.name, package):
+                exists = RemotePackage.exists(self.name, package,
+                                              apiurl=self.apiurl)
+                if not exists:
                     pkg = RemotePackage(self.name, package)
-                    pkg.store()
+                    pkg.store(apiurl=self.apiurl)
                 pkg = self.package(package, transaction_listener=tl)
                 pkg.commit()
                 cstate.state = CommitStateMixin.STATE_COMMITTING
@@ -433,7 +435,7 @@ class Project(WorkingCopy):
         cinfo = cstate.info
         for package in cinfo.deleted:
             if cstate.state == CommitStateMixin.STATE_TRANSFER:
-                RemotePackage.delete(self.name, package)
+                RemotePackage.delete(self.name, package, apiurl=self.apiurl)
                 cstate.state = CommitStateMixin.STATE_COMMITTING
             self._remove_wc_dir(package, notify=True)
             cstate.processed(package, None)
