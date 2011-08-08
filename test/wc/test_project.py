@@ -58,8 +58,8 @@ class TestProject(OscTest):
         path = self.fixture_file('prj1')
         prj = Project(path)
         self.assertEqual(prj.name, 'prj1')
-        self.assertEqual(prj.apiurl, 'http://localhost')
-        self.assertTrue(len(prj.packages()) == 0)
+        self.assertEqual(prj.apiurl, 'http://apiurl')
+        self.assertTrue(len(prj.packages()) == 2)
 
     def test4(self):
         """read invalid project (missing storefiles)"""
@@ -265,10 +265,10 @@ class TestProject(OscTest):
         self.assertEqual(tl._processed.keys(), ['file'])
         self.assertEqual(tl._processed['file'], None)
 
-    @GET('http://localhost/source/prj1', file='prj1_list.xml')
-    @GET('http://localhost/source/prj1', file='prj1_list.xml')
-    @GET('http://localhost/source/prj1/foo?rev=latest', file='foo_list2.xml')
-    @GET(('http://localhost/source/prj1/foo/file'
+    @GET('http://apiurl/source/prj1', file='prj1_list.xml')
+    @GET('http://apiurl/source/prj1', file='prj1_list.xml')
+    @GET('http://apiurl/source/prj1/foo?rev=latest', file='foo_list2.xml')
+    @GET(('http://apiurl/source/prj1/foo/file'
           '?rev=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaf'), file='foo_file')
     def test_update5(self):
         """test update (add package)"""
@@ -463,6 +463,42 @@ class TestProject(OscTest):
         self.assertEqual(prj._status('conflict'), ' ')
         pkg = prj.package('conflict')
         self.assertEqual(pkg.status('conflict'), 'C')
+
+    @GET('http://apiurl/source/prj1/added/_meta', text='<OK/>', code=404)
+    @PUT('http://apiurl/source/prj1/added/_meta', text='<OK/>',
+         expfile='commit_7_meta.xml')
+    @GET('http://apiurl/source/prj1/added?rev=latest',
+         text='<directory name="added"/>')
+    @POST('http://apiurl/source/prj1/added?cmd=commitfilelist',
+          expfile='commit_7_lfiles.xml', file='commit_7_mfiles.xml')
+    @PUT('http://apiurl/source/prj1/added/foo?rev=repository',
+         expfile='commit_7_foo', text=UPLOAD_REV)
+    @POST('http://apiurl/source/prj1/added?cmd=commitfilelist',
+          expfile='commit_7_lfiles.xml', file='commit_7_files.xml')
+    def test_commit7(self):
+        """test commit (local state: 'A')"""
+        path = self.fixture_file('prj1')
+        prj = Project(path)
+        pkg = prj.package('added')
+        self.assertEqual(pkg.status('foo'), 'A')
+        self.assertEqual(prj._status('added'), 'A')
+        prj.commit('added')
+        self.assertEqual(prj._status('added'), ' ')
+        pkg = prj.package('added')
+        self.assertEqual(pkg.status('foo'), ' ')
+        self._exists(path, '.osc', 'data', 'added')
+
+    @DELETE('http://apiurl/source/prj1/missing', text='<ok/>')
+    def test_commit8(self):
+        """test commit delete (local state: 'D' (wc doesn't exist))"""
+        path = self.fixture_file('prj1')
+        prj = Project(path)
+        self._not_exists(path, 'missing')
+        self._exists(path, '.osc', 'data', 'missing')
+        self.assertEqual(prj._status('missing'), 'D')
+        prj.commit('missing')
+        self.assertEqual(prj._status('missing'), '?')
+        self._not_exists(path, '.osc', 'data', 'missing')
 
 if __name__ == '__main__':
     unittest.main()

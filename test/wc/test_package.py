@@ -408,9 +408,9 @@ class TestPackage(OscTest):
         self.assertEqual(pkg.status('bar'), ' ')
         self.assertEqual(pkg.status('foobar'), '?')
 
-    @GET('http://localhost/source/prj/update_2?rev=latest',
+    @GET('http://apiurl/source/prj/update_2?rev=latest',
          file='update_2_files.xml')
-    @GET(('http://localhost/source/prj/update_2/foo'
+    @GET(('http://apiurl/source/prj/update_2/foo'
           '?rev=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), file='update_2_foo')
     def test_update2(self):
         """test update (conflict)"""
@@ -1126,13 +1126,13 @@ class TestPackage(OscTest):
         self.assertEqual(cinfo.modified, [])
         self.assertEqual(cinfo.conflicted, [])
 
-    @GET('http://localhost/source/prj/update_2?rev=latest',
+    @GET('http://apiurl/source/prj/update_2?rev=latest',
          file='commit_1_latest.xml')
-    @POST('http://localhost/source/prj/update_2?cmd=commitfilelist',
+    @POST('http://apiurl/source/prj/update_2?cmd=commitfilelist',
           expfile='commit_1_lfiles.xml', file='commit_1_mfiles.xml')
-    @PUT('http://localhost/source/prj/update_2/foo?rev=repository',
+    @PUT('http://apiurl/source/prj/update_2/foo?rev=repository',
          expfile='commit_1_foo', text=UPLOAD_REV)
-    @POST('http://localhost/source/prj/update_2?cmd=commitfilelist',
+    @POST('http://apiurl/source/prj/update_2?cmd=commitfilelist',
           expfile='commit_1_lfiles.xml', file='commit_1_files.xml')
     def test_commit1(self):
         """test commit (modified)"""
