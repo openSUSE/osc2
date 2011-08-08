@@ -363,11 +363,11 @@ class TestProject(OscTest):
 
     @GET('http://localhost/source/prj2/foo_modified?rev=latest',
          file='commit_1_latest.xml')
-    @POST('http://localhost/source/prj2/foo_modified?cmd=sourcecommitfilelist',
+    @POST('http://localhost/source/prj2/foo_modified?cmd=commitfilelist',
           expfile='commit_1_lfiles.xml', file='commit_1_mfiles.xml')
     @PUT('http://localhost/source/prj2/foo_modified/file?rev=repository',
          expfile='commit_1_file', text=UPLOAD_REV)
-    @POST('http://localhost/source/prj2/foo_modified?cmd=sourcecommitfilelist',
+    @POST('http://localhost/source/prj2/foo_modified?cmd=commitfilelist',
           expfile='commit_1_lfiles.xml', file='commit_1_files.xml')
     def test_commit1(self):
         """test commit (local state: ' ')"""
@@ -386,11 +386,11 @@ class TestProject(OscTest):
          expfile='commit_2_meta.xml')
     @GET('http://localhost/source/prj2/bar?rev=latest',
          file='commit_2_latest.xml')
-    @POST('http://localhost/source/prj2/bar?cmd=sourcecommitfilelist',
+    @POST('http://localhost/source/prj2/bar?cmd=commitfilelist',
           expfile='commit_2_lfiles.xml', file='commit_2_mfiles.xml')
     @PUT('http://localhost/source/prj2/bar/add?rev=repository',
          expfile='commit_2_add', text=UPLOAD_REV)
-    @POST('http://localhost/source/prj2/bar?cmd=sourcecommitfilelist',
+    @POST('http://localhost/source/prj2/bar?cmd=commitfilelist',
           expfile='commit_2_lfiles.xml', file='commit_2_files.xml')
     def test_commit2(self):
         """test commit (local state: 'A')"""
@@ -425,11 +425,11 @@ class TestProject(OscTest):
     @GET('http://localhost/source/prj2/bar/_meta', file='commit_2_meta.xml')
     @GET('http://localhost/source/prj2/bar?rev=latest',
          file='commit_2_latest.xml')
-    @POST('http://localhost/source/prj2/bar?cmd=sourcecommitfilelist',
+    @POST('http://localhost/source/prj2/bar?cmd=commitfilelist',
           expfile='commit_2_lfiles.xml', file='commit_2_mfiles.xml')
     @PUT('http://localhost/source/prj2/bar/add?rev=repository',
          expfile='commit_2_add', text=UPLOAD_REV)
-    @POST('http://localhost/source/prj2/bar?cmd=sourcecommitfilelist',
+    @POST('http://localhost/source/prj2/bar?cmd=commitfilelist',
           expfile='commit_2_lfiles.xml', file='commit_2_files.xml')
     def test_commit4(self):
         """test commit (same as test_commit4 but remote package exists)"""
