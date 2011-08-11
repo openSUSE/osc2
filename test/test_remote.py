@@ -38,7 +38,8 @@ class TestRemoteModel(OscTest):
         self.assertEqual(prj.person[1].get('userid'), 'foobar')
         self.assertEqual(prj.person[1].get('role'), 'bugowner')
 
-    @PUT('http://localhost/source/foo/_meta', text='OK', expfile='project.xml')
+    @PUT('http://localhost/source/foo/_meta', text='OK', expfile='project.xml',
+         exp_content_type='application/xml')
     def test_project2(self):
         """create a remote project"""
         prj = RemoteProject(name='foo')
@@ -55,7 +56,7 @@ class TestRemoteModel(OscTest):
 
     @GET('http://localhost/source/foo/_meta', file='project.xml')
     @PUT('http://localhost/source/foo/_meta', text='OK',
-         expfile='project_modified.xml')
+         expfile='project_modified.xml', exp_content_type='application/xml')
     def test_project3(self):
         """get, modify, store remote project"""
         prj = RemoteProject.find('foo')
@@ -76,7 +77,8 @@ class TestRemoteModel(OscTest):
 
     @GET('http://localhost/source/test/_meta', file='project_simple.xml')
     @PUT('http://localhost/source/test/_meta', text='OK',
-         expfile='project_simple_modified.xml')
+         expfile='project_simple_modified.xml',
+         exp_content_type='application/xml')
     def test_project4(self):
         """test project validation"""
         RemoteProject.SCHEMA = self.fixture_file('project_simple.xsd')
@@ -86,7 +88,8 @@ class TestRemoteModel(OscTest):
         RemoteProject.SCHEMA = ''
 
     @PUT('http://localhost/source/test/_meta', text='<OK />',
-         expfile='project_simple_modified.xml')
+         expfile='project_simple_modified.xml',
+         exp_content_type='application/xml')
     def test_project5(self):
         """test project validation"""
         RemoteProject.SCHEMA = self.fixture_file('project_simple.xsd')
@@ -114,7 +117,7 @@ class TestRemoteModel(OscTest):
         RemoteProject.SCHEMA = ''
 
     @PUT('http://localhost/source/test/_meta', text='<INVALID />',
-         exp='<project name="test"/>\n')
+         exp='<project name="test"/>\n', exp_content_type='application/xml')
     def test_project8(self):
         """test project validation 3 (invalid xml response after store)"""
         RemoteProject.SCHEMA = self.fixture_file('project_simple.xsd')
@@ -166,7 +169,7 @@ class TestRemoteModel(OscTest):
         self.assertEqual(pkg.person.get('role'), 'maintainer')
 
     @PUT('http://localhost/source/openSUSE%3ATools/osc/_meta', text='OK',
-         expfile='package.xml')
+         expfile='package.xml', exp_content_type='application/xml')
     def test_package2(self):
         """create a remote package"""
         pkg = RemotePackage('openSUSE:Tools', 'osc')
@@ -184,7 +187,7 @@ class TestRemoteModel(OscTest):
     @GET('http://localhost/source/openSUSE%3ATools/osc/_meta',
          file='package.xml')
     @PUT('http://localhost/source/openSUSE%3ATools/osc/_meta', text='OK',
-         expfile='package_modified.xml')
+         expfile='package_modified.xml', exp_content_type='application/xml')
     def test_package3(self):
         """get, modify, store remote package"""
         pkg = RemotePackage.find('openSUSE:Tools', 'osc')
@@ -200,7 +203,8 @@ class TestRemoteModel(OscTest):
 
     @GET('http://localhost/source/foo/bar/_meta', file='package_simple.xml')
     @PUT('http://localhost/source/newprj/bar/_meta', text='OK',
-         expfile='package_simple_modified.xml')
+         expfile='package_simple_modified.xml',
+         exp_content_type='application/xml')
     def test_package4(self):
         """test package validation"""
         RemotePackage.SCHEMA = self.fixture_file('package_simple.xsd')
@@ -210,7 +214,8 @@ class TestRemoteModel(OscTest):
         RemotePackage.SCHEMA = ''
 
     @PUT('http://localhost/source/newprj/bar/_meta', text='<OK />',
-         expfile='package_simple_modified.xml')
+         expfile='package_simple_modified.xml',
+         exp_content_type='application/xml')
     def test_package5(self):
         """test package validation"""
         RemotePackage.SCHEMA = self.fixture_file('package_simple.xsd')
@@ -238,7 +243,8 @@ class TestRemoteModel(OscTest):
         RemotePackage.SCHEMA = ''
 
     @PUT('http://localhost/source/foo/bar/_meta', text='<INVALID />',
-         exp='<package project="foo" name="bar"/>\n')
+         exp='<package project="foo" name="bar"/>\n',
+         exp_content_type='application/xml')
     def test_package8(self):
         """test package validation (invalid xml response after store)"""
         RemotePackage.SCHEMA = self.fixture_file('package_simple.xsd')
@@ -301,7 +307,8 @@ class TestRemoteModel(OscTest):
         self.assertEqual(req.history[0].get('who'), 'creator')
 
     @POST('http://localhost/request?cmd=create', file='request_created.xml',
-          expfile='request_create.xml')
+          expfile='request_create.xml',
+          exp_content_type='application/xml')
     def test_request2(self):
         """create a request"""
         req = Request()
@@ -328,7 +335,8 @@ class TestRemoteModel(OscTest):
     @GET('http://localhost/request/456', file='request_simple_created.xml')
     @POST('http://localhost/request?cmd=create',
           file='request_simple_created.xml',
-          expfile='request_simple_create.xml')
+          expfile='request_simple_create.xml',
+          exp_content_type='application/xml')
     def test_request3(self):
         """test request validation (incoming + outgoing)"""
         Request.SCHEMA = self.fixture_file('request_simple.xsd')
@@ -341,7 +349,8 @@ class TestRemoteModel(OscTest):
     @GET('http://localhost/request/456', text='<invalid />')
     @POST('http://localhost/request?cmd=create',
           text='<invalid />',
-          expfile='request_simple_create.xml')
+          expfile='request_simple_create.xml',
+          exp_content_type='application/xml')
     def test_request4(self):
         """test request validation (incoming + outgoing)"""
         Request.SCHEMA = self.fixture_file('request_simple.xsd')
