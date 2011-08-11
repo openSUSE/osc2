@@ -450,33 +450,50 @@ class Project(WorkingCopy):
                 cstate.state = CommitStateMixin.STATE_COMMITTING
             cstate.processed(package, ' ')
 
-    def add(self, pkg):
+    def add(self, package, *filenames, **kwargs):
         """Add a new package to the project.
 
-        pkg is the name of the directory which will be added.
-        A ValueError is raised if pkg is already tracked or if
-        pkg is already an osc working copy.
-        Also if prj/pkg does not exist or is no directory
+        package is the name of the directory which will be added.
+        A ValueError is raised if package is already tracked or if
+        package is already an osc working copy.
+        Also if prj/package does not exist or is no directory
         a ValueError is raised.
+        If filenames are specified they are added to package.
+        If no filenames are specified all files will be added
+        to the package.
+        A ValueError is raised if filenames and no_files=True
+        is specified.
+
+        Keyword arguments:
+        no_files -- add no files (default: False)
 
         """
-        super(Project, self).add(pkg)
+        super(Project, self).add(package)
+        no_files = kwargs.get('no_files', False)
+        if filenames and no_files:
+            raise ValueError("filenames and no_files are mutually exclusive")
         with wc_lock(self.path) as lock:
-            if self._status(pkg) != '?':
-                raise ValueError("package \"%s\" is already tracked" % pkg)
-            pkg_path = os.path.join(self.path, pkg)
+            if self._status(package) != '?':
+                raise ValueError("package \"%s\" is already tracked" % package)
+            pkg_path = os.path.join(self.path, package)
             if not os.path.isdir(pkg_path):
                 raise ValueError("path \"%s\" is no dir" % pkg_path)
             elif wc_is_project(pkg_path) or wc_is_package(pkg_path):
                 msg = ("path \"%s\" is already an initialized"
                        "working copy" % pkg_path)
                 raise ValueError(msg)
-            storedir = wc_pkg_data_mkdir(self.path, pkg)
-            Package.init(pkg_path, pkg, self.name, self.apiurl,
-                         ext_storedir=storedir)
-            # TODO: add files
-            self._packages.add(pkg, state='A')
+            storedir = wc_pkg_data_mkdir(self.path, package)
+            pkg = Package.init(pkg_path, package, self.name, self.apiurl,
+                               ext_storedir=storedir)
+            self._packages.add(package, state='A')
             self._packages.write()
+            if no_files:
+                filenames = []
+            elif not filenames:
+                filenames = [f for f in os.listdir(pkg.path)
+                             if os.path.isfile(os.path.join(pkg.path, f))]
+            for filename in filenames:
+                pkg.add(filename)
 
     def remove(self, pkg):
         """Mark a package for deletion.
