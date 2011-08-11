@@ -189,5 +189,28 @@ class TestHTTPRequest(OscTest):
         resp = r.put('/source', data='foo', apiurl='http://url')
         self.assertEqual(resp.read(), 'foobar')
 
+    @PUT('http://localhost/source/prj/_meta', exp='<xml/>', text='foobar',
+         exp_content_type='application/xml')
+    def test19(self):
+        """test content type (PUT)"""
+        r = Urllib2HTTPRequest('http://localhost', True, '', '', '', False)
+        resp = r.put('/source/prj/_meta', data='<xml/>',
+                     content_type='application/xml')
+        self.assertEqual(resp.read(), 'foobar')
+
+    @PUT('http://localhost/source', exp='asdf', text='foobar',
+         exp_content_type='foo')
+    def test20(self):
+        """test content type (POST)"""
+        r = Urllib2HTTPRequest('http://localhost', True, '', '', '', False)
+        resp = r.put('/source', data='asdf', content_type='foo')
+        self.assertEqual(resp.read(), 'foobar')
+
+    def test21(self):
+        """test content type and urlencoded (POST)"""
+        r = Urllib2HTTPRequest('http://localhost', True, '', '', '', False)
+        self.assertRaises(ValueError, r.post, '/source', data='bar',
+                          content_type='foo', urlencoded=True)
+
 if __name__ == '__main__':
     unittest.main()
