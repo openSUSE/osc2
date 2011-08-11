@@ -132,14 +132,59 @@ class TestProject(OscTest):
         self.assertEqual(uinfo.conflicted, [])
 
     def test10(self):
-        """test add"""
+        """test add (no files)"""
         path = self.fixture_file('project')
         pkg_path = os.path.join(path, 'added')
         os.mkdir(pkg_path)
+        open(os.path.join(pkg_path, 'foo'), 'w').close()
+        open(os.path.join(pkg_path, 'bar'), 'w').close()
+        prj = Project(path)
+        prj.add('added', no_files=True)
+        self.assertEqual(prj._status('added'), 'A')
+        self.assertTrue(os.path.islink(os.path.join(pkg_path, '.osc')))
+        pkg = prj.package('added')
+        self.assertEqual(pkg.status('foo'), '?')
+        self.assertEqual(pkg.status('bar'), '?')
+
+    def test10_1(self):
+        """test add (specific file)"""
+        path = self.fixture_file('project')
+        pkg_path = os.path.join(path, 'added')
+        os.mkdir(pkg_path)
+        open(os.path.join(pkg_path, 'foo'), 'w').close()
+        open(os.path.join(pkg_path, 'bar'), 'w').close()
+        prj = Project(path)
+        prj.add('added', 'foo')
+        self.assertEqual(prj._status('added'), 'A')
+        self.assertTrue(os.path.islink(os.path.join(pkg_path, '.osc')))
+        pkg = prj.package('added')
+        self.assertEqual(pkg.status('foo'), 'A')
+        self.assertEqual(pkg.status('bar'), '?')
+
+    def test10_2(self):
+        """test add (all files)"""
+        path = self.fixture_file('project')
+        pkg_path = os.path.join(path, 'added')
+        os.mkdir(pkg_path)
+        open(os.path.join(pkg_path, 'foo'), 'w').close()
+        open(os.path.join(pkg_path, 'bar'), 'w').close()
         prj = Project(path)
         prj.add('added')
         self.assertEqual(prj._status('added'), 'A')
         self.assertTrue(os.path.islink(os.path.join(pkg_path, '.osc')))
+        pkg = prj.package('added')
+        self.assertEqual(pkg.status('foo'), 'A')
+        self.assertEqual(pkg.status('bar'), 'A')
+
+    def test10_3(self):
+        """test add (all files)"""
+        path = self.fixture_file('project')
+        pkg_path = os.path.join(path, 'added')
+        os.mkdir(pkg_path)
+        open(os.path.join(pkg_path, 'foo'), 'w').close()
+        open(os.path.join(pkg_path, 'bar'), 'w').close()
+        prj = Project(path)
+        self.assertRaises(ValueError, prj.add, 'added', 'foo', no_files=True)
 
     def test11(self):
         """add already existing package"""
