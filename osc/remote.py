@@ -203,6 +203,7 @@ class RemoteModel(object):
             kwargs['data'] = self.tostring()
         if not 'schema' in kwargs:
             kwargs['schema'] = self._store_schema
+        kwargs['content_type'] = 'application/xml'
         return http_method(path, **kwargs)
 
     @classmethod
