@@ -743,9 +743,14 @@ class Package(WorkingCopy):
     def _commit_filelist(self, xml_data):
         request = Osc.get_osc().get_reqobj()
         path = "/source/%s/%s" % (self.project, self.name)
-        f = request.post(path, data=xml_data, apiurl=self.apiurl,
-                         cmd='commitfilelist')
-        return fromstring(f.read(), entry=File, directory=Directory)
+        query = {'cmd': 'commitfilelist'}
+        if self.is_expanded():
+            # the expanded check is not neccessary
+            query['keeplink'] = '1'
+            query['expand'] = '1'
+        f = request.post(path, data=xml_data, apiurl=self.apiurl, **query)
+        return fromstring(f.read(), directory=Directory, entry=File,
+                          linkinfo=Linkinfo)
 
     def _read_send_files(self, directory):
         if directory.get('error') != 'missing':
@@ -772,11 +777,11 @@ class Package(WorkingCopy):
         """Return the latest remote revision."""
         spkg = SourcePackage(self.project, self.name)
         directory = spkg.list(rev='latest', apiurl=self.apiurl)
-        if self._files.is_link():
+        if self.is_link():
             if directory.linkinfo.has_error():
                 # FIXME: proper error handling
                 return 'latest'
-            elif self._files.linkinfo.is_expanded():
+            elif self.is_expanded():
                 return directory.linkinfo.get('xsrcmd5')
         return directory.get('srcmd5')
 
@@ -888,6 +893,18 @@ class Package(WorkingCopy):
             os.unlink(wc_filename)
         self._files.set(filename, 'D')
         self._files.write()
+
+    def is_link(self):
+        """Return True if the package is a source link."""
+        return self._files.is_link()
+
+    def is_expanded(self):
+        """Return True if the working copy is expanded."""
+        return self.is_link() and self._files.linkinfo.is_expanded()
+
+    def is_unexpanded(self):
+        """Return True if the working copy is unexpanded."""
+        return self.is_link() and not self.is_expanded()
 
     @classmethod
     def wc_check(cls, path):
