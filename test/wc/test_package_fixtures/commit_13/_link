@@ -1,0 +1,5 @@
+<link project="openSUSE:Factory" package="glibc" baserev="8a47da335bf024c4669f8e94d17ddc9d">
+  <patches>
+    <branch/>
+  </patches>
+</link>

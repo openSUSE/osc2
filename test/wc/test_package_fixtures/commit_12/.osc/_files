@@ -1,0 +1,7 @@
+<directory name="update_11" rev="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" srcmd5="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb">
+  <linkinfo project="openSUSE:Factory" package="glibc" srcmd5="3f89595f78d827e664e84d040e03db9f" baserev="8a47da335bf024c4669f8e94d17ddc9d" lsrcmd5="0a308b2aca4c9cbab37f343a48f55fd6" />
+  <entry state=" " name="foo" md5="0e04f7f7fa4ec3fbbb907ebbe4dc9bc4" mtime="1311541427.0" size="45"/>
+  <entry state="D" name="bar" md5="3a2c6e3cf6986d6e5af70cc467e4b29f" mtime="1311541504.0" size="30"/>
+  <entry state="D" name="foobar" md5="d8fb5cb79e98b0257f7c5ff2624ac280" mtime="1311541580.0" size="51"/>
+</directory>
+

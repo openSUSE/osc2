@@ -1385,5 +1385,77 @@ class TestPackage(OscTest):
         self.assertEqual(pkg.status('foo'), 'M')
         self._not_exists(path, 'some_tmp')
 
+    @GET('http://localhost/source/prj/update_11?rev=latest',
+         file='commit_12_latest.xml')
+    @POST(('http://localhost/source/prj/update_11?cmd=commitfilelist'
+           '&expand=1&keeplink=1'), expfile='commit_2_lfiles.xml',
+           file='commit_2_mfiles.xml')
+    @PUT('http://localhost/source/prj/update_11/foo?rev=repository',
+         expfile='commit_2_foo', text=UPLOAD_REV)
+    @POST(('http://localhost/source/prj/update_11?cmd=commitfilelist'
+           '&expand=1&keeplink=1'), expfile='commit_2_lfiles.xml',
+           file='commit_12_files.xml')
+    def test_commit12(self):
+        """test commit (expanded link)"""
+        path = self.fixture_file('commit_12')
+        pkg = Package(path)
+        self.assertTrue(pkg.is_link())
+        self.assertTrue(pkg.is_expanded())
+        self.assertFalse(pkg.is_unexpanded())
+        self.assertEqual(pkg.status('foo'), 'M')
+        self.assertEqual(pkg.status('bar'), 'D')
+        self.assertEqual(pkg.status('foobar'), 'D')
+        self._check_md5(path, 'foo', '0e04f7f7fa4ec3fbbb907ebbe4dc9bc4',
+                        data=True)
+        pkg.commit()
+        self._check_md5(path, 'foo', '5fb9f8bed64fb741e760b0db312b7c5a',
+                        data=True)
+        self._not_exists(path, 'bar')
+        self._not_exists(path, 'bar', data=True)
+        # foobar was modified before deletion
+        self._exists(path, 'foobar')
+        self._not_exists(path, 'foobar', data=True)
+        self.assertEqual(pkg.status('foo'), ' ')
+        self.assertEqual(pkg.status('bar'), '?')
+        self.assertEqual(pkg.status('foobar'), '?')
+        self.assertTrue(pkg.is_link())
+        self.assertTrue(pkg.is_expanded())
+        self.assertFalse(pkg.is_unexpanded())
+
+    @GET('http://localhost/source/prj/update_11?rev=latest',
+         file='commit_13_latest.xml')
+    @POST('http://localhost/source/prj/update_11?cmd=commitfilelist',
+           expfile='commit_13_lfiles.xml', file='commit_2_mfiles.xml')
+    @PUT('http://localhost/source/prj/update_11/foo?rev=repository',
+         expfile='commit_2_foo', text=UPLOAD_REV)
+    @POST('http://localhost/source/prj/update_11?cmd=commitfilelist',
+           expfile='commit_13_lfiles.xml', file='commit_13_files.xml')
+    def test_commit13(self):
+        """test commit (unexpanded link)"""
+        path = self.fixture_file('commit_13')
+        pkg = Package(path)
+        self.assertTrue(pkg.is_link())
+        self.assertFalse(pkg.is_expanded())
+        self.assertTrue(pkg.is_unexpanded())
+        self.assertEqual(pkg.status('foo'), 'M')
+        self.assertEqual(pkg.status('bar'), 'D')
+        self.assertEqual(pkg.status('foobar'), 'D')
+        self._check_md5(path, 'foo', '0e04f7f7fa4ec3fbbb907ebbe4dc9bc4',
+                        data=True)
+        pkg.commit('foo')
+        self._check_md5(path, 'foo', '5fb9f8bed64fb741e760b0db312b7c5a',
+                        data=True)
+        self._not_exists(path, 'bar')
+        self._exists(path, 'bar', data=True)
+        # foobar was modified before deletion
+        self._exists(path, 'foobar')
+        self._exists(path, 'foobar', data=True)
+        self.assertEqual(pkg.status('foo'), ' ')
+        self.assertEqual(pkg.status('bar'), 'D')
+        self.assertEqual(pkg.status('foobar'), 'D')
+        self.assertTrue(pkg.is_link())
+        self.assertFalse(pkg.is_expanded())
+        self.assertTrue(pkg.is_unexpanded())
+
 if __name__ == '__main__':
     unittest.main()

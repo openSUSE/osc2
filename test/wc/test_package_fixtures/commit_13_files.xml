@@ -1,0 +1,7 @@
+<directory name="update_11" rev="77" srcmd5="aaa08b2aca4c9cbab37f343a48f55fd6">
+  <linkinfo project="openSUSE:Factory" package="glibc" srcmd5="3f89595f78d827e664e84d040e03db9f" baserev="8a47da335bf024c4669f8e94d17ddc9d" xsrcmd5="aabbbbbbbbbbbbbbbbbbbbbbbbbbbbaa" lsrcmd5="aaa08b2aca4c9cbab37f343a48f55fd6"/>
+  <entry name="_link" md5="75836e3578f7ecb82c1e0c9224dd5600" mtime="1313060460" size="140"/>
+  <entry size="50" md5="5fb9f8bed64fb741e760b0db312b7c5a" name="foo" mtime="1311611158"/>
+  <entry name="bar" md5="3a2c6e3cf6986d6e5af70cc467e4b29f" mtime="1311541504" size="30"/>
+  <entry name="foobar" md5="d8fb5cb79e98b0257f7c5ff2624ac280" mtime="1311541580" size="51"/>
+</directory>

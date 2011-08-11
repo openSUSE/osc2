@@ -1,0 +1,4 @@
+<directory name="update_11" rev="cccccccccccccccccccccccccccccccc" srcmd5="cccccccccccccccccccccccccccccccc">
+  <linkinfo project="openSUSE:Factory" package="glibc" srcmd5="3f89595f78d827e664e84d040e03db9f" baserev="8a47da335bf024c4669f8e94d17ddc9d" lsrcmd5="dddddddddddddddddddddddddddddddd" />
+  <entry size="50" md5="5fb9f8bed64fb741e760b0db312b7c5a" name="foo" mtime="1311611158"/>
+</directory>
