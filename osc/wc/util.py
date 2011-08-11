@@ -307,6 +307,9 @@ class XMLFileTracker(XMLEntryTracker):
         """Return True if package is a link."""
         return self._xml.find('linkinfo') is not None
 
+    def __getattr__(self, name):
+        return getattr(self._xml, name)
+
     @classmethod
     def _fromstring(cls, data):
         return fromstring(data, entry=File, directory=Directory,
@@ -350,7 +353,8 @@ class XMLTransactionState(AbstractTransactionState):
             os.mkdir(data_dir)
             xml_data = ('<transaction name="%s" state="%s"/>'
                 % (name, initial_state))
-            self._xml = fromstring(xml_data)
+            self._xml = fromstring(xml_data, entry=File, directory=Directory,
+                                   linkinfo=Linkinfo)
             self._xml.append(self._xml.makeelement('states'))
             self._add_states(states)
             self._xml.append(self._xml.makeelement('info'))
