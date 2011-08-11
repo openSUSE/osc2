@@ -131,7 +131,8 @@ class AbstractHTTPRequest(object):
         """
         raise NotImplementedError()
 
-    def put(self, path, data=None, filename='', apiurl='', schema='', **query):
+    def put(self, path, data=None, filename='', apiurl='', content_type='',
+            schema='', **query):
         """Issues a http PUT request to apiurl/path.
 
         Either data or file mustn't be None.
@@ -139,6 +140,7 @@ class AbstractHTTPRequest(object):
         data -- a str or file-like object which should be PUTed (default None)
         filename -- path to a file which should be PUTed (default None)
         apiurl -- use this url instead of the default apiurl
+        content_type -- use this value for the Content-type header
         schema -- path to schema file (default '')
         query -- optional query parameters
 
@@ -146,14 +148,16 @@ class AbstractHTTPRequest(object):
         raise NotImplementedError()
 
     def post(self, path, data=None, filename='', urlencoded=False, apiurl='',
-             schema='', **query):
+             content_type='', schema='', **query):
         """Issues a http POST request to apiurl/path.
 
         Either data or file mustn't be None.
+        A ValueError is raised if content_type and urlencoded is specified.
         Keyword arguments:
         data -- a str or file-like object which should be POSTed (default None)
         filename -- path to a file which should be POSTed (default None)
         apiurl -- use this url instead of the default apiurl
+        content_type -- use this value for the Content-type header
         schema -- path to schema file (default '')
         urlencoded -- used to indicate if the data has to be urlencoded or not;
                       if set to True the requests's Content-Type is
@@ -325,13 +329,20 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
         self._validate_response(f, schema)
         return f
 
-    def _send_data(self, request, data, filename, schema, urlencoded):
+    def _send_data(self, request, data, filename, content_type, schema,
+                   urlencoded):
         self._logger.info(request.get_full_url())
         f = None
-        request.add_header('Content-type', 'application/octet-stream')
-        if urlencoded:
+        if content_type and urlencoded:
+            msg = 'content_type and urlencoded are mutually exclusive'
+            raise ValueError(msg)
+        if content_type:
+            request.add_header('Content-type', content_type)
+        elif urlencoded:
             request.add_header('Content-type',
                                'application/x-www-form-urlencoded')
+        else:
+            request.add_header('Content-type', 'application/octet-stream')
         try:
             if filename:
                 f = self._send_file(request, filename, urlencoded)
@@ -371,13 +382,16 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
     def delete(self, path, apiurl='', schema='', **query):
         return self._send_request('DELETE', path, apiurl, schema, **query)
 
-    def put(self, path, data=None, filename='', apiurl='', schema='', **query):
+    def put(self, path, data=None, filename='', apiurl='', content_type='',
+            schema='', **query):
         self._check_put_post_args(data, filename)
         request = self._build_request('PUT', path, apiurl, **query)
-        return self._send_data(request, data, filename, schema, False)
+        return self._send_data(request, data, filename, content_type,
+                               schema, False)
 
-    def post(self, path, data=None, filename='', apiurl='', schema='',
-             urlencoded=False, **query):
+    def post(self, path, data=None, filename='', apiurl='', content_type='',
+             schema='', urlencoded=False, **query):
         self._check_put_post_args(data, filename)
         request = self._build_request('POST', path, apiurl, **query)
-        return self._send_data(request, data, filename, schema, urlencoded)
+        return self._send_data(request, data, filename, content_type,
+                               schema, urlencoded)
