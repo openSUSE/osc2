@@ -228,13 +228,11 @@ class TestProject(OscTest):
         # delete xxx
         self.assertEqual(prj._status('xxx'), '!')
         prj.remove('xxx')
-        self.assertEqual(prj._status('foo'), 'D')
+        self.assertEqual(prj._status('xxx'), 'D')
         # delete bar
         self.assertEqual(prj._status('bar'), 'A')
         prj.remove('bar')
         self.assertEqual(prj._status('bar'), '?')
-        # TODO: uncomment me later
-        # self.assertFalse(os.path.exists(self.fixture_file('prj2', 'bar')))
 
     def test16(self):
         """delete untracked package"""
@@ -247,6 +245,37 @@ class TestProject(OscTest):
         path = self.fixture_file('project')
         prj = Project(path)
         self.assertRaises(ValueError, prj.remove, 'nonexistent')
+
+    def test18(self):
+        """test remove (also check if the files were removed)"""
+        path = self.fixture_file('prj2')
+        prj = Project(path)
+        self.assertEqual(prj._status('bar'), 'A')
+        prj.remove('bar')
+        self.assertEqual(prj._status('bar'), '?')
+        self._not_exists(path, 'bar')
+        self._not_exists(path, 'bar', data=True)
+
+    def test19(self):
+        """test remove (all files removed)"""
+        path = self.fixture_file('prj2')
+        prj = Project(path)
+        pkg = prj.package('foo')
+        self.assertEqual(pkg.status('file'), ' ')
+        self.assertEqual(prj._status('foo'), ' ')
+        self._exists(path, 'foo', 'file')
+        prj.remove('foo')
+        self._exists(path, 'foo')
+        self._not_exists(path, 'foo', 'file')
+        self.assertEqual(prj._status('foo'), 'D')
+        pkg = prj.package('foo')
+        self.assertEqual(pkg.status('file'), 'D')
+
+    def test20(self):
+        """test remove (remove package with conflicts)"""
+        path = self.fixture_file('prj3')
+        prj = Project(path)
+        self.assertRaises(FileConflictError, prj.remove, 'conflict')
 
     @GET('http://localhost/source/prj2', file='prj2_list2.xml')
     @GET('http://localhost/source/prj2/foo?foo=bar&rev=latest',
