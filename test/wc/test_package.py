@@ -588,13 +588,13 @@ class TestPackage(OscTest):
         # is_updateable returns False because there are conflicted files
         self.assertRaises(FileConflictError, pkg.update)
 
-    @GET('http://localhost/source/prj/update_9?rev=latest',
+    @GET('http://localhost/source/prj/update_9?foo=bar&rev=latest',
          file='update_9_files.xml')
     def test_update9(self):
-        """test update (delete files)."""
+        """test update (delete files + query parameter)."""
         path = self.fixture_file('update_9')
         pkg = Package(path)
-        pkg.update()
+        pkg.update(foo='bar')
         self._check_md5(path, 'foo', '0e04f7f7fa4ec3fbbb907ebbe4dc9bc4')
         self._check_md5(path, 'foo', '0e04f7f7fa4ec3fbbb907ebbe4dc9bc4',
                         data=True)

@@ -249,7 +249,7 @@ class TestProject(OscTest):
         self.assertRaises(ValueError, prj.remove, 'nonexistent')
 
     @GET('http://localhost/source/prj2', file='prj2_list2.xml')
-    @GET('http://localhost/source/prj2/foo?rev=latest',
+    @GET('http://localhost/source/prj2/foo?foo=bar&rev=latest',
          file='foo_list1.xml')
     @GET(('http://localhost/source/prj2/foo/added'
           '?rev=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), file='foo_added_file')
@@ -258,7 +258,7 @@ class TestProject(OscTest):
         path = self.fixture_file('prj2')
         prj = Project(path)
         self.assertEqual(prj._status('foo'), ' ')
-        prj.update('foo')
+        prj.update('foo', foo='bar')
         self.assertEqual(prj._status('foo'), ' ')
 
     @GET('http://localhost/source/prj2', file='prj2_list3.xml')
