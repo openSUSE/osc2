@@ -818,7 +818,7 @@ class TestPackage(OscTest):
 
     def test_revert1(self):
         """test revert"""
-        path = self.fixture_file('status1')
+        path = self.fixture_file('status1_no_conflict')
         pkg = Package(path)
         self.assertEqual(pkg.status('file1'), ' ')
         pkg.revert('file1')
@@ -840,7 +840,7 @@ class TestPackage(OscTest):
 
     def test_revert2(self):
         """test revert (revert modified deleted file)"""
-        path = self.fixture_file('status1')
+        path = self.fixture_file('status1_no_conflict')
         pkg = Package(path)
         self.assertEqual(pkg.status('delete_mod'), 'D')
         pkg.revert('delete_mod')
@@ -851,16 +851,22 @@ class TestPackage(OscTest):
 
     def test_revert3(self):
         """test revert (raise ValueError)"""
-        path = self.fixture_file('status1')
+        path = self.fixture_file('status1_no_conflict')
         pkg = Package(path)
-        self.assertRaises(ValueError, pkg.revert, 'conflict')
         self.assertRaises(ValueError, pkg.revert, 'unknown')
         self.assertRaises(ValueError, pkg.revert, 'nonexistent')
         self.assertRaises(ValueError, pkg.revert, 'skipped')
 
+    def test_revert4(self):
+        """test revert (package has a conflict)"""
+        path = self.fixture_file('status1')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('conflict'), 'C')
+        self.assertRaises(FileConflictError, pkg.revert, 'missing')
+
     def test_add1(self):
         """test add"""
-        path = self.fixture_file('status1')
+        path = self.fixture_file('status1_no_conflict')
         pkg = Package(path)
         self.assertEqual(pkg.status('unknown'), '?')
         pkg.add('unknown')
@@ -870,7 +876,7 @@ class TestPackage(OscTest):
 
     def test_add2(self):
         """test add (add deleted file again)"""
-        path = self.fixture_file('status1')
+        path = self.fixture_file('status1_no_conflict')
         pkg = Package(path)
         self.assertEqual(pkg.status('delete'), 'D')
         self._check_md5(path, 'delete', '2e7d76c347da6740e153d154b9064f33',
@@ -884,7 +890,7 @@ class TestPackage(OscTest):
 
     def test_add3(self):
         """test add already tracked file"""
-        path = self.fixture_file('status1')
+        path = self.fixture_file('status1_no_conflict')
         pkg = Package(path)
         self.assertEqual(pkg.status('added'), 'A')
         self.assertRaises(ValueError, pkg.add, 'added')
@@ -914,7 +920,7 @@ class TestPackage(OscTest):
 
     def test_remove1(self):
         """test remove unmodified file"""
-        path = self.fixture_file('status1')
+        path = self.fixture_file('status1_no_conflict')
         pkg = Package(path)
         self.assertEqual(pkg.status('file1'), ' ')
         pkg.remove('file1')
@@ -924,7 +930,7 @@ class TestPackage(OscTest):
 
     def test_remove2(self):
         """test remove missing file"""
-        path = self.fixture_file('status1')
+        path = self.fixture_file('status1_no_conflict')
         pkg = Package(path)
         self.assertEqual(pkg.status('missing'), '!')
         pkg.remove('missing')
@@ -934,7 +940,7 @@ class TestPackage(OscTest):
 
     def test_remove3(self):
         """test remove modified file"""
-        path = self.fixture_file('status1')
+        path = self.fixture_file('status1_no_conflict')
         pkg = Package(path)
         self.assertEqual(pkg.status('modified'), 'M')
         pkg.remove('modified')
@@ -944,7 +950,7 @@ class TestPackage(OscTest):
 
     def test_remove4(self):
         """test remove already removed file"""
-        path = self.fixture_file('status1')
+        path = self.fixture_file('status1_no_conflict')
         pkg = Package(path)
         self.assertEqual(pkg.status('delete'), 'D')
         pkg.remove('delete')
@@ -953,7 +959,7 @@ class TestPackage(OscTest):
 
     def test_remove5(self):
         """test remove added file"""
-        path = self.fixture_file('status1')
+        path = self.fixture_file('status1_no_conflict')
         pkg = Package(path)
         self.assertEqual(pkg.status('added'), 'A')
         pkg.remove('added')
@@ -963,17 +969,15 @@ class TestPackage(OscTest):
 
     def test_remove6(self):
         """test remove conflicted/skipped file (raises a ValueError)"""
-        path = self.fixture_file('status1')
+        path = self.fixture_file('status1_no_conflict')
         pkg = Package(path)
-        self.assertEqual(pkg.status('conflict'), 'C')
-        self.assertRaises(ValueError, pkg.remove, 'conflict')
         # hmm or should we allow to remove skipped files
         self.assertEqual(pkg.status('skipped'), 'S')
         self.assertRaises(ValueError, pkg.remove, 'skipped')
 
     def test_remove7(self):
         """test remove (raises a ValueError)"""
-        path = self.fixture_file('status1')
+        path = self.fixture_file('status1_no_conflict')
         pkg = Package(path)
         # try to remove untracked file
         self.assertEqual(pkg.status('unknown'), '?')
@@ -1001,6 +1005,13 @@ class TestPackage(OscTest):
         self.assertEqual(pkg.status('foobar'), 'D')
         self.assertRaises(PendingTransactionError, pkg.remove, 'foobar')
         self.assertEqual(pkg.status('foobar'), 'D')
+
+    def test_remove10(self):
+        """test remove (package has a conflict)"""
+        path = self.fixture_file('status1')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('conflict'), 'C')
+        self.assertRaises(FileConflictError, pkg.remove, 'foobar')
 
     def test_calculate_commitinfo1(self):
         """test _calculate_commitinfo"""
