@@ -22,6 +22,22 @@ def no_pending_transaction(meth):
     return wrapper
 
 
+def no_conflicts(meth):
+    """Raise a FileConflictError if there are conflicts.
+
+    If no FileConflictError is raised meth is returned.
+    Can be used to decorate methods which should not be executed
+    if there are conflicts.
+
+    """
+    def wrapper(self, *args, **kwargs):
+        conflicts = self.has_conflicts()
+        if conflicts:
+            raise FileConflictError(conflicts)
+        return meth(self, *args, **kwargs)
+    return wrapper
+
+
 class TransactionListener(object):
     """Notify a client about a transaction.
 
@@ -336,6 +352,7 @@ class WorkingCopy(object):
             return cstate
         return self._ustate_class.read_state(self.path)
 
+    @no_conflicts
     @no_pending_transaction
     def add(self, entry, *args, **kwargs):
         """Add entry to working copy.
@@ -349,6 +366,7 @@ class WorkingCopy(object):
         """
         pass
 
+    @no_conflicts
     @no_pending_transaction
     def remove(self, entry, *args, **kwargs):
         """Remove entry from the working copy.
@@ -364,6 +382,7 @@ class WorkingCopy(object):
         """
         pass
 
+    @no_conflicts
     @no_pending_transaction
     def revert(self, entry, *args, **kwargs):
         """Revert an entry.
