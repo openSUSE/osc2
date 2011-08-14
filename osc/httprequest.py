@@ -284,9 +284,11 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
 
     def _build_request(self, method, path, apiurl, **query):
         quoted_path = '/'.join([urllib.quote_plus(p) for p in path.split('/')])
+        # sort query keys (to get a reproduceable url)
+        sorted_keys = sorted(query.keys())
         quoted_query = '&'.join([urllib.quote_plus(k) + '=' +
-                                 urllib.quote_plus(v)
-                                 for k, v in query.iteritems() if v])
+                                 urllib.quote_plus(query[k])
+                                 for k in sorted_keys if query[k]])
         if not apiurl:
             apiurl = self.apiurl
         scheme, host = urlparse.urlsplit(apiurl)[0:2]
