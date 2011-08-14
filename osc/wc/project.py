@@ -513,27 +513,30 @@ class Project(WorkingCopy):
             for filename in filenames:
                 pkg.add(filename)
 
-    def remove(self, pkg):
+    def remove(self, package):
         """Mark a package for deletion.
 
-        pkg is the name of the package to be deleted.
-        A ValueError is raised if pkg is not under version control.
-        If pkg has state 'A' it is directly removed.
+        package is the name of the package to be deleted.
+        A ValueError is raised if package is not under version control.
+        If package has state 'A' it is directly removed.
 
         """
-        super(Project, self).remove(pkg)
+        super(Project, self).remove(package)
         with wc_lock(self.path) as lock:
-            st = self._status(pkg)
+            st = self._status(package)
             if st == '?':
-                msg = "package \"%s\" is not under version control" % pkg
+                msg = "package \"%s\" is not under version control" % package
                 raise ValueError(msg)
             elif st == 'A':
-                # remove files
-                self._packages.remove(pkg)
+                self._remove_wc_dir(package, notify=False)
+                self._packages.remove(package)
             else:
-                self._packages.set(pkg, 'D')
-                # XXX: pkg has a file conflict, pkg totally broken, remove
-                #      files
+                pkg = self.package(package)
+                if pkg is not None:
+                    # only remove files
+                    for filename in pkg.files():
+                        pkg.remove(filename)
+                self._packages.set(package, 'D')
             self._packages.write()
 
     def package(self, package, *args, **kwargs):
