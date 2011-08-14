@@ -1277,13 +1277,13 @@ class TestPackage(OscTest):
 
     @GET('http://localhost/source/prj/commit_6?rev=latest',
          file='commit_6_latest.xml')
-    @POST('http://localhost/source/prj/commit_6?cmd=commitfilelist',
+    @POST('http://localhost/source/prj/commit_6?cmd=commitfilelist&comment=x',
           expfile='commit_6_lfiles1.xml', file='commit_6_mfiles1.xml')
     @PUT('http://localhost/source/prj/commit_6/foo?rev=repository',
          expfile='commit_6_foo', text=UPLOAD_REV)
     @PUT('http://localhost/source/prj/commit_6/added?rev=repository',
          expfile='commit_6_added', text=UPLOAD_REV)
-    @POST('http://localhost/source/prj/commit_6?cmd=commitfilelist',
+    @POST('http://localhost/source/prj/commit_6?cmd=commitfilelist&comment=x',
           expfile='commit_6_lfiles1.xml', file='commit_6_files1.xml')
     def test_commit6(self):
         """test commit (commit added, modified and deleted files)."""
@@ -1296,7 +1296,7 @@ class TestPackage(OscTest):
         self.assertEqual(pkg.status('added'), 'A')
         self._check_md5(path, 'foo', '0e04f7f7fa4ec3fbbb907ebbe4dc9bc4',
                         data=True)
-        pkg.commit('foo', 'bar', 'foobar', 'added')
+        pkg.commit('foo', 'bar', 'foobar', 'added', comment='x')
         self._check_md5(path, 'foo', '5fb9f8bed64fb741e760b0db312b7c5a',
                         data=True)
         self._exists(path, 'added')

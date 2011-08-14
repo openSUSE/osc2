@@ -410,6 +410,8 @@ class TestProject(OscTest):
          file='commit_1_latest.xml')
     @POST('http://localhost/source/prj2/foo_modified?cmd=commitfilelist',
           expfile='commit_1_lfiles.xml', file='commit_1_mfiles.xml')
+    @PUT('http://localhost/source/prj2/foo_modified/add?rev=repository',
+         expfile='commit_1_add', text=UPLOAD_REV)
     @PUT('http://localhost/source/prj2/foo_modified/file?rev=repository',
          expfile='commit_1_file', text=UPLOAD_REV)
     @POST('http://localhost/source/prj2/foo_modified?cmd=commitfilelist',
@@ -420,11 +422,13 @@ class TestProject(OscTest):
         prj = Project(path)
         pkg = prj.package('foo_modified')
         self.assertEqual(pkg.status('file'), 'M')
+        self.assertEqual(pkg.status('add'), 'A')
         self.assertEqual(prj._status('foo'), ' ')
         prj.commit('foo_modified')
         self.assertEqual(prj._status('foo'), ' ')
         pkg = prj.package('foo_modified')
         self.assertEqual(pkg.status('file'), ' ')
+        self.assertEqual(pkg.status('add'), ' ')
 
     @GET('http://localhost/source/prj2/bar/_meta', text='<OK/>', code=404)
     @PUT('http://localhost/source/prj2/bar/_meta', text='<OK/>',
@@ -435,6 +439,8 @@ class TestProject(OscTest):
           expfile='commit_2_lfiles.xml', file='commit_2_mfiles.xml')
     @PUT('http://localhost/source/prj2/bar/add?rev=repository',
          expfile='commit_2_add', text=UPLOAD_REV)
+    @PUT('http://localhost/source/prj2/bar/add2?rev=repository',
+         expfile='commit_2_add2', text=UPLOAD_REV)
     @POST('http://localhost/source/prj2/bar?cmd=commitfilelist',
           expfile='commit_2_lfiles.xml', file='commit_2_files.xml')
     def test_commit2(self):
@@ -443,11 +449,13 @@ class TestProject(OscTest):
         prj = Project(path)
         pkg = prj.package('bar')
         self.assertEqual(pkg.status('add'), 'A')
+        self.assertEqual(pkg.status('add2'), 'A')
         self.assertEqual(prj._status('bar'), 'A')
         prj.commit('bar')
         self.assertEqual(prj._status('bar'), ' ')
         pkg = prj.package('bar')
         self.assertEqual(pkg.status('add'), ' ')
+        self.assertEqual(pkg.status('add2'), ' ')
         self._exists(path, '.osc', 'data', 'bar')
 
     @DELETE('http://localhost/source/prj2/abc', text='<ok/>')
@@ -474,6 +482,8 @@ class TestProject(OscTest):
           expfile='commit_2_lfiles.xml', file='commit_2_mfiles.xml')
     @PUT('http://localhost/source/prj2/bar/add?rev=repository',
          expfile='commit_2_add', text=UPLOAD_REV)
+    @PUT('http://localhost/source/prj2/bar/add2?rev=repository',
+         expfile='commit_2_add2', text=UPLOAD_REV)
     @POST('http://localhost/source/prj2/bar?cmd=commitfilelist',
           expfile='commit_2_lfiles.xml', file='commit_2_files.xml')
     def test_commit4(self):
@@ -565,6 +575,66 @@ class TestProject(OscTest):
         self.assertEqual(tl._finished, ['prj_commit'])
         self.assertEqual(tl._transfer, [])
         self.assertEqual(tl._processed, {})
+
+    @GET('http://localhost/source/prj2/foo_modified?rev=latest',
+         file='commit_1_latest.xml')
+    @POST(('http://localhost/source/prj2/foo_modified?cmd=commitfilelist'
+           '&comment=foo+bar'), expfile='commit_9_lfiles.xml',
+           file='commit_9_mfiles.xml')
+    @PUT('http://localhost/source/prj2/foo_modified/file?rev=repository',
+         expfile='commit_1_file', text=UPLOAD_REV)
+    @POST(('http://localhost/source/prj2/foo_modified?cmd=commitfilelist'
+           '&comment=foo+bar'), expfile='commit_9_lfiles.xml',
+           file='commit_9_files.xml')
+    def test_commit9(self):
+        """test commit (specify file + comment; local state ' ')"""
+        path = self.fixture_file('prj2')
+        prj = Project(path)
+        pkg = prj.package('foo_modified')
+        self.assertEqual(pkg.status('file'), 'M')
+        self.assertEqual(pkg.status('add'), 'A')
+        self.assertEqual(prj._status('foo'), ' ')
+        todo = {'foo_modified': ['file']}
+        prj.commit(package_filenames=todo, comment='foo bar')
+        self.assertEqual(prj._status('foo'), ' ')
+        pkg = prj.package('foo_modified')
+        self.assertEqual(pkg.status('file'), ' ')
+        self.assertEqual(pkg.status('add'), 'A')
+
+    @GET('http://localhost/source/prj2/bar/_meta', text='<OK/>', code=404)
+    @PUT('http://localhost/source/prj2/bar/_meta', text='<OK/>',
+         expfile='commit_2_meta.xml')
+    @GET('http://localhost/source/prj2/bar?rev=latest',
+         file='commit_2_latest.xml')
+    @POST('http://localhost/source/prj2/bar?cmd=commitfilelist&comment=foo',
+          expfile='commit_10_lfiles.xml', file='commit_10_mfiles.xml')
+    @PUT('http://localhost/source/prj2/bar/add?rev=repository',
+         expfile='commit_2_add', text=UPLOAD_REV)
+    @POST('http://localhost/source/prj2/bar?cmd=commitfilelist&comment=foo',
+          expfile='commit_10_lfiles.xml', file='commit_10_files.xml')
+    def test_commit10(self):
+        """test commit (specify file + comment; local state 'A')"""
+        path = self.fixture_file('prj2')
+        prj = Project(path)
+        pkg = prj.package('bar')
+        self.assertEqual(pkg.status('add'), 'A')
+        self.assertEqual(pkg.status('add2'), 'A')
+        self.assertEqual(prj._status('bar'), 'A')
+        todo = {'bar': ['add']}
+        prj.commit(package_filenames=todo, comment='foo')
+        self.assertEqual(prj._status('bar'), ' ')
+        pkg = prj.package('bar')
+        self.assertEqual(pkg.status('add'), ' ')
+        self.assertEqual(pkg.status('add2'), 'A')
+        self._exists(path, '.osc', 'data', 'bar')
+
+    def test_commit11(self):
+        """test commit (package in *packages and package_filenames)"""
+        path = self.fixture_file('prj2')
+        todo = {'bar': ['add']}
+        prj = Project(path)
+        self.assertRaises(ValueError, prj.commit, 'bar',
+                          package_filenames=todo)
 
 if __name__ == '__main__':
     unittest.main()

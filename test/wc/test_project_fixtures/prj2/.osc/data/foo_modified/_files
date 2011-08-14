@@ -1,3 +1,4 @@
 <directory name="foo_modified" rev="77" srcmd5="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa">
   <entry state=" " name="file" md5="d8e8fca2dc0f896fd7cb4cb0031ba249" mtime="1310226672" size="5"/>
+  <entry state="A" name="add"/>
 </directory>
