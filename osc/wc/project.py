@@ -249,12 +249,16 @@ class Project(WorkingCopy):
                 break
         state.clear_info(entry)
 
-    def update(self, *packages):
+    def update(self, *packages, **kwargs):
         """Update project working copy.
 
         If *packages are specified only the specified
         packages will be updated. Otherwise all packages
         will be updated.
+
+        Keyword arguments:
+        **kwargs -- optional keyword arguments which will be passed
+                    to the Package's update method
 
         """
         with wc_lock(self.path) as lock:
@@ -276,16 +280,16 @@ class Project(WorkingCopy):
                     return
                 states = dict([(p, self._status(p)) for p in self.packages()])
                 ustate = ProjectUpdateState(self.path, uinfo=uinfo, **states)
-                self._update(ustate)
+                self._update(ustate, **kwargs)
                 self.notifier.finished('prj_update', aborted=False)
 
-    def _update(self, ustate):
-        self._perform_adds(ustate)
+    def _update(self, ustate, **kwargs):
+        self._perform_adds(ustate, **kwargs)
         self._perform_deletes(ustate)
-        self._perform_candidates(ustate)
+        self._perform_candidates(ustate, **kwargs)
         self._packages.merge(ustate.entrystates)
 
-    def _perform_adds(self, ustate):
+    def _perform_adds(self, ustate, **kwargs):
         uinfo = ustate.info
         tl = self.notifier.listener
         for package in uinfo.added:
@@ -296,7 +300,7 @@ class Project(WorkingCopy):
                 pkg = Package.init(tmp_dir, self.name, package,
                                    self.apiurl, storedir,
                                    transaction_listener=tl)
-                pkg.update()
+                pkg.update(**kwargs)
                 ustate.state = UpdateStateMixin.STATE_UPDATING
             # fixup symlink
             new_dir = os.path.join(self.path, package)
@@ -321,7 +325,7 @@ class Project(WorkingCopy):
             ustate.processed(package, None)
             self.notifier.finished('update', aborted=False)
 
-    def _perform_candidates(self, ustate):
+    def _perform_candidates(self, ustate, **kwargs):
         uinfo = ustate.info
         tl = self.notifier.listener
         for package in uinfo.candidates:
@@ -330,7 +334,7 @@ class Project(WorkingCopy):
             if pkg is None:
                 msg = "package \"%s\" is an invalid candidate." % package
                 raise ValueError(msg)
-            pkg.update()
+            pkg.update(**kwargs)
             ustate.processed(package, ' ')
 
     def _remove_wc_dir(self, package, notify=False):

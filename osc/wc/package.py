@@ -370,7 +370,7 @@ class Package(WorkingCopy):
     def has_conflicts(self):
         return [c for c in self.files() if self.status(c) == 'C']
 
-    def _calculate_updateinfo(self, revision=''):
+    def _calculate_updateinfo(self, revision='', **kwargs):
         unchanged = []
         added = []
         deleted = []
@@ -378,7 +378,7 @@ class Package(WorkingCopy):
         conflicted = []
         skipped = []
         spkg = SourcePackage(self.project, self.name)
-        remote_files = spkg.list(rev=revision, apiurl=self.apiurl)
+        remote_files = spkg.list(rev=revision, apiurl=self.apiurl, **kwargs)
         local_files = self.files()
         data = {}
         for rfile in remote_files:
@@ -446,11 +446,13 @@ class Package(WorkingCopy):
                 else:
                     uinfo.added.append(unskip)
 
-    def update(self, revision='latest'):
+    def update(self, revision='latest', **kwargs):
         """Update working copy.
 
         Keyword arguments:
         revision -- the update revision (default: latest)
+        **kwargs -- optional arguments for the "getfilelist" http
+                    request
 
         """
         with wc_lock(self.path) as lock:
@@ -464,7 +466,7 @@ class Package(WorkingCopy):
                 and ustate.state == UpdateStateMixin.STATE_UPDATING):
                 self._update(ustate)
             else:
-                uinfo = self._calculate_updateinfo(revision=revision)
+                uinfo = self._calculate_updateinfo(revision=revision, **kwargs)
                 self._calculate_skips(uinfo)
                 conflicts = uinfo.conflicted
                 if conflicts:
