@@ -379,12 +379,18 @@ class Project(WorkingCopy):
         return PackageCommitInfo(unchanged, added, deleted,
                                  modified, conflicted)
 
-    def commit(self, *packages):
+    def commit(self, *packages, **kwargs):
         """Commit project working copy.
 
         If *packages are specified only the specified
         packages will be commited. Otherwise all packages
         will be updated.
+
+        Keyword arguments:
+        package_filenames -- a dict which maps a package to a list
+                             of filenames (only these filenames will
+                             be committed) (default: {})
+        comment -- a commit message (default: '')
 
         """
         with wc_lock(self.path) as lock:
@@ -394,8 +400,13 @@ class Project(WorkingCopy):
             if (cstate is not None
                 and cstate.state == CommitStateMixin.STATE_COMMITTING):
                 self._clear_cinfo(cstate)
-                self._commit(cstate)
+                self._commit(cstate, {}, '')
             else:
+                package_filenames = kwargs.get('package_filenames', {})
+                if [p for p in packages if p in package_filenames]:
+                    msg = 'package present in *packages and package_filenames'
+                    raise ValueError(msg)
+                packages = list(packages) + package_filenames.keys()
                 cinfo = self._calculate_commitinfo(*packages)
                 conflicts = cinfo.conflicted
                 if conflicts:
@@ -406,16 +417,17 @@ class Project(WorkingCopy):
                     return
                 states = dict([(p, self._status(p)) for p in self.packages()])
                 cstate = ProjectCommitState(self.path, cinfo=cinfo, **states)
-                self._commit(cstate)
+                comment = kwargs.get('comment', '')
+                self._commit(cstate, package_filenames, comment)
                 self.notifier.finished('prj_commit', aborted=False)
 
-    def _commit(self, cstate):
-        self._commit_adds(cstate)
+    def _commit(self, cstate, package_filenames, comment):
+        self._commit_adds(cstate, package_filenames, comment)
         self._commit_deletes(cstate)
-        self._commit_modified(cstate)
+        self._commit_modified(cstate, package_filenames, comment)
         self._packages.merge(cstate.entrystates)
 
-    def _commit_adds(self, cstate):
+    def _commit_adds(self, cstate, package_filenames, comment):
         cinfo = cstate.info
         tl = self.notifier.listener
         for package in cinfo.added:
@@ -427,7 +439,8 @@ class Project(WorkingCopy):
                     pkg = RemotePackage(self.name, package)
                     pkg.store(apiurl=self.apiurl)
                 pkg = self.package(package, transaction_listener=tl)
-                pkg.commit()
+                filenames = package_filenames.get(package, [])
+                pkg.commit(*filenames, comment=comment)
                 cstate.state = CommitStateMixin.STATE_COMMITTING
             cstate.processed(package, ' ')
 
@@ -440,13 +453,14 @@ class Project(WorkingCopy):
             self._remove_wc_dir(package, notify=True)
             cstate.processed(package, None)
 
-    def _commit_modified(self, cstate):
+    def _commit_modified(self, cstate, package_filenames, comment):
         cinfo = cstate.info
         tl = self.notifier.listener
         for package in cinfo.modified:
             if cstate.state == CommitStateMixin.STATE_TRANSFER:
                 pkg = self.package(package, transaction_listener=tl)
-                pkg.commit()
+                filenames = package_filenames.get(package, [])
+                pkg.commit(*filenames, comment=comment)
                 cstate.state = CommitStateMixin.STATE_COMMITTING
             cstate.processed(package, ' ')
 

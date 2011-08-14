@@ -639,13 +639,15 @@ class Package(WorkingCopy):
                     cinfo_list = getattr(cinfo, listname)
                     cinfo_list.append(filename)
 
-    def commit(self, *filenames):
+    def commit(self, *filenames, **kwargs):
         """Commit working copy.
 
         If no filenames are specified all tracked files
         are committed.
 
         Keyword arguments:
+        **kwargs -- optional parameters for the final commit
+                    http request
 
         """
         with wc_lock(self.path) as lock:
@@ -675,18 +677,18 @@ class Package(WorkingCopy):
                     return
                 states = dict([(f, self.status(f)) for f in self.files()])
                 cstate = PackageCommitState(self.path, cinfo=cinfo, **states)
-                self._commit(cstate)
+                self._commit(cstate, **kwargs)
 
-    def _commit(self, cstate):
+    def _commit(self, cstate, **kwargs):
         cinfo = cstate.info
         # FIXME: validation
         if cstate.state == CommitStateMixin.STATE_TRANSFER:
             cfilelist = self._calculate_commit_filelist(cinfo)
-            missing = self._commit_filelist(cfilelist)
+            missing = self._commit_filelist(cfilelist, **kwargs)
             send_filenames = self._read_send_files(missing)
             if send_filenames:
                 self._commit_files(cstate, send_filenames)
-                filelist = self._commit_filelist(cfilelist)
+                filelist = self._commit_filelist(cfilelist, **kwargs)
             else:
                 filelist = missing
             cstate.append_filelist(filelist)
@@ -740,7 +742,7 @@ class Package(WorkingCopy):
         xml_data = etree.tostring(xml, pretty_print=True)
         return xml_data
 
-    def _commit_filelist(self, xml_data):
+    def _commit_filelist(self, xml_data, **kwargs):
         request = Osc.get_osc().get_reqobj()
         path = "/source/%s/%s" % (self.project, self.name)
         query = {'cmd': 'commitfilelist'}
@@ -748,6 +750,7 @@ class Package(WorkingCopy):
             # the expanded check is not neccessary
             query['keeplink'] = '1'
             query['expand'] = '1'
+        query.update(kwargs)
         f = request.post(path, data=xml_data, apiurl=self.apiurl, **query)
         return fromstring(f.read(), directory=Directory, entry=File,
                           linkinfo=Linkinfo)
