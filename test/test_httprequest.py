@@ -29,7 +29,7 @@ class TestHTTPRequest(OscTest):
         self.assertEqual(resp.read(), 'foobar')
         self.assertIsNone(resp._sio)
 
-    @GET('http://localhost/source/server%3Amail?foo=bar&esc=foo%26bar',
+    @GET('http://localhost/source/server%3Amail?esc=foo%26bar&foo=bar',
          text='foobar')
     def test2(self):
         """simple get with query"""
@@ -62,7 +62,7 @@ class TestHTTPRequest(OscTest):
         self.assertEqual(resp.read(), 'ok')
         self.assertIsNone(resp._sio)
 
-    @PUT('http://localhost/source/foo/bar/file?x=foo+bar&foo=bar',
+    @PUT('http://localhost/source/foo/bar/file?foo=bar&x=foo+bar',
          expfile='putfile', text='ok',
          exp_content_type='application/octet-stream')
     def test6(self):
@@ -84,7 +84,7 @@ class TestHTTPRequest(OscTest):
         self.assertEqual(resp.read(), 'ok')
         self.assertIsNone(resp._sio)
 
-    @POST('http://localhost/source/foo/bar/file?x=foo+bar&foo=bar',
+    @POST('http://localhost/source/foo/bar/file?foo=bar&x=foo+bar',
           expfile='putfile', file='prj_list.xml',
           exp_content_type='application/octet-stream')
     def test8(self):
@@ -98,7 +98,7 @@ class TestHTTPRequest(OscTest):
         self.assertEqual(resp.read(), self.read_file('prj_list.xml'))
         self.assertIsNotNone(resp._sio)
 
-    @POST('http://localhost/source/foo/bar/file?x=foo+bar&foo=bar',
+    @POST('http://localhost/source/foo/bar/file?foo=bar&x=foo+bar',
           expfile='putfile', text='<somexml />',
           exp_content_type='application/octet-stream')
     def test9(self):

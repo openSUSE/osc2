@@ -93,8 +93,8 @@ class TestBuild(OscTest):
         self.assertEqual(res.result[1].status[0].get('code'), 'excluded')
         self.assertEqual(res.result[1].status[0].details, '')
 
-    @GET('http://localhost/build/test/_result?x=y&arch=x86_64&' \
-         'repository=openSUSE_Factory&package=bar',
+    @GET('http://localhost/build/test/_result?arch=x86_64&' \
+         'package=bar&repository=openSUSE_Factory&x=y',
          file='pkg_repo_arch_result.xml')
     def test_buildresult5(self):
         """package repo arch result"""
