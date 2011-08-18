@@ -70,7 +70,7 @@ class ListInfo(object):
             setattr(self, listname, [f for f in l if f != entry])
 
     def _list_iter(self):
-        for listname in self._listnaems:
+        for listname in self._listnames:
             yield getattr(self, listname)
 
     def __contains__(self, entry):
