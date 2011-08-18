@@ -1,0 +1,16 @@
+Index: binary
+===================================================================
+Binary file "binary" has been added.
+Index: binary_added
+===================================================================
+Binary file "binary_added" has been added.
+Index: binary_deleted
+===================================================================
+Binary file "binary_deleted" has been deleted.
+Index: deleted_no_bin
+===================================================================
+--- deleted_no_bin	(revision 7)
++++ deleted_no_bin	(working copy)
+@@ -1,1 +0,0 @@
+-modified without newline
+\ No newline at end of file

@@ -10,7 +10,7 @@ from osc.wc.base import (TransactionListener, FileConflictError,
                          PendingTransactionError)
 from osc.wc.package import (Package, FileSkipHandler, PackageUpdateState,
                             FileUpdateInfo, file_md5, is_binaryfile,
-                            FileCommitPolicy)
+                            FileCommitPolicy, UnifiedDiff, Diff)
 from osc.wc.util import WCInconsistentError
 from osc.source import Package as SourcePackage
 from test.osctest import OscTest
@@ -44,6 +44,15 @@ class TL(TransactionListener):
 
     def processed(self, filename, new_state):
         self._processed[filename] = new_state
+
+
+class UD(UnifiedDiff):
+    def __init__(self):
+        super(UD, self).__init__()
+        self.diff_data = ''
+
+    def process(self, udiff):
+        self.diff_data += ''.join(udiff)
 
 
 class TestPackage(OscTest):
@@ -796,7 +805,7 @@ class TestPackage(OscTest):
         pkg = Package(path)
         self.assertEqual(pkg.status('conflict'), 'C')
         pkg.resolved('conflict')
-        self.assertEqual(pkg.status('conflict'), ' ')
+        self.assertEqual(pkg.status('conflict'), 'M')
 
     def test_resolved2(self):
         """test resolved (conflict modified)"""
@@ -1467,6 +1476,155 @@ class TestPackage(OscTest):
         self.assertTrue(pkg.is_link())
         self.assertFalse(pkg.is_expanded())
         self.assertTrue(pkg.is_unexpanded())
+
+    def test_diff1(self):
+        """test diff (added file)"""
+        path = self.fixture_file('status1')
+        ud = UD()
+        pkg = Package(path)
+        pkg.diff(ud, 'added')
+        ud.diff()
+        self.assertEqualFile(ud.diff_data, 'diff_1')
+
+    def test_diff2(self):
+        """test diff (deleted file)"""
+        path = self.fixture_file('status1')
+        ud = UD()
+        pkg = Package(path)
+        pkg.diff(ud, 'delete')
+        ud.diff()
+        self.assertEqualFile(ud.diff_data, 'diff_2')
+
+    def test_diff3(self):
+        """test diff (modified file)"""
+        path = self.fixture_file('status1')
+        ud = UD()
+        pkg = Package(path)
+        pkg.diff(ud, 'modified')
+        ud.diff()
+        self.assertEqualFile(ud.diff_data, 'diff_3')
+
+    def test_diff4(self):
+        """test diff (missing file)"""
+        path = self.fixture_file('status1')
+        ud = UD()
+        pkg = Package(path)
+        pkg.diff(ud, 'missing')
+        ud.diff()
+        self.assertEqualFile(ud.diff_data, 'diff_4')
+
+    def test_diff5(self):
+        """test diff (conflicted file (this is nothing special))"""
+        path = self.fixture_file('status1')
+        ud = UD()
+        pkg = Package(path)
+        pkg.diff(ud, 'conflict')
+        ud.diff()
+        self.assertEqualFile(ud.diff_data, 'diff_5')
+
+    @GET('http://localhost/source/foo/status1?rev=77',
+         file='status1_list2.xml')
+    @GET(('http://localhost/source/foo/status1/added'
+          '?rev=bbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), file='status1_added')
+    @GET('http://localhost/source/foo/status1?rev=77',
+         file='status1_list2.xml')
+    def test_diff6(self):
+        """test diff (remote revision; local state: 'A')"""
+        # treated as modified file
+        path = self.fixture_file('status1')
+        ud = UD()
+        pkg = Package(path)
+        pkg.diff(ud, 'added', revision='77')
+        ud.diff()
+        self.assertEqualFile(ud.diff_data, 'diff_6')
+        self._exists(path, 'diff', 'bbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                     store=True)
+        # create a new diff object
+        ud = UD()
+        pkg.diff(ud, 'added', revision='77')
+        ud.diff()
+        self.assertEqualFile(ud.diff_data, 'diff_6')
+        ud.cleanup()
+        self._not_exists(path, 'diff', store=True)
+
+    @GET('http://localhost/source/foo/status1?rev=77',
+         file='status1_list2.xml')
+    def test_diff7(self):
+        """test diff (remote revision; local state: 'M')"""
+        # treated as added file
+        path = self.fixture_file('status1')
+        ud = UD()
+        pkg = Package(path)
+        pkg.diff(ud, 'modified', revision='77')
+        ud.diff()
+        self.assertEqualFile(ud.diff_data, 'diff_7')
+        ud.cleanup()
+
+    def test_diff8(self):
+        """test diff (binary)"""
+        path = self.fixture_file('binary')
+        ud = UD()
+        pkg = Package(path)
+        pkg.diff(ud)
+        ud.diff()
+        self.assertEqualFile(ud.diff_data, 'diff_8')
+        ud.cleanup()
+
+    @GET('http://localhost/source/foo/binary?rev=7',
+         file='binary_list.xml')
+    @GET(('http://localhost/source/foo/binary/binary_deleted'
+          '?rev=ccccaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), file='binary_deleted')
+    @GET(('http://localhost/source/foo/binary/deleted_no_bin'
+          '?rev=ccccaaaaaaaaaaaaaaaaaaaaaaaaaaaa'),
+          file='binary_deleted_no_bin')
+    def test_diff9(self):
+        """test diff (binary and remote revision)"""
+        path = self.fixture_file('binary')
+        ud = UD()
+        pkg = Package(path)
+        pkg.diff(ud, revision='7')
+        ud.diff()
+        self.assertEqualFile(ud.diff_data, 'diff_9')
+        ud.cleanup()
+
+    def test_diff10(self):
+        """test diff (skipped file)"""
+        path = self.fixture_file('status1')
+        ud = UD()
+        pkg = Package(path)
+        pkg.diff(ud, 'skipped')
+        ud.diff()
+        self.assertEqualFile(ud.diff_data, 'diff_10')
+        ud.cleanup()
+
+    def test_diff11(self):
+        """test diff (all files)"""
+        path = self.fixture_file('status1')
+        d = Diff()
+        pkg = Package(path)
+        pkg.diff(d)
+        self.assertEqual(d.unchanged, ['file1'])
+        self.assertEqual(d.added, ['added', 'added2'])
+        self.assertEqual(d.deleted, ['delete', 'delete_mod'])
+        self.assertEqual(d.modified, ['modified', 'conflict'])
+        self.assertEqual(d.missing, ['missing'])
+        self.assertEqual(d.skipped, ['skipped'])
+
+    @GET('http://localhost/source/foo/status1?rev=77',
+         file='status1_list2.xml')
+    def test_diff12(self):
+        """test diff (all files; remove revision)"""
+        path = self.fixture_file('status1')
+        d = Diff()
+        pkg = Package(path)
+        pkg.diff(d, revision='77')
+        # conflict's md5 did not change
+        self.assertEqual(d.unchanged, ['conflict'])
+        self.assertEqual(d.added, ['file1', 'modified', 'added2'])
+        self.assertEqual(d.deleted, ['foobar', 'delete', 'delete_mod'])
+        self.assertEqual(d.modified, ['added'])
+        self.assertEqual(d.missing, ['missing'])
+        self.assertEqual(d.skipped, ['skipped'])
 
 if __name__ == '__main__':
     unittest.main()

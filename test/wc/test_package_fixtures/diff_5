@@ -1,0 +1,9 @@
+Index: conflict
+===================================================================
+--- conflict	(revision 72)
++++ conflict	(working copy)
+@@ -1,1 +1,4 @@
+ conflicted file
++CONFLICT
++which has to be
++resolved.
