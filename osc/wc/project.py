@@ -7,7 +7,7 @@ import shutil
 from lxml import objectify, etree
 
 from osc.wc.base import (WorkingCopy, UpdateStateMixin, CommitStateMixin,
-                         PendingTransactionError, FileConflictError)
+                         PendingTransactionError, FileConflictError, ListInfo)
 from osc.wc.package import Package
 from osc.wc.util import (wc_read_project, wc_read_apiurl, wc_read_packages,
                          wc_init, wc_write_apiurl, wc_write_project,
@@ -19,7 +19,7 @@ from osc.source import Project as SourceProject
 from osc.remote import RemotePackage
 
 
-class PackageUpdateInfo(object):
+class PackageUpdateInfo(ListInfo):
     """Contains information about an update.
 
     It provides the following information:
@@ -36,14 +36,12 @@ class PackageUpdateInfo(object):
     """
 
     def __init__(self, candidates, added, deleted, conflicted):
-        super(PackageUpdateInfo, self).__init__()
-        self.candidates = candidates
-        self.added = added
-        self.deleted = deleted
-        self.conflicted = conflicted
+        super(PackageUpdateInfo, self).__init__(candidates=candidates,
+                                                added=added, deleted=deleted,
+                                                conflicted=conflicted)
 
 
-class PackageCommitInfo(object):
+class PackageCommitInfo(ListInfo):
     """Contains information about a commit.
 
     It provides the following information:
@@ -55,11 +53,10 @@ class PackageCommitInfo(object):
 
     """
     def __init__(self, unchanged, added, deleted, modified, conflicted):
-        self.unchanged = unchanged
-        self.added = added
-        self.deleted = deleted
-        self.modified = modified
-        self.conflicted = conflicted
+        super(PackageCommitInfo, self).__init__(unchanged=unchanged,
+                                                added=added, deleted=deleted,
+                                                modified=modified,
+                                                conflicted=conflicted)
 
 
 class ProjectUpdateState(XMLTransactionState, UpdateStateMixin):

@@ -16,7 +16,7 @@ from osc.util.xml import fromstring
 from osc.util.io import copy_file
 from osc.wc.base import (WorkingCopy, UpdateStateMixin, CommitStateMixin,
                          FileConflictError, PendingTransactionError,
-                         no_pending_transaction)
+                         ListInfo, no_pending_transaction)
 from osc.wc.util import (wc_read_package, wc_read_project, wc_read_apiurl,
                          wc_init, wc_lock, wc_write_package, wc_write_project,
                          wc_write_apiurl, wc_write_files, wc_read_files,
@@ -113,7 +113,7 @@ class Merge(object):
             return Merge.FAILURE
 
 
-class FileUpdateInfo(object):
+class FileUpdateInfo(ListInfo):
     """Contains information about an update.
 
     It provides the following information:
@@ -135,13 +135,10 @@ class FileUpdateInfo(object):
 
     def __init__(self, unchanged, added, deleted, modified,
                  conflicted, skipped, data, remote_xml):
-        super(FileUpdateInfo, self).__init__()
-        self.unchanged = unchanged
-        self.added = added
-        self.deleted = deleted
-        self.modified = modified
-        self.conflicted = conflicted
-        self.skipped = skipped
+        super(FileUpdateInfo, self).__init__(unchanged=unchanged, added=added,
+                                             deleted=deleted, skipped=skipped,
+                                             modified=modified,
+                                             conflicted=conflicted)
         self.data = data
         self.remote_xml = remote_xml
         self.rev = remote_xml.get('rev')
@@ -157,7 +154,7 @@ class FileUpdateInfo(object):
         return '\n'.join(ret)
 
 
-class FileCommitInfo(object):
+class FileCommitInfo(ListInfo):
     """Contains information about a commit.
 
     It provides the following information:
@@ -171,12 +168,10 @@ class FileCommitInfo(object):
     """
 
     def __init__(self, unchanged, added, deleted, modified, conflicted):
-        super(FileCommitInfo, self).__init__()
-        self.unchanged = unchanged
-        self.added = added
-        self.deleted = deleted
-        self.modified = modified
-        self.conflicted = conflicted
+        super(FileCommitInfo, self).__init__(unchanged=unchanged, added=added,
+                                             deleted=deleted,
+                                             modified=modified,
+                                             conflicted=conflicted)
 
 
 class FileSkipHandler(object):
@@ -370,15 +365,17 @@ class Package(WorkingCopy):
     def has_conflicts(self):
         return [c for c in self.files() if self.status(c) == 'C']
 
-    def _calculate_updateinfo(self, revision='', **kwargs):
+    def _calculate_updateinfo(self, revision='', remote_files=None, **kwargs):
         unchanged = []
         added = []
         deleted = []
         modified = []
         conflicted = []
         skipped = []
-        spkg = SourcePackage(self.project, self.name)
-        remote_files = spkg.list(rev=revision, apiurl=self.apiurl, **kwargs)
+        if remote_files is None:
+            spkg = SourcePackage(self.project, self.name)
+            remote_files = spkg.list(rev=revision, apiurl=self.apiurl,
+                                     **kwargs)
         local_files = self.files()
         data = {}
         for rfile in remote_files:
@@ -421,14 +418,6 @@ class Package(WorkingCopy):
         an invalid skip or unskip list.
 
         """
-        def uinfo_remove(skip):
-            uinfo.unchanged = [f for f in uinfo.unchanged if f != skip]
-            uinfo.added = [f for f in uinfo.added if f != skip]
-            uinfo.deleted = [f for f in uinfo.deleted if f != skip]
-            uinfo.modified = [f for f in uinfo.modified if f != skip]
-            uinfo.conflicted = [f for f in uinfo.conflicted if f != skip]
-            uinfo.skipped = [f for f in uinfo.skipped if f != skip]
-
         for handler in self.skip_handlers:
             skips, unskips = handler.skip(copy.deepcopy(uinfo))
             inv = [f for f in skips if not f in uinfo.data.keys()]
@@ -437,7 +426,7 @@ class Package(WorkingCopy):
                 msg = "invalid skip/unskip files: %s" % ', '.join(inv)
                 raise ValueError(msg)
             for skip in skips:
-                uinfo_remove(skip)
+                uinfo.remove(skip)
                 uinfo.skipped.append(skip)
             for unskip in unskips:
                 uinfo.skipped.remove(unskip)
@@ -590,6 +579,8 @@ class Package(WorkingCopy):
         for filename in wc_filenames:
             st = self.status(filename)
             if not filename in filenames:
+                # no 'A' state because unchanged files are part
+                # of the commit
                 if st != 'A':
                     unchanged.append(filename)
                 continue
@@ -617,12 +608,6 @@ class Package(WorkingCopy):
         an invalid unchanged or deleted list.
 
         """
-        def cinfo_remove(filename):
-            cinfo.unchanged = [f for f in cinfo.unchanged if f != filename]
-            cinfo.added = [f for f in cinfo.added if f != filename]
-            cinfo.deleted = [f for f in cinfo.deleted if f != filename]
-            cinfo.modified = [f for f in cinfo.modified if f != filename]
-
         filenames = self.files()
         for policy in self.commit_policies:
             unchanged, deleted = policy.apply(copy.deepcopy(cinfo))
@@ -637,9 +622,8 @@ class Package(WorkingCopy):
                         msg = ("commit policy: file \"%s\" isn't tracked"
                                % filename)
                         raise ValueError(msg)
-                    cinfo_remove(filename)
-                    cinfo_list = getattr(cinfo, listname)
-                    cinfo_list.append(filename)
+                    cinfo.remove(filename)
+                    cinfo.append(filename, listname)
 
     def commit(self, *filenames, **kwargs):
         """Commit working copy.
