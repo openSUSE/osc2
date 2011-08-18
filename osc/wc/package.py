@@ -5,6 +5,7 @@ import hashlib
 import copy
 import shutil
 import subprocess
+from difflib import unified_diff
 
 from lxml import etree, objectify
 
@@ -21,7 +22,8 @@ from osc.wc.util import (wc_read_package, wc_read_project, wc_read_apiurl,
                          wc_init, wc_lock, wc_write_package, wc_write_project,
                          wc_write_apiurl, wc_write_files, wc_read_files,
                          missing_storepaths, WCInconsistentError,
-                         wc_pkg_data_filename, XMLTransactionState)
+                         wc_pkg_data_filename, XMLTransactionState,
+                         wc_diff_mkdir)
 
 
 def file_md5(filename):
@@ -111,6 +113,184 @@ class Merge(object):
             return Merge.CONFLICT
         else:
             return Merge.FAILURE
+
+
+class Diff(ListInfo):
+    """Encapsulates files for a diff and diff logic.
+    
+    All attributes will be filled by the Package's diff
+    method.
+
+    """
+
+    def __init__(self):
+        super(Diff, self).__init__('unchanged', 'added', 'deleted',
+                                   'modified', 'missing', 'skipped')
+        # all attributes will be set after the Package's diff call
+        self.wc_path = ''
+        self.old_path = ''
+        self._remote_files = None
+        self.revision_data = {}
+
+    def wc_filename(self, filename):
+        """Return the path to the wc filename."""
+        return os.path.join(self.wc_path, filename)
+
+    def old_filename(self, filename):
+        """Return the path to the old filename."""
+        path = os.path.join(self.old_path, filename)
+        if not os.path.exists(path) and self._remote_files is not None:
+            for entry in self._remote_files:
+                if entry.get('name') == filename:
+                    f = entry.file()
+                    f.write_to(path)
+                    break
+        return path
+
+    def cleanup(self):
+        """Remove downloaded files.
+
+        Note: it is perfectly ok if subclasses decide to
+              cache the downloaded data for some time.
+
+        """
+        if self._remote_files is None:
+            return
+        for filename in os.listdir(self.old_path):
+            os.unlink(os.path.join(self.old_path, filename))
+        os.rmdir(self.old_path)
+        try:
+            os.rmdir(wc_diff_mkdir(self.wc_path, ''))
+        except OSError as e:
+            if e.errno != errno.ENOTEMPTY:
+                raise
+
+
+class UnifiedDiff(Diff):
+    """Perform unified diff."""
+    DIFF_HEADER = "Index: %s\n" + '=' * 67 + '\n'
+    DIFF_FILES = "--- %s\t(%s)\n+++ %s\t(%s)\n"
+
+    def process(self, data):
+        """Process generated diff data.
+
+        data is a list which contains the diff.
+        Subclasses may override this method to present
+        the diff data.
+
+        """
+        pass
+
+    def _diff_binary(self, filename, old_filepath, wc_filepath):
+        is_binary = False
+        data = [UnifiedDiff.DIFF_HEADER % filename]
+        if wc_filepath and not old_filepath:
+            is_binary = is_binaryfile(wc_filepath)
+            data.append("Binary file \"%s\" has been added.\n" % filename)
+        elif not wc_filepath and old_filepath:
+            is_binary = is_binaryfile(old_filepath)
+            data.append("Binary file \"%s\" has been deleted.\n" % filename)
+        else:
+            # unified diff does not care about unchanged, so this
+            # is the modified case
+            is_binary = (is_binaryfile(wc_filepath)
+                         or is_binaryfile(old_filepath))
+            data.append("Binary file \"%s\" has changed.\n" % filename)
+        if not is_binary:
+            return None
+        return data
+
+    def _diff_add_delete(self, filename, filepath, revision, add):
+        # difflib does not correctly handle new/deleted files
+        old_revision = wc_revision = revision
+        if add:
+            data = self._diff_binary(filename, None, filepath)
+        else:
+            old_revision = "revision %s" % revision
+            wc_revision = 'working copy'
+            data = self._diff_binary(filename, filepath, None)
+        if data is not None:
+            return data
+        data = [UnifiedDiff.DIFF_HEADER % filename]
+        data.append((UnifiedDiff.DIFF_FILES % (filename, old_revision,
+                                               filename, wc_revision)))
+        with open(filepath, 'r') as f:
+            diff = f.readlines()
+        if add:
+            data.append('@@ -0,0 +1,%s @@\n' % len(diff))
+            data.extend(['+' + line for line in diff])
+        else:
+            data.append('@@ -1,%s +0,0 @@\n' % len(diff))
+            data.extend(['-' + line for line in diff])
+        self._fixup_newline(data)
+        return data
+
+    def _fixup_newline(self, data):
+        if not data:
+            return
+        if not data[-1].endswith('\n'):
+            data.append('\n\\ No newline at end of file\n')
+
+    def _diff_add(self):
+        for filename in self.added:
+            wc_filename = self.wc_filename(filename)
+            data = self._diff_add_delete(filename, wc_filename,
+                                         'working copy', True)
+            self.process(data)
+
+    def _diff_delete(self):
+        for filename in self.deleted:
+            old_filename = self.old_filename(filename)
+            data = self._diff_add_delete(filename, old_filename,
+                                         self.revision_data['rev'], False)
+            self.process(data)
+
+    def _diff_modified(self):
+        for filename in self.modified:
+            old_filename = self.old_filename(filename)
+            old_revision = "revision %s" % self.revision_data['rev']
+            wc_filename = self.wc_filename(filename)
+            wc_revision = 'working copy'
+            fromfile = "%s\t(%s)" % (filename, old_revision)
+            tofile = "%s\t(%s)" % (filename, wc_revision)
+            data = self._diff_binary(filename, old_filename, wc_filename)
+            if data is not None:
+                self.process(data)
+                continue
+            data = [UnifiedDiff.DIFF_HEADER % filename]
+            with open(old_filename) as f:
+                old = f.readlines()
+            with open(wc_filename) as f:
+                wc = f.readlines()
+            diff = unified_diff(old, wc, fromfile=fromfile, tofile=tofile)
+            # hmm is it possible to avoid the conversion?
+            diff = list(diff)
+            if len(diff) >= 1:
+                diff[0] = diff[0].replace(' \n', '\n')
+                diff[1] = diff[1].replace(' \n', '\n')
+            data.extend(diff)
+            self._fixup_newline(data)
+            self.process(data)
+
+    def _diff_missing(self):
+        for filename in self.missing:
+            data = [UnifiedDiff.DIFF_HEADER % filename]
+            data.append("File \"%s\" is missing.\n" % filename)
+            self.process(data)
+
+    def _diff_skipped(self):
+        for filename in self.skipped:
+            data = [UnifiedDiff.DIFF_HEADER % filename]
+            data.append("File \"%s\" is skipped.\n" % filename)
+            self.process(data)
+
+    def diff(self):
+        """Perform the diff."""
+        self._diff_add()
+        self._diff_delete()
+        self._diff_modified()
+        self._diff_missing()
+        self._diff_skipped()
 
 
 class FileUpdateInfo(ListInfo):
@@ -894,6 +1074,83 @@ class Package(WorkingCopy):
     def is_unexpanded(self):
         """Return True if the working copy is unexpanded."""
         return self.is_link() and not self.is_expanded()
+
+    def diff(self, diff, *filenames, **kwargs):
+        """Initialize diff object.
+
+        filenames are the working copy filenames which should
+        be considered. If no filenames are specified all working
+        copy files will be used.
+        A ValueError is raised if a filename is not tracked.
+
+        Keyword arguments:
+        revision -- diff against the remote revision revision (default: '')
+
+        """
+        def consider_filenames(info, filenames):
+            if set(filenames) == set(self.files()):
+                return
+            # only consider filenames
+            remove = []
+            for filename in info:
+                if not filename in filenames:
+                    remove.append(filename)
+            for filename in remove:
+                info.remove(filename)
+
+        untracked = [f for f in filenames if self.status(f) == '?']
+        if untracked:
+            msg = ("diff not possible untracked files: %s"
+                   % ', '.join(untracked))
+            raise ValueError(msg)
+        revision = kwargs.get('revision', '')
+        if not filenames:
+            filenames = self.files()
+        diff.wc_path = self.path
+        diff.revision_data = self._files.revision_data()
+        if revision:
+            spkg = SourcePackage(self.project, self.name)
+            directory = spkg.list(rev=revision, apiurl=self.apiurl)
+            info = self._calculate_updateinfo(remote_files=directory)
+            consider_filenames(info, filenames)
+            # swap added and deleted
+            tmp = info.added
+            info.added = info.deleted
+            info.deleted = tmp
+            # treat files with state 'A' as added
+            local_added = [f for f in info.unchanged if self.status(f) == 'A']
+            for filename in local_added:
+                info.unchanged.remove(filename)
+                info.added.append(filename)
+            # check for missing files
+            missing = [f for f in info if self.status(f) == '!']
+            # treat files with state 'D' as deleted
+            deleted = [f for f in info if self.status(f) == 'D']
+            for filename in missing + deleted:
+                info.remove(filename)
+            info.conflicted.extend(missing)
+            info.deleted.extend(deleted)
+            diff._remote_files = directory
+            srcmd5 = directory.get('srcmd5')
+            diff.old_path = wc_diff_mkdir(self.path, srcmd5)
+            diff.revision_data = {'rev': revision, 'srcmd5': srcmd5}
+        else:
+            info = self._calculate_commitinfo(*filenames)
+            consider_filenames(info, filenames)
+            skipped = [f for f in info.unchanged if self.status(f) == 'S']
+            for filename in skipped:
+                info.remove(filename)
+            info.skipped = skipped
+            diff.old_path = wc_pkg_data_filename(self.path, '')
+        listnames = ('added', 'deleted', 'modified', 'unchanged', 'skipped')
+        for listname in listnames:
+            for filename in getattr(info, listname):
+                diff.append(filename, listname)
+        for filename in info.conflicted:
+            if self.status(filename) == '!':
+                diff.append(filename, 'missing')
+            else:
+                diff.append(filename, 'modified')
 
     @classmethod
     def wc_check(cls, path):

@@ -22,6 +22,7 @@ __all__ = ['wc_is_project', 'wc_is_package', 'wc_read_project',
 # maybe we should define this somewhere else
 _STORE = '.osc'
 _PKG_DATA = 'data'
+_DIFF_DATA = 'diff'
 _LOCK = 'wc.lock'
 
 
@@ -778,3 +779,18 @@ def wc_pkg_data_filename(path, filename):
     global _PKG_DATA
     data_path = _storefile(path, _PKG_DATA)
     return os.path.join(data_path, filename)
+
+def wc_diff_mkdir(path, revision):
+    """Return the filename to the diff dir.
+
+    If the directory does not exist it will be
+    created.
+    revision is the revision of the remote files.
+
+    """
+    global _DIFF_DATA
+    diff_path = os.path.join(_storefile(path, _DIFF_DATA), revision)
+    if not os.path.exists(diff_path):
+        os.makedirs(diff_path)
+    return diff_path
+    
