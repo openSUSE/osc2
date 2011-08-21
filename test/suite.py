@@ -9,6 +9,7 @@ from test import test_oscargs
 from test.wc import test_util
 from test.wc import test_project
 from test.wc import test_package
+from test.wc import test_convert
 
 suite = unittest.TestSuite()
 suite.addTests(test_httprequest.suite())
@@ -19,5 +20,6 @@ suite.addTests(test_oscargs.suite())
 suite.addTests(test_util.suite())
 suite.addTests(test_project.suite())
 suite.addTests(test_package.suite())
+suite.addTests(test_convert.suite())
 result = unittest.TextTestRunner(verbosity=1).run(suite)
 sys.exit(not result.wasSuccessful())
