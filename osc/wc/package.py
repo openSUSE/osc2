@@ -23,7 +23,8 @@ from osc.wc.util import (wc_read_package, wc_read_project, wc_read_apiurl,
                          wc_write_apiurl, wc_write_files, wc_read_files,
                          missing_storepaths, WCInconsistentError,
                          wc_pkg_data_filename, XMLTransactionState,
-                         wc_diff_mkdir)
+                         wc_diff_mkdir, _storedir, _PKG_DATA, wc_verify_format,
+                         wc_write_version)
 
 
 def file_md5(filename):
@@ -472,7 +473,7 @@ class Package(WorkingCopy):
     """Represents a package working copy."""
 
     def __init__(self, path, skip_handlers=[], commit_policies=[],
-                 merge_class=Merge, **kwargs):
+                 merge_class=Merge, verify_format=True, **kwargs):
         """Constructs a new package object.
 
         path is the path to the working copy.
@@ -486,9 +487,12 @@ class Package(WorkingCopy):
                          (default: [])
         merge_class -- class which is used for a file merge
                        (default: Merge)
+        verify_format -- verify working copy format (default: True)
         **kwargs -- see class WorkingCopy for the details
 
         """
+        if verify_format:
+            wc_verify_format(path)
         (meta, xml_data, pkg_data) = self.wc_check(path)
         if meta or xml_data or pkg_data:
             raise WCInconsistentError(path, meta, xml_data, pkg_data)
@@ -1163,7 +1167,7 @@ class Package(WorkingCopy):
 
         """
         meta = missing_storepaths(path, '_project', '_package',
-                                  '_apiurl', '_files')
+                                  '_apiurl', '_files', '_version')
         dirs = missing_storepaths(path, 'data', dirs=True)
         missing = meta + dirs
         if '_files' in missing:
@@ -1177,6 +1181,58 @@ class Package(WorkingCopy):
                      if not f.get('state') in ('A', 'S')]
         pkg_data = missing_storepaths(path, *filenames, data=True)
         return (missing, '', pkg_data)
+
+    @staticmethod
+    def repair(path, ext_storedir=None, revision='latest', **kwargs):
+        """Repair a working copy.
+
+        path is the path to the package working copy.
+
+        Keyword arguments:
+        project -- name of the project (default: '')
+        package -- name of the package (default: '')
+        apiurl -- apiurl is the apiurl (default: '')
+        revision -- the revision of the package (default: 'latest')
+        ext_storedir -- path to the storedir (default: None)
+
+        """
+        global _PKG_DATA
+        if not os.path.exists(_storedir(path)):
+            wc_init(path, ext_storedir=ext_storedir)
+        missing, xml_data, pkg_data = Package.wc_check(path)
+        for filename in ('_project', '_package', '_apiurl'):
+            if not filename in missing:
+                continue
+            key = filename[1:]
+            if not key in kwargs:
+                raise ValueError("%s argument required" % key)
+            meth_name = 'wc_write_' + key
+            globals()[meth_name](path, kwargs[key])
+        project = wc_read_project(path)
+        package = wc_read_package(path)
+        apiurl = wc_read_apiurl(path)
+        if '_files' in missing or xml_data:
+            spkg = SourcePackage(project, package)
+            directory = spkg.list(rev=revision, apiurl=apiurl)
+            xml_data = etree.tostring(directory, pretty_print=True)
+            wc_write_files(path, xml_data)
+        if '_version' in missing:
+            wc_write_version(path)
+        data_name = os.path.basename(wc_pkg_data_filename(path, ''))
+        if _PKG_DATA in missing:
+            os.mkdir(wc_pkg_data_filename(path, ''))
+        files = wc_read_files(path)
+        # check again - only pkg_data left
+        missing, xml_data, pkg_data = Package.wc_check(path)
+        for filename in pkg_data:
+            fname = wc_pkg_data_filename(path, filename)
+            f = files.find(filename).file()
+            f.write_to(fname)
+        # clean unused storefiles
+        store = wc_pkg_data_filename(path, '')
+        for filename in os.listdir(store):
+            if files.find(filename) is None:
+                os.unlink(os.path.join(store, filename))
 
     @staticmethod
     def init(path, project, package, apiurl, ext_storedir=None, **kwargs):
