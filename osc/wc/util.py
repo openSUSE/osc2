@@ -24,6 +24,7 @@ _STORE = '.osc'
 _PKG_DATA = 'data'
 _DIFF_DATA = 'diff'
 _LOCK = 'wc.lock'
+_VERSION = 2.0
 
 
 class WCInconsistentError(Exception):
@@ -35,6 +36,14 @@ class WCInconsistentError(Exception):
         self.meta = meta
         self.xml_data = xml_data
         self.data = data
+
+
+class WCFormatVersionError(Exception):
+    """Represents an outdated wc version format"""
+
+    def __init__(self, version):
+        super(WCFormatVersionError, self).__init__()
+        self.version = version
 
 
 class WCLock(object):
@@ -701,6 +710,15 @@ def wc_write_files(path, xml_data):
     """
     _write_storefile(path, '_files', xml_data)
 
+def wc_write_version(path):
+    """Write the working copy's format version.
+
+    path is the path to the package working copy.
+
+    """
+    global _VERSION
+    _write_storefile(path, '_version', str(_VERSION))
+
 def wc_init(path, ext_storedir=None):
     """Initialize path as a working copy.
 
@@ -723,7 +741,7 @@ def wc_init(path, ext_storedir=None):
         raise ValueError(msg)
 
     storedir = _storedir(path)
-    if os.path.exists(storedir):
+    if os.path.exists(storedir) or os.path.islink(storedir):
         raise ValueError("path \"%s\" is already a working copy" % path)
     elif os.path.exists(path) and not os.path.isdir(path):
         raise ValueError("path \"%s\" already exists but is no dir" % path)
@@ -744,6 +762,7 @@ def wc_init(path, ext_storedir=None):
         os.symlink(ext_storedir, storedir)
     else:
         os.mkdir(storedir)
+    wc_write_version(path)
     global _PKG_DATA
     data_path = _storefile(path, _PKG_DATA)
     os.mkdir(data_path)
@@ -793,4 +812,19 @@ def wc_diff_mkdir(path, revision):
     if not os.path.exists(diff_path):
         os.makedirs(diff_path)
     return diff_path
-    
+
+def wc_verify_format(path):
+    """Check if the working copy format.
+
+    path is the path to the working copy.
+    A WCFormatVersion error if raised if the working
+    copy format is out of date.
+
+    """
+    global _VERSION
+    try:
+        format = float(_read_storefile(path, '_version'))
+    except ValueError as e:
+        raise WCFormatVersionError(None)
+    if format - _VERSION >= 1 or format - _VERSION <= -1:
+        raise WCFormatVersionError(format)
