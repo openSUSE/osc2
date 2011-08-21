@@ -11,7 +11,7 @@ from osc.wc.base import (TransactionListener, FileConflictError,
 from osc.wc.package import (Package, FileSkipHandler, PackageUpdateState,
                             FileUpdateInfo, file_md5, is_binaryfile,
                             FileCommitPolicy, UnifiedDiff, Diff)
-from osc.wc.util import WCInconsistentError
+from osc.wc.util import WCInconsistentError, WCFormatVersionError
 from osc.source import Package as SourcePackage
 from test.osctest import OscTest
 from test.httptest import GET, PUT, POST
@@ -1625,6 +1625,81 @@ class TestPackage(OscTest):
         self.assertEqual(d.modified, ['added'])
         self.assertEqual(d.missing, ['missing'])
         self.assertEqual(d.skipped, ['skipped'])
+
+    def test_repair1(self):
+        """test repair (_package missing)"""
+        path = self.fixture_file('inv_foo1')
+        self._not_exists(path, '_package', store=True)
+        self.assertRaises(WCInconsistentError, Package, path)
+        self.assertRaises(ValueError, Package.repair, path)
+        Package.repair(path, package='inv_foo1')
+        self._exists(path, '_package', store=True)
+        self.assertEqual(Package.wc_check(path), ([], '', []))
+        pkg = Package(path)
+        self.assertEqual(pkg.name, 'inv_foo1')
+
+    @GET(('http://localhost/source/prj/inv_foo2/file'
+          '?rev=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), file='inv_foo2_file')
+    def test_repair2(self):
+        """test repair (pkg data file missing)"""
+        path = self.fixture_file('inv_foo2')
+        self._not_exists(path, 'file', data=True)
+        self.assertRaises(WCInconsistentError, Package, path)
+        Package.repair(path)
+        self._exists(path, 'file', data=True)
+        self.assertEqual(Package.wc_check(path), ([], '', []))
+        Package(path)
+
+    @GET('http://localhost/source/prj/inv_foo3?rev=latest',
+         file='inv_foo3_files.xml')
+    def test_repair3(self):
+        """test repair (corrupt _files)"""
+        path = self.fixture_file('inv_foo3')
+        self.assertRaises(WCInconsistentError, Package, path)
+        Package.repair(path)
+        self.assertEqual(Package.wc_check(path), ([], '', []))
+        Package(path)
+
+    @GET('http://localhost/source/prj/inv_foo4?rev=latest',
+         file='inv_foo4_files.xml')
+    @GET(('http://localhost/source/prj/inv_foo4/file'
+          '?rev=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), file='inv_foo2_file')
+    def test_repair4(self):
+        """test repair (corrupt _files + different rev)"""
+        path = self.fixture_file('inv_foo4')
+        self._exists(path, 'foo')
+        self._exists(path, 'foo', data=True)
+        self._exists(path, 'bar')
+        self._exists(path, 'bar', data=True)
+        self._not_exists(path, 'file')
+        self._not_exists(path, 'file', data=True)
+        self.assertRaises(WCInconsistentError, Package, path)
+        Package.repair(path)
+        self.assertEqual(Package.wc_check(path), ([], '', []))
+        Package(path)
+        self._exists(path, 'foo')
+        self._not_exists(path, 'foo', data=True)
+        self._exists(path, 'bar')
+        self._not_exists(path, 'bar', data=True)
+        # we do not touch the wc files
+        self._not_exists(path, 'file')
+        self._exists(path, 'file', data=True)
+
+    @GET('http://localhost/source/prj/inv_foo5?rev=latest',
+         file='inv_foo5_files.xml')
+    @GET(('http://localhost/source/prj/inv_foo5/file'
+          '?rev=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), file='inv_foo2_file')
+    def test_repair5(self):
+        """test repair (missing storedir)"""
+        path = self.fixture_file('inv_foo5')
+        self._not_exists(path, '.osc')
+        self.assertRaises(WCFormatVersionError, Package, path)
+        self.assertRaises(WCInconsistentError, Package, path,
+                          verify_format=False)
+        Package.repair(path, project='prj', package='inv_foo5',
+                       apiurl='http://localhost')
+        self.assertEqual(Package.wc_check(path), ([], '', []))
+        self._exists(path, '.osc')
 
 if __name__ == '__main__':
     unittest.main()
