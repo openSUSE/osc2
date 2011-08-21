@@ -1,0 +1,5 @@
+<project name="home:Marcus_H:lnktest">
+  <package name="foo" state=" " />
+  <package name="deleted" state="D" />
+  <package name="added" state="A" />
+</project>

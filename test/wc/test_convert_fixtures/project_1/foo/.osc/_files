@@ -1,0 +1,5 @@
+<directory name="foo" rev="316" srcmd5="16f9d5ecbaba39e8941b2f6c8d427f21" vrev="3">
+  <entry name="file" md5="7de45bf879db49de7e2eacea23e6c165" mtime="1313947690" size="22"/>
+  <entry name="deleted" md5="10c4fbdf4b1dce4d5e39057ba165d8e1" mtime="1313947770" size="10"/>
+  <entry name="modified" md5="770ce89212871c31d3293cc25eb746c1" mtime="1313947804" size="27"/>
+</directory>

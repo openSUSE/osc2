@@ -1,0 +1,9 @@
+<package project="openSUSE:Tools" name="obs-server">
+  <title>openSUSE build service Server</title>
+  <description>This package is based on the package 'obs-server' from project 'openSUSE:Tools'.
+
+The openSUSE Build Service is open and complete distribution development platform that provides infrastructure for a development of the future openSUSE based distributions. It provides software developers with a tool to compile, release and publish their software for the broad user audience, including creation of their own Linux distribution based on openSUSE for various hardware architectures.
+It also features services that enable compilation and packaging for the other Linux distributions, like Fedora, Debian, Ubuntu, and many more.
+
+For more information see http://en.opensuse.org/Build_Service</description>
+</package>

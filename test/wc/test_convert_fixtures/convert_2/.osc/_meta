@@ -1,0 +1,8 @@
+<package project="home:Marcus_H" name="abc">
+  <title/>
+  <description>
+
+  </description>
+  <person role="maintainer" userid="Marcus_H"/>
+  <person role="bugowner" userid="Marcus_H"/>
+</package>
