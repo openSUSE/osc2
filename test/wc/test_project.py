@@ -62,7 +62,7 @@ class TestProject(OscTest):
         self.assertTrue(len(prj.packages()) == 2)
 
     def test4(self):
-        """read invalid project (missing storefiles)"""
+        """read invalid project (missing _project)"""
         path = self.fixture_file('inv1')
         self.assertRaises(WCInconsistentError, Project, path)
 
@@ -664,6 +664,55 @@ class TestProject(OscTest):
         prj = Project(path)
         self.assertRaises(ValueError, prj.commit, 'bar',
                           package_filenames=todo)
+
+    def test_repair1(self):
+        """test repair (missing _project and storefile)"""
+        path = self.fixture_file('inv1')
+        self._not_exists(path, '_project', store=True)
+        self.assertRaises(WCInconsistentError, Project, path)
+        self.assertRaises(ValueError, Project.repair, path)
+        Project.repair(path, project='inv1')
+        self.assertEqual(Project.wc_check(path), ([], '', []))
+        self._exists(path, '_project', store=True)
+        prj = Project(path)
+        self.assertEqual(prj.name, 'inv1')
+
+    @GET('http://localhost/source/inv3/conflict?rev=latest',
+         file='conflict_files.xml')
+    @GET(('http://localhost/source/inv3/conflict/foo'
+          '?rev=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), file='conflict_foo')
+    @GET(('http://localhost/source/inv3/conflict/bar'
+          '?rev=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), file='conflict_bar')
+    def test_repair2(self):
+        """test repair (missing pkg data; state ' ')"""
+        path = self.fixture_file('inv3')
+        self._not_exists(path, 'conflict', data=True)
+        self.assertRaises(WCInconsistentError, Project, path)
+        Project.repair(path)
+        self.assertEqual(Project.wc_check(path), ([], '', []))
+        self._exists(path, 'conflict', data=True)
+        prj = Project(path)
+        self.assertEqual(prj._status('conflict'), ' ')
+        self.assertIsNotNone(prj.package('conflict'))
+
+    def test_repair3(self):
+        """test repair (invalid _packages xml)"""
+        path = self.fixture_file('inv4')
+        self.assertRaises(WCInconsistentError, Project, path)
+        self.assertRaises(ValueError, Project.repair, path)
+        Project.repair(path, added='A', missing=' ')
+        self.assertEqual(Project.wc_check(path), ([], '', []))
+
+    def test_repair4(self):
+        """test repair (wc + pkg data missing)"""
+        # remove package from _packages in this case
+        path = self.fixture_file('inv5')
+        self.assertRaises(WCInconsistentError, Project, path)
+        Project.repair(path)
+        self.assertEqual(Project.wc_check(path), ([], '', []))
+        prj = Project(path)
+        self.assertEqual(prj._status('missing'), '?')
+        self.assertEqual(prj._status('added'), 'A')
 
 if __name__ == '__main__':
     unittest.main()

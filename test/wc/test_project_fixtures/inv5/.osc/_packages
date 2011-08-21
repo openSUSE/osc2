@@ -1,0 +1,4 @@
+<packages>
+  <package name="added" state="A"/>
+  <package name="missing" state="D"/>
+</packages>

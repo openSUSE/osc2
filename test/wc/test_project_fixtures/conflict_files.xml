@@ -1,0 +1,4 @@
+<directory name="conflict" rev="77" srcmd5="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa">
+  <entry name="foo" md5="938435eeadd5b657044f7f4387f692fb" mtime="1313693912" size="9"/>
+  <entry name="bar" md5="5cdcbb02e9e97b75d087f12415509783" mtime="1313693921" size="9"/>
+</directory>
