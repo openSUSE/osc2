@@ -125,7 +125,11 @@ class Entry(object):
                        'package': wc_read_package(path)}
                 unresolved.update(ret)
                 return unresolved
-        elif has_prj:
+        pkg_opt = True
+        for comp in self._components:
+            if comp.name == 'package':
+                pkg_opt = comp.opt
+        if has_prj and pkg_opt:
             if wc_is_project(path):
                 ret = {'apiurl': wc_read_apiurl(path),
                        'project': wc_read_project(path)}
