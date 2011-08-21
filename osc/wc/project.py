@@ -14,7 +14,8 @@ from osc.wc.util import (wc_read_project, wc_read_apiurl, wc_read_packages,
                          wc_write_packages, missing_storepaths, wc_lock,
                          WCInconsistentError, wc_is_project, wc_is_package,
                          wc_pkg_data_mkdir, XMLTransactionState, _storedir,
-                         _STORE, wc_pkg_data_filename)
+                         _STORE, wc_pkg_data_filename, wc_verify_format,
+                         _PKG_DATA, wc_write_version)
 from osc.source import Project as SourceProject
 from osc.remote import RemotePackage
 
@@ -129,7 +130,7 @@ class Project(WorkingCopy):
 
     PACKAGES_SCHEMA = ''
 
-    def __init__(self, path, **kwargs):
+    def __init__(self, path, verify_format=True, **kwargs):
         """Constructs a new project object.
 
         path is the path to the working copy.
@@ -139,12 +140,15 @@ class Project(WorkingCopy):
         metadata is corrupt.
 
         Keyword arguments:
+        verify_format -- verify working copy format (default: True)
         kwargs -- see class WorkingCopy for the details
 
         """
-        (meta, xml_data) = self.wc_check(path)
-        if meta or xml_data:
-            raise WCInconsistentError(path, meta, xml_data)
+        if verify_format:
+            wc_verify_format(path)
+        meta, xml_data, pkg_data = self.wc_check(path)
+        if meta or xml_data or pkg_data:
+            raise WCInconsistentError(path, meta, xml_data, pkg_data)
         self.apiurl = wc_read_apiurl(path)
         self.name = wc_read_project(path)
         with wc_lock(path) as lock:
@@ -563,17 +567,72 @@ class Project(WorkingCopy):
 
         """
         meta = missing_storepaths(path, '_project', '_apiurl',
-                                  '_packages')
+                                  '_packages', '_version')
         dirs = missing_storepaths(path, 'data', dirs=True)
         missing = meta + dirs
         if '_packages' in missing:
-            return (missing, '')
+            return (missing, '', [])
         # check if _packages file is a valid xml
         try:
-            data = wc_read_packages(path)
+            packages = wc_read_packages(path)
         except ValueError as e:
-            return (missing, wc_read_packages(path, raw=True))
-        return (missing, '')
+            return (missing, wc_read_packages(path, raw=True), [])
+        packages = [p.get('name') for p in packages]
+        pkg_data = missing_storepaths(path, *packages, data=True, dirs=True)
+        return (missing, '', pkg_data)
+
+    @staticmethod
+    def repair(path, project='', apiurl='', no_packages=False,
+               **package_states):
+        """Repair a working copy.
+
+        path is the path to the project working copy.
+
+        Keyword arguments:
+        project -- the name of the project (default: '')
+        apiurl -- the apiurl of the project (default: '')
+        no_packages -- do not repair the project's packages (default: False)
+        **package_states -- a package to state mapping (default: {})
+
+        """
+        global _PKG_DATA
+        missing, xml_data, pkg_data = Project.wc_check(path)
+        if '_project' in missing:
+            if not project:
+                raise ValueError('project argument required')
+            wc_write_project(path, project)
+        if '_apiurl' in missing:
+            if not apiurl:
+                raise ValueError('apiurl argument required')
+            wc_write_apiurl(path, apiurl)
+        if '_packages' in missing or xml_data:
+            if not package_states:
+                raise ValueError('package states required')
+            wc_write_packages(path, '<packages/>')
+            packages = wc_read_packages(path)
+            for package, st in package_states.iteritems():
+                packages.add(package, state=st)
+            packages.write()
+        if '_version' in missing:
+            wc_write_version(path)
+        if _PKG_DATA in missing:
+            os.mkdir(wc_pkg_data_filename(path, ''))
+        if not no_packages:
+            project = wc_read_project(path)
+            apiurl = wc_read_apiurl(path)
+            packages = wc_read_packages(path)
+            missing, xml_data, pkg_data = Project.wc_check(path)
+            # only pkg data left
+            for package in pkg_data:
+                package_path = os.path.join(path, package)
+                if os.path.isdir(package_path):
+                    storedir = wc_pkg_data_mkdir(path, package)
+                    Package.repair(package_path, project=project,
+                                   package=package, apiurl=apiurl,
+                                   ext_storedir=storedir)
+                else:
+                    packages.remove(package)
+                    packages.write()
 
     @staticmethod
     def init(path, project, apiurl):
