@@ -106,6 +106,10 @@ class Package(object):
         self.project = project
         self.name = name
 
+    def get(self, name):
+        """Return attribute with name name."""
+        return getattr(self, name)
+
     def list(self, **kwargs):
         """List all files for this package.
         Keyword arguments:
