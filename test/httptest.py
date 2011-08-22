@@ -126,7 +126,9 @@ def add_expected_request(method, url, **kwargs):
 
 class MockUrllib2Request(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        self._fixtures_dir = kwargs.pop('fixtures_dir', os.curdir)
+        dirname = os.path.dirname(__file__)
+        fixtures_dir = kwargs.pop('fixtures_dir', os.curdir)
+        self._fixtures_dir = os.path.join(dirname, fixtures_dir)
         super(MockUrllib2Request, self).__init__(*args, **kwargs)
 
     def fixture_file(self, *paths):
