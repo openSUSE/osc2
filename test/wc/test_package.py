@@ -873,6 +873,15 @@ class TestPackage(OscTest):
         self.assertEqual(pkg.status('conflict'), 'C')
         self.assertRaises(FileConflictError, pkg.revert, 'missing')
 
+    def test_revert5(self):
+        """test revert (newly added file is missing)"""
+        path = self.fixture_file('added_missing')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('file1'), ' ')
+        self.assertEqual(pkg.status('added_missing'), '!')
+        pkg.revert('added_missing')
+        self.assertEqual(pkg.status('added_missing'), '?')
+
     def test_add1(self):
         """test add"""
         path = self.fixture_file('status1_no_conflict')
