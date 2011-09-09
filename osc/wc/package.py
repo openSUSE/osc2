@@ -990,13 +990,14 @@ class Package(WorkingCopy):
         st = self.status(filename)
         wc_filename = os.path.join(self.path, filename)
         store_filename = wc_pkg_data_filename(self.path, filename)
+        entry = self._files.find(filename)
         if st == 'C':
             raise ValueError("cannot revert conflicted file: %s" % filename)
         elif st == '?':
             raise ValueError("cannot revert untracked file: %s" % filename)
         elif st == 'S':
             raise ValueError("cannot revert skipped file: %s" % filename)
-        elif st == 'A':
+        elif st == 'A' or st == '!' and entry.get('state') == 'A':
             self._files.remove(filename)
         elif st == 'D':
             self._files.set(filename, ' ')
