@@ -58,7 +58,7 @@ class UD(UnifiedDiff):
 class TestPackage(OscTest):
 
     def __init__(self, *args, **kwargs):
-        kwargs['fixtures_dir'] = 'wc/test_package_fixtures'
+        kwargs['fixtures_dir'] = os.path.join('wc', 'test_package_fixtures')
         super(TestPackage, self).__init__(*args, **kwargs)
 
     def _check_md5(self, path, filename, md5, data=False):
@@ -917,8 +917,9 @@ class TestPackage(OscTest):
         # try to add non-existent file
         self.assertRaises(ValueError, pkg.add, 'nonexistent')
         # disallow path like filenames
-        self._exists(path, '../update_5_files.xml')
-        self.assertRaises(ValueError, pkg.add, '../update_5_files.xml')
+        fname = os.path.join(os.pardir, 'update_5_files.xml')
+        self._exists(path, fname)
+        self.assertRaises(ValueError, pkg.add, fname)
 
     def test_add4(self):
         """test add (pending transaction (rollback possible))"""
@@ -1005,7 +1006,8 @@ class TestPackage(OscTest):
         # try to remove non-existent file
         self.assertRaises(ValueError, pkg.remove, 'nonexistent')
         # disallow path like filenames
-        self.assertRaises(ValueError, pkg.remove, '../update_7_files.xml')
+        fname = os.path.join(os.pardir, 'update_7_files.xml')
+        self.assertRaises(ValueError, pkg.remove, fname)
 
     def test_remove8(self):
         """test remove (pending transaction (rollback possible))"""

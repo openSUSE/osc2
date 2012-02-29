@@ -16,7 +16,7 @@ def suite():
 class TestConvert(OscTest):
 
     def __init__(self, *args, **kwargs):
-        kwargs['fixtures_dir'] = 'wc/test_convert_fixtures'
+        kwargs['fixtures_dir'] = os.path.join('wc', 'test_convert_fixtures')
         super(TestConvert, self).__init__(*args, **kwargs)
 
     def test_package1(self):

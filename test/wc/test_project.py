@@ -18,7 +18,7 @@ def suite():
 class TestProject(OscTest):
 
     def __init__(self, *args, **kwargs):
-        kwargs['fixtures_dir'] = 'wc/test_project_fixtures'
+        kwargs['fixtures_dir'] = os.path.join('wc', 'test_project_fixtures')
         super(TestProject, self).__init__(*args, **kwargs)
 
     def test1(self):
