@@ -485,6 +485,8 @@ class Package(WorkingCopy):
         Keyword arguments:
         skip_handlers -- list of FileSkipHandler objects
                          (default: [])
+        commit_policies -- list of FileCommitPolicy objects
+                           (default: None)
         merge_class -- class which is used for a file merge
                        (default: Merge)
         verify_format -- verify working copy format (default: True)
