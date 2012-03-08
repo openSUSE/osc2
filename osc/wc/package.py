@@ -472,7 +472,7 @@ class PackageCommitState(XMLTransactionState, CommitStateMixin):
 class Package(WorkingCopy):
     """Represents a package working copy."""
 
-    def __init__(self, path, skip_handlers=[], commit_policies=[],
+    def __init__(self, path, skip_handlers=None, commit_policies=None,
                  merge_class=Merge, verify_format=True, **kwargs):
         """Constructs a new package object.
 
@@ -501,8 +501,8 @@ class Package(WorkingCopy):
         self.apiurl = wc_read_apiurl(path)
         self.project = wc_read_project(path)
         self.name = wc_read_package(path)
-        self.skip_handlers = skip_handlers
-        self.commit_policies = commit_policies
+        self.skip_handlers = skip_handlers or []
+        self.commit_policies = commit_policies or []
         self.merge_class = merge_class
         with wc_lock(path) as lock:
             self._files = wc_read_files(path)
