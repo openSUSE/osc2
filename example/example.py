@@ -70,6 +70,7 @@ def _init(apiurl):
             Osc.init(section, username=user, password=password)
             return section
 
+
 def _checkout(info):
     path = os.path.join(os.getcwd(), info.project)
     if not os.path.exists(path):
@@ -79,6 +80,7 @@ def _checkout(info):
         packages.append(info.package)
     prj = Project(path, transaction_listener=[MyTransactionListener()])
     prj.update(*packages)
+
 
 def _update(info):
     path = os.getcwd()
@@ -96,6 +98,7 @@ def _update(info):
         prj = Project(path, transaction_listener=[MyTransactionListener()])
         prj.update(expand=expand)
 
+
 def _status(info):
     path = os.getcwd()
     if hasattr(info, 'package'):
@@ -107,12 +110,14 @@ def _status(info):
         for package in sorted(os.listdir(path)):
             print "%s\t%s" % (prj._status(package), package)
 
+
 def _diff(info):
     path = os.getcwd()
     pkg = Package(path)
     ud = MyUnifiedDiff()
     pkg.diff(ud)
     ud.diff()
+
 
 def _list(info):
     expand = ''
@@ -130,6 +135,7 @@ def _list(info):
     print title
     for entry in directory:
         print entry.get('name')
+
 
 def _fixup_args(args, num):
     # FIXME: adjust oscargs module so that this is not needed anymore
