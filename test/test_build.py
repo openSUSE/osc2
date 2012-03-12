@@ -16,6 +16,10 @@ class TestBuild(OscTest):
         kwargs['fixtures_dir'] = 'test_build_fixtures'
         super(TestBuild, self).__init__(*args, **kwargs)
 
+    def tearDown(self):
+        super(TestBuild, self).tearDown()
+        BuildResult.RESULT_SCHEMA = ''
+
     @GET('http://localhost/build/test/_result', file='prj_result.xml')
     def test_buildresult1(self):
         """project result"""

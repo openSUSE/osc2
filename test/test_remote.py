@@ -20,6 +20,14 @@ class TestRemoteModel(OscTest):
         kwargs['fixtures_dir'] = 'test_remote_fixtures'
         super(TestRemoteModel, self).__init__(*args, **kwargs)
 
+    def tearDown(self):
+        super(TestRemoteModel, self).tearDown()
+        RemoteProject.SCHEMA = ''
+        RemoteProject.PUT_RESPONSE_SCHEMA = ''
+        RemotePackage.SCHEMA = ''
+        RemotePackage.PUT_RESPONSE_SCHEMA = ''
+        Request.SCHEMA = ''
+
     @GET('http://localhost/source/foo/_meta', file='project.xml')
     def test_project1(self):
         """get a remote project"""
@@ -85,7 +93,6 @@ class TestRemoteModel(OscTest):
         prj = RemoteProject.find('test')
         prj.person.set('userid', 'bar')
         prj.store()
-        RemoteProject.SCHEMA = ''
 
     @PUT('http://localhost/source/test/_meta', text='<OK />',
          expfile='project_simple_modified.xml',
@@ -97,8 +104,6 @@ class TestRemoteModel(OscTest):
         prj = RemoteProject('test')
         prj.add_person(userid='bar', role='maintainer')
         prj.store()
-        RemoteProject.SCHEMA = ''
-        RemoteProject.PUT_RESPONSE_SCHEMA = ''
 
     def test_project6(self):
         """test project validation (invalid model)"""
@@ -107,14 +112,12 @@ class TestRemoteModel(OscTest):
         prj.add_unknown('foo')
         self.assertRaises(etree.DocumentInvalid, prj.validate)
         self.assertRaises(etree.DocumentInvalid, prj.store)
-        RemoteProject.SCHEMA = ''
 
     @GET('http://localhost/source/test/_meta', text='<invalid />')
     def test_project7(self):
         """test project validation (invalid xml response)"""
         RemoteProject.SCHEMA = self.fixture_file('project_simple.xsd')
         self.assertRaises(etree.DocumentInvalid, RemoteProject.find, 'test')
-        RemoteProject.SCHEMA = ''
 
     @PUT('http://localhost/source/test/_meta', text='<INVALID />',
          exp='<project name="test"/>\n', exp_content_type='application/xml')
@@ -126,8 +129,6 @@ class TestRemoteModel(OscTest):
         # check that validation is ok
         prj.validate()
         self.assertRaises(etree.DocumentInvalid, prj.store)
-        RemoteProject.SCHEMA = ''
-        RemoteProject.PUT_RESPONSE_SCHEMA = ''
 
     @GET('http://localhost/source/foo/_meta', file='project.xml')
     def test_project9(self):
@@ -211,7 +212,6 @@ class TestRemoteModel(OscTest):
         pkg = RemotePackage.find('foo', 'bar')
         pkg.set('project', 'newprj')
         pkg.store()
-        RemotePackage.SCHEMA = ''
 
     @PUT('http://localhost/source/newprj/bar/_meta', text='<OK />',
          expfile='package_simple_modified.xml',
@@ -222,8 +222,6 @@ class TestRemoteModel(OscTest):
         RemotePackage.PUT_RESPONSE_SCHEMA = self.fixture_file('ok_simple.xsd')
         pkg = RemotePackage('newprj', 'bar')
         pkg.store()
-        RemotePackage.SCHEMA = ''
-        RemotePackage.PUT_RESPONSE_SCHEMA = ''
 
     def test_package6(self):
         """test package validation (invalid model)"""
@@ -232,7 +230,6 @@ class TestRemoteModel(OscTest):
         pkg.set('invalidattr', 'yes')
         self.assertRaises(etree.DocumentInvalid, pkg.validate)
         self.assertRaises(etree.DocumentInvalid, pkg.store)
-        RemotePackage.SCHEMA = ''
 
     @GET('http://localhost/source/foo/bar/_meta', text='<invalid />')
     def test_package7(self):
@@ -240,7 +237,6 @@ class TestRemoteModel(OscTest):
         RemotePackage.SCHEMA = self.fixture_file('package_simple.xsd')
         self.assertRaises(etree.DocumentInvalid, RemotePackage.find,
                           'foo', 'bar')
-        RemotePackage.SCHEMA = ''
 
     @PUT('http://localhost/source/foo/bar/_meta', text='<INVALID />',
          exp='<package project="foo" name="bar"/>\n',
@@ -253,8 +249,6 @@ class TestRemoteModel(OscTest):
         # check that validation is ok
         pkg.validate()
         self.assertRaises(etree.DocumentInvalid, pkg.store)
-        RemotePackage.SCHEMA = ''
-        RemotePackage.PUT_RESPONSE_SCHEMA = ''
 
     @GET('http://localhost/source/newprj/bar/_meta', file='package.xml')
     def test_package9(self):
@@ -344,7 +338,6 @@ class TestRemoteModel(OscTest):
         req = Request()
         req.add_action(type='submit')
         req.store()
-        Request.SCHEMA = ''
 
     @GET('http://localhost/request/456', text='<invalid />')
     @POST('http://localhost/request?cmd=create',
@@ -366,7 +359,6 @@ class TestRemoteModel(OscTest):
         req.validate()
         # we get an invalid response
         self.assertRaises(etree.DocumentInvalid, req.store)
-        Request.SCHEMA = ''
 
     @GET('http://localhost/request/123', file='request.xml')
     def test_request5(self):
