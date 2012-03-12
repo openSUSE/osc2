@@ -421,7 +421,7 @@ class WorkingCopy(object):
         Actually this marks entry for deletion (entry has
         state 'D' afterwards).
         A ValueError is raised if entry is not tracked or
-        if entry is conflicted (has state 'C') or if entry 
+        if entry is conflicted (has state 'C') or if entry
         is skipped (has state 'S').
 
         Usage of *args and **kwargs is implementation specific.

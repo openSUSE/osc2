@@ -118,7 +118,7 @@ class Merge(object):
 
 class Diff(ListInfo):
     """Encapsulates files for a diff and diff logic.
-    
+
     All attributes will be filled by the Package's diff
     method.
 

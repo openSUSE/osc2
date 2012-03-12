@@ -20,6 +20,7 @@ def _copy_file(fsource_obj, fdest_obj, bufsize, size,
                           read_method=read_method):
         write(data)
 
+
 def copy_file(source, dest, mode=0644, mtime=None, bufsize=8096,
               size=-1, read_method='read', write_method='write'):
     """Copy a file source to file dest.
@@ -103,6 +104,7 @@ def copy_file(source, dest, mode=0644, mtime=None, bufsize=8096,
         if mtime is not None:
             os.utime(dest, (-1, mtime))
         os.chmod(dest, mode)
+
 
 def iter_read(fsource, bufsize=8096, size=-1, read_method='read'):
     """Iterate over fsource and yield at most bufsize bytes.

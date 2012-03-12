@@ -259,6 +259,7 @@ class TestPackage(OscTest):
                 # check for deepcopy
                 uinfo.deleted.remove('file1')
                 return ['modified'], []
+
         class FSH_2(FileSkipHandler):
             def skip(self, uinfo):
                 return ['conflict'], ['skipped']
@@ -1286,6 +1287,7 @@ class TestPackage(OscTest):
             def apply(self, cinfo):
                 # foobar should be treated as unchanged
                 return ['foo'], []
+
         class FCP_2(FileCommitPolicy):
             def apply(self, cinfo):
                 # foo should be treated as unchanged

@@ -6,8 +6,10 @@ from osc.build import BuildResult, BinaryList
 from test.osctest import OscTest
 from test.httptest import GET
 
+
 def suite():
     return unittest.makeSuite(TestBuild)
+
 
 class TestBuild(OscTest):
     def __init__(self, *args, **kwargs):

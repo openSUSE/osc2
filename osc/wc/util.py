@@ -494,14 +494,17 @@ def _storedir(path):
     global _STORE
     return os.path.join(path, _STORE)
 
+
 def _storefile(path, filename):
     """Return the path to the storefile"""
     return os.path.join(_storedir(path), filename)
+
 
 def _has_storedir(path):
     """Test if path has a storedir (internal function)"""
     storedir = _storedir(path)
     return os.path.isdir(path) and os.path.isdir(storedir)
+
 
 def missing_storepaths(path, *paths, **kwargs):
     """Test if the path/storedir contains all *paths
@@ -535,6 +538,7 @@ def missing_storepaths(path, *paths, **kwargs):
                 missing.append(p)
     return missing
 
+
 def _read_storefile(path, filename):
     """Read the content of the path/storedir/filename.
 
@@ -550,6 +554,7 @@ def _read_storefile(path, filename):
     storefile = _storefile(path, filename)
     with open(storefile, 'r') as f:
         return f.read().strip()
+
 
 def _write_storefile(path, filename, data):
     """Write a wc file.
@@ -575,6 +580,7 @@ def _write_storefile(path, filename, data):
             tmpfile.close()
             os.rename(tmpfile.name, fname)
 
+
 def wc_lock(path):
     """Return a WCLock object.
 
@@ -588,6 +594,7 @@ def wc_lock(path):
     """
     return WCLock(path)
 
+
 def wc_is_project(path):
     """Test if path is a project working copy."""
     missing = missing_storepaths(path, '_apiurl', '_project', '_package')
@@ -598,9 +605,11 @@ def wc_is_project(path):
         return True
     return False
 
+
 def wc_is_package(path):
     """Test if path is a package working copy."""
     return not missing_storepaths(path, '_apiurl', '_project', '_package')
+
 
 def wc_read_project(path):
     """Return the name of the project.
@@ -612,6 +621,7 @@ def wc_read_project(path):
 
     """
     return _read_storefile(path, '_project')
+
 
 def wc_read_packages(path, raw=False):
     """Return a XMLPackageTracker object.
@@ -629,6 +639,7 @@ def wc_read_packages(path, raw=False):
         return _read_storefile(path, XMLPackageTracker.filename())
     return XMLPackageTracker(path)
 
+
 def wc_read_package(path):
     """Return the name of the package.
 
@@ -638,6 +649,7 @@ def wc_read_package(path):
 
     """
     return _read_storefile(path, '_package')
+
 
 def wc_read_apiurl(path):
     """Return the apiurl for this working copy.
@@ -649,6 +661,7 @@ def wc_read_apiurl(path):
 
     """
     return _read_storefile(path, '_apiurl')
+
 
 def wc_read_files(path, raw=False):
     """Return a XMLFileTracker object.
@@ -666,6 +679,7 @@ def wc_read_files(path, raw=False):
         return _read_storefile(path, '_files')
     return XMLFileTracker(path)
 
+
 def wc_write_apiurl(path, apiurl):
     """Write the _apiurl file.
 
@@ -674,6 +688,7 @@ def wc_write_apiurl(path, apiurl):
 
     """
     _write_storefile(path, '_apiurl', apiurl)
+
 
 def wc_write_project(path, project):
     """Write the _project file.
@@ -684,6 +699,7 @@ def wc_write_project(path, project):
     """
     _write_storefile(path, '_project', project)
 
+
 def wc_write_package(path, package):
     """Write the _package file.
 
@@ -693,6 +709,7 @@ def wc_write_package(path, package):
     """
     _write_storefile(path, '_package', package)
 
+
 def wc_write_packages(path, xml_data):
     """Write the _packages file.
 
@@ -700,6 +717,7 @@ def wc_write_packages(path, xml_data):
 
     """
     _write_storefile(path, '_packages', xml_data)
+
 
 def wc_write_files(path, xml_data):
     """Write the _packages file.
@@ -710,6 +728,7 @@ def wc_write_files(path, xml_data):
     """
     _write_storefile(path, '_files', xml_data)
 
+
 def wc_write_version(path):
     """Write the working copy's format version.
 
@@ -718,6 +737,7 @@ def wc_write_version(path):
     """
     global _VERSION
     _write_storefile(path, '_version', str(_VERSION))
+
 
 def wc_init(path, ext_storedir=None):
     """Initialize path as a working copy.
@@ -767,6 +787,7 @@ def wc_init(path, ext_storedir=None):
     data_path = _storefile(path, _PKG_DATA)
     os.mkdir(data_path)
 
+
 def wc_pkg_data_mkdir(path, new_dir):
     """Create a new package data dir called new_dir.
 
@@ -788,6 +809,7 @@ def wc_pkg_data_mkdir(path, new_dir):
     os.mkdir(ndir)
     return ndir
 
+
 def wc_pkg_data_filename(path, filename):
     """Return the filename to the store's _PKG_DATA/filename dir.
 
@@ -798,6 +820,7 @@ def wc_pkg_data_filename(path, filename):
     global _PKG_DATA
     data_path = _storefile(path, _PKG_DATA)
     return os.path.join(data_path, filename)
+
 
 def wc_diff_mkdir(path, revision):
     """Return the filename to the diff dir.
@@ -812,6 +835,7 @@ def wc_diff_mkdir(path, revision):
     if not os.path.exists(diff_path):
         os.makedirs(diff_path)
     return diff_path
+
 
 def wc_verify_format(path):
     """Check if the working copy format.

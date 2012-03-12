@@ -107,17 +107,22 @@ def urldecorator(method, fullurl, **kwargs):
         return wrapped_test_method
     return decorate
 
+
 def GET(fullurl, **kwargs):
     return urldecorator('GET', fullurl, **kwargs)
+
 
 def PUT(fullurl, **kwargs):
     return urldecorator('PUT', fullurl, **kwargs)
 
+
 def POST(fullurl, **kwargs):
     return urldecorator('POST', fullurl, **kwargs)
 
+
 def DELETE(fullurl, **kwargs):
     return urldecorator('DELETE', fullurl, **kwargs)
+
 
 def add_expected_request(method, url, **kwargs):
     global EXPECTED_REQUESTS
@@ -140,6 +145,7 @@ class MockUrllib2Request(unittest.TestCase):
         global EXPECTED_REQUESTS
         EXPECTED_REQUESTS = []
         old_build_opener = urllib2.build_opener
+
         def build_opener(*handlers):
             handlers += (MyHTTPHandler(exp_requests=EXPECTED_REQUESTS,
                                        fixtures_dir=self._fixtures_dir), )

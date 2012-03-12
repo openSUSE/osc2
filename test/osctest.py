@@ -3,6 +3,7 @@ import os
 from test.httptest import MockUrllib2Request
 from osc.core import Osc
 
+
 class OscTest(MockUrllib2Request):
     """Base class for all osc related testcases.
 

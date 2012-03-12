@@ -46,6 +46,7 @@ def get_parser(tree_class=None, empty_data_class=None,
     parser.set_element_class_lookup(lookup)
     return parser
 
+
 def fromstring(data, parser=None, **kwargs):
     """Parse a string into a xml objectify object.
 

@@ -80,6 +80,7 @@ def convert_package(path, ext_storedir=None, **kwargs):
         os.symlink(os.path.relpath(ext_storedir, path), storedir)
     Package.repair(path, ext_storedir=ext_storedir, **kwargs)
 
+
 def convert_project(path, project='', apiurl='', **package_states):
     """Convert working copy to the new format.
 

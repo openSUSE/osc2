@@ -622,7 +622,7 @@ class TestRemoteModel(OscTest):
         self.assertRaises(ValueError, RWLocalFile, path)
 
     @PUT('http://localhost/source/prj/pkg/remotefile2', text='ok',
-         exp = 'yet another\nsimple\nfile\n testcase\n')
+         exp='yet another\nsimple\nfile\n testcase\n')
     def test_rwlocalfile3(self):
         """use existing file"""
         path = self.fixture_file('remotefile2')
@@ -638,7 +638,7 @@ class TestRemoteModel(OscTest):
         f.close()
 
     @PUT('http://localhost/source/prj/pkg/remotefile2', text='ok',
-         exp = 'yet another\nsimple\nfile\n')
+         exp='yet another\nsimple\nfile\n')
     def test_rwlocalfile4(self):
         """test direct write_back (no previous read, write etc.)"""
         path = self.fixture_file('remotefile2')

@@ -369,7 +369,7 @@ class TestProject(OscTest):
         self.assertEqual(tl._transfer, [('download', 'file')])
         self.assertEqual(tl._processed.keys(), ['file'])
         self.assertEqual(tl._processed['file'], ' ')
- 
+
     def test_update6(self):
         """test update (finish pending add transaction)"""
         path = self.fixture_file('prj1_update_resume')
