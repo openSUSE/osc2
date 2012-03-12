@@ -15,6 +15,7 @@ from lxml import etree, objectify
 from osc.wc.base import AbstractTransactionState
 from osc.source import File, Directory, Linkinfo
 from osc.util.xml import fromstring
+from osc.util.xpath import XPathBuilder
 
 __all__ = ['wc_is_project', 'wc_is_package', 'wc_read_project',
            'wc_read_package', 'wc_read_apiurl']
@@ -229,8 +230,9 @@ class XMLEntryTracker(AbstractEntryTracker):
         self._xml.remove(elm)
 
     def find(self, name):
-        xpath = "//%s[@name='%s']" % (self._tag, name)
-        return self._xml.find(xpath)
+        xpb = XPathBuilder()
+        xp = xpb.descendant(self._tag)[xpb.attr('name') == name]
+        return self._xml.find(xp.tostring())
 
     def set(self, name, new_state):
         entry = self.find(name)
