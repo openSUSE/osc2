@@ -250,7 +250,7 @@ class Tree(object):
         """
         old_parent = self._parent
         self._parent = parent
-        if not old_parent is None:
+        if old_parent is not None:
             old_parent.remove_child(self)
 
     @tree_op()
