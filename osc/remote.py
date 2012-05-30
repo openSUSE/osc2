@@ -359,6 +359,74 @@ class Request(RemoteModel):
         path = Request.GET_PATH % {'reqid': reqid}
         return super(Request, cls).delete(path, **kwargs)
 
+    def _change_state(self, state, review=None, **kwargs):
+        """Changes the state of the request.
+
+        state is the new state of the request.
+
+        Keyword arguments:
+        review -- change state of review review (default: None)
+        **kwargs -- optional parameters for the http request
+
+        """
+        path = Request.GET_PATH % {'reqid': self.get('id')}
+        query = {'cmd': 'changestate', 'newstate': state}
+        if review is not None:
+            query['cmd'] = 'changereviewstate'
+            attrs = review.keys()
+            for kind in ('by_user', 'by_group', 'by_project', 'by_package'):
+                query[kind] = review.get(kind, '')
+        query.update(kwargs)
+        request = Osc.get_osc().get_reqobj()
+        request.post(path, **query)
+        f = request.get(path)
+        self._read_xml_data(f.read())
+
+    def accept(self, **kwargs):
+        """Accepts the request.
+
+        Keyword arguments:
+        comment -- a comment (default: '')
+        review -- change state of review review (default: None)
+        **kwargs -- optional parameters for the http request
+
+        """
+        self._change_state('accepted', **kwargs)
+
+    def decline(self, **kwargs):
+        """Declines the request.
+
+        Keyword arguments:
+        comment -- a comment (default: '')
+        review -- change state of review review (default: None)
+        **kwargs -- optional parameters for the http request
+
+        """
+        self._change_state('declined', **kwargs)
+
+    def revoke(self, **kwargs):
+        """Revokes the request.
+
+        Keyword arguments:
+        comment -- a comment (default: '')
+        **kwargs -- optional parameters for the http request
+
+        """
+        self._change_state('revoked', **kwargs)
+
+    def supersede(self, reqid, **kwargs):
+        """Supersedes the request.
+
+        reqid is the request id which supersedes this request.
+
+        Keyword arguments:
+        comment -- a comment (default: '')
+        review -- change state of review review (default: None)
+        **kwargs -- optional parameters for the http request
+
+        """
+        self._change_state('superseded', superseded_by=reqid, **kwargs)
+
 
 class RORemoteFile(object):
     """Provides basic methods to read and to store a remote file.
