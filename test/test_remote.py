@@ -380,6 +380,171 @@ class TestRemoteModel(OscTest):
         """test delete method"""
         self.assertFalse(Request.delete('123'))
 
+    @GET('http://localhost/request/73270', file='request2.xml')
+    @POST(('http://localhost/request/73270?cmd=changestate'
+           '&comment=thanks&newstate=accepted'),
+          text='<OK/>')
+    @GET('http://localhost/request/73270', file='request2_accepted.xml')
+    def test_request9(self):
+        """test accept request"""
+        req = Request.find('73270')
+        self.assertEqual(req.get('id'), '73270')
+        self.assertEqual(req.state.get('name'), 'new')
+        # accept request
+        req.accept(comment='thanks')
+        self.assertEqual(req.get('id'), '73270')
+        self.assertEqual(req.state.get('name'), 'accepted')
+        self.assertEqual(req.state.comment, 'thanks')
+
+    @GET('http://localhost/request/73270', file='request2.xml')
+    @POST(('http://localhost/request/73270?cmd=changestate'
+           '&comment=needs+some+more+work&newstate=revoked'),
+          text='<OK/>')
+    @GET('http://localhost/request/73270', file='request2_revoked.xml')
+    def test_request10(self):
+        """test revoke request"""
+        req = Request.find('73270')
+        self.assertEqual(req.get('id'), '73270')
+        self.assertEqual(req.state.get('name'), 'new')
+        # revoke request
+        req.revoke(comment='needs some more work')
+        self.assertEqual(req.get('id'), '73270')
+        self.assertEqual(req.state.get('name'), 'revoked')
+        self.assertEqual(req.state.comment, 'needs some more work')
+
+    @GET('http://localhost/request/73270', file='request2.xml')
+    @POST(('http://localhost/request/73270?cmd=changestate'
+           '&comment=does+not+build&newstate=declined'),
+          text='<OK/>')
+    @GET('http://localhost/request/73270', file='request2_declined.xml')
+    def test_request11(self):
+        """test decline request"""
+        req = Request.find('73270')
+        self.assertEqual(req.get('id'), '73270')
+        self.assertEqual(req.state.get('name'), 'new')
+        # decline request
+        req.decline(comment='does not build')
+        self.assertEqual(req.get('id'), '73270')
+        self.assertEqual(req.state.get('name'), 'declined')
+        self.assertEqual(req.state.comment, 'does not build')
+
+    @GET('http://localhost/request/73270', file='request2.xml')
+    @POST(('http://localhost/request/73270?cmd=changestate'
+           '&comment=already+accepted&newstate=superseded'
+           '&superseded_by=59130'),
+          text='<OK/>')
+    @GET('http://localhost/request/73270', file='request2_superseded.xml')
+    def test_request12(self):
+        """test supersede request"""
+        req = Request.find('73270')
+        self.assertEqual(req.get('id'), '73270')
+        self.assertEqual(req.state.get('name'), 'new')
+        self.assertTrue(req.state.get('superseded_by') is None)
+        # supersed request
+        req.supersede('59130', comment='already accepted')
+        self.assertEqual(req.get('id'), '73270')
+        self.assertEqual(req.state.get('name'), 'superseded')
+        # XXX: or should this be a reference to the request object?
+        self.assertEqual(req.state.get('superseded_by'), '59130')
+        self.assertEqual(req.state.comment, 'already accepted')
+
+    @GET('http://localhost/request/120704', file='request3.xml')
+    @POST(('http://localhost/request/120704?by_group=autobuild-team'
+           '&cmd=changereviewstate&comment=Thanks&newstate=accepted'),
+          text='<OK/>')
+    @GET('http://localhost/request/120704',
+         file='request3_review_accepted.xml')
+    def test_request13(self):
+        """test accept review"""
+        req = Request.find('120704')
+        self.assertEqual(req.get('id'), '120704')
+        self.assertEqual(req.state.get('name'), 'review')
+        self.assertEqual(len(req.review[:]), 3)
+        review = req.review[2]
+        self.assertTrue(review.get('state'), 'new')
+        self.assertTrue(review.get('by_group'), 'autobuild-team')
+        # accept review
+        req.accept(comment='Thanks', review=review)
+        self.assertEqual(req.get('id'), '120704')
+        self.assertEqual(req.state.get('name'), 'review')
+        self.assertEqual(len(req.review[:]), 3)
+        self.assertEqual(req.review[2].get('state'), 'accepted')
+        self.assertEqual(req.review[2].comment, 'Thanks')
+
+    @GET('http://localhost/request/120704', file='request3.xml')
+    @POST(('http://localhost/request/120704?by_group=autobuild-team'
+           '&cmd=changereviewstate&comment=does+not+look+good'
+           '&newstate=declined'),
+          text='<OK/>')
+    @GET('http://localhost/request/120704',
+         file='request3_review_declined.xml')
+    def test_request14(self):
+        """test decline review"""
+        req = Request.find('120704')
+        self.assertEqual(req.get('id'), '120704')
+        self.assertEqual(req.state.get('name'), 'review')
+        self.assertEqual(len(req.review[:]), 3)
+        review = req.review[2]
+        self.assertTrue(review.get('state'), 'new')
+        self.assertTrue(review.get('by_group'), 'autobuild-team')
+        # decline review
+        req.decline(comment='does not look good', review=review)
+        self.assertEqual(req.get('id'), '120704')
+        self.assertEqual(req.state.get('name'), 'declined')
+        self.assertEqual(len(req.review[:]), 3)
+        self.assertEqual(req.review[2].get('state'), 'declined')
+        self.assertEqual(req.review[2].comment, 'does not look good')
+
+    @GET('http://localhost/request/120704', file='request3.xml')
+    @POST(('http://localhost/request/120704?by_group=autobuild-team'
+           '&cmd=changereviewstate&comment=see+rq12345&newstate=superseded'
+           '&superseded_by=12345'),
+          text='<OK/>')
+    @GET('http://localhost/request/120704',
+         file='request3_review_superseded.xml')
+    def test_request15(self):
+        """test supersede review"""
+        req = Request.find('120704')
+        self.assertEqual(req.get('id'), '120704')
+        self.assertEqual(req.state.get('name'), 'review')
+        self.assertEqual(len(req.review[:]), 3)
+        review = req.review[2]
+        self.assertTrue(review.get('state'), 'new')
+        self.assertTrue(review.get('by_group'), 'autobuild-team')
+        # supersede review
+        req.supersede('12345', comment='see rq12345', review=review)
+        self.assertEqual(req.get('id'), '120704')
+        self.assertEqual(req.state.get('name'), 'superseded')
+        self.assertEqual(len(req.review[:]), 3)
+        self.assertEqual(req.review[2].get('state'), 'superseded')
+        self.assertEqual(req.review[2].comment, 'see rq12345')
+
+
+    @GET('http://localhost/request/120703', file='request4.xml')
+    @POST(('http://localhost/request/120703?by_package=package'
+           '&by_project=project&cmd=changereviewstate&comment=Thanks'
+           '&newstate=accepted'),
+          text='<OK/>')
+    @GET('http://localhost/request/120703',
+         file='request4_review_accepted.xml')
+    def test_request16(self):
+        """test accept review (by_project and by_package)"""
+        req = Request.find('120703')
+        self.assertEqual(req.get('id'), '120703')
+        self.assertEqual(req.state.get('name'), 'review')
+        self.assertEqual(len(req.review[:]), 3)
+        review = req.review[2]
+        self.assertTrue(review.get('state'), 'new')
+        self.assertTrue(review.get('by_project'), 'project')
+        self.assertTrue(review.get('by_package'), 'package')
+        # accept review
+        req.accept(comment='Thanks', review=review)
+        self.assertEqual(req.get('id'), '120703')
+        self.assertEqual(req.state.get('name'), 'review')
+        self.assertEqual(len(req.review[:]), 3)
+        self.assertEqual(req.review[2].get('state'), 'accepted')
+        self.assertEqual(req.review[2].comment, 'Thanks')
+
     @GET('http://localhost/source/project/package/fname', file='remotefile1')
     def test_remotefile1(self):
         """get a simple file1"""

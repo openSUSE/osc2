@@ -1,0 +1,20 @@
+<request id="120704">
+  <action type="submit">
+    <source project="foo" package="bar" rev="42"/>
+    <target project="foobar" package="baz"/>
+  </action>
+  <state name="review" who="factory-auto" when="2012-05-11T13:56:54">
+    <comment>Please review sources</comment>
+  </state>
+  <review state="accepted" by_group="legal-auto" who="licensedigger" when="2012-05-27T00:00:00">
+    <comment>ok</comment>
+  </review>
+  <review state="accepted" by_group="factory-auto" who="factory-auto" when="2012-05-27T00:00:05">
+    <comment>Builds for repo openSUSE_Factory</comment>
+  </review>
+  <review state="new" by_group="autobuild-team">
+    <comment>Please review sources</comment>
+  </review>
+  <history name="review" who="user" when="2012-05-26T20:20:20"/>
+  <description>foo bar</description>
+</request>

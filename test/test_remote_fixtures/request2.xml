@@ -1,0 +1,8 @@
+<request id="73270">
+  <action type="submit">
+    <source project="foo" package="foo_pkg" rev="acffa4e5117aca4dcb3686b7a1f5705c"/>
+    <target project="bar" package="xyz"/>
+  </action>
+  <state name="new" who="user" when="2012-03-13T00:00:00"/>
+  <description>some description</description>
+</request>

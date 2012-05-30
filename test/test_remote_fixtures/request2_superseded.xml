@@ -1,0 +1,12 @@
+<request id="73270">
+  <action type="submit">
+    <source project="foo" package="foo_pkg" rev="acffa4e5117aca4dcb3686b7a1f5705c"/>
+    <target project="bar" package="xyz"/>
+    <acceptinfo />
+  </action>
+  <state name="superseded" who="Marcus_H" when="2012-03-13T13:53:44" superseded_by="59130">
+      <comment>already accepted</comment>
+  </state>
+  <history name="new" who="Marcus_H" when="2011-06-10T14:33:55"/>
+  <description>some description</description>
+</request>
