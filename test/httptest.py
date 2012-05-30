@@ -51,19 +51,21 @@ class MyHTTPHandler(urllib2.HTTPHandler):
         if req.get_method() in ('GET', 'DELETE'):
             return self._mock_GET(r[1], **r[2])
         elif req.get_method() in ('PUT', 'POST'):
-            return self._mock_PUT(req, **r[2])
+            return self._mock_PUT(req, req.get_method(), **r[2])
 
     def _mock_GET(self, fullurl, **kwargs):
         return self._get_response(fullurl, **kwargs)
 
-    def _mock_PUT(self, req, **kwargs):
+    def _mock_PUT(self, req, method, **kwargs):
         exp = kwargs.pop('exp', None)
         if exp is not None and 'expfile' in kwargs:
             raise ValueError('either specify exp or expfile')
         elif 'expfile' in kwargs:
             filename = os.path.join(self._fixtures_dir, kwargs.pop('expfile'))
             exp = open(filename, 'r').read()
-        elif exp is None:
+        elif exp is None and method == 'PUT':
+            # in case of a POST it is ok if no data is posted (for instance
+            # if a obs request's state is changed)
             raise ValueError('exp or expfile required')
 
         exp_content_type = kwargs.pop('exp_content_type', '')
