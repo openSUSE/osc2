@@ -22,7 +22,8 @@ def _copy_file(fsource_obj, fdest_obj, bufsize, size,
 
 
 def copy_file(source, dest, mode=0644, mtime=None, bufsize=8096,
-              size=-1, read_method='read', write_method='write'):
+              size=-1, uid=-1, gid=-1, read_method='read',
+              write_method='write'):
     """Copy a file source to file dest.
 
     source is a file-like object or a filename.
@@ -31,6 +32,8 @@ def copy_file(source, dest, mode=0644, mtime=None, bufsize=8096,
     the file does not exist.
     Note: if file-like objects are passed they won't
     be closed.
+    No error is raised if the user has insufficient permissions
+    to set uid or gid.
 
     Keyword arguments:
     mode -- the mode of file dest (default: 0644)
@@ -38,6 +41,10 @@ def copy_file(source, dest, mode=0644, mtime=None, bufsize=8096,
     bufsize -- the size of each read request
     size -- copy only size bytes (default: -1, that is copy
             everything)
+    uid -- the uid of file dest (default: -1, that is the uid of
+           the current user is used)
+    gid -- the gid of file dest (default: -1, that is the gid of
+           the current user is used)
     read_method -- name of the method which should be called on
                    the source file-like object to perform a read
                    (default: read)
@@ -101,6 +108,15 @@ def copy_file(source, dest, mode=0644, mtime=None, bufsize=8096,
         if tmp_filename and os.path.isfile(tmp_filename):
             os.unlink(tmp_filename)
     if not dest_flike:
+        euid = os.geteuid()
+        egid = os.getegid()
+        if uid != euid or euid != 0:
+            # (probably) insufficient permissions
+            uid = -1
+        if gid != egid or egid != 0:
+            # (probably) insufficient permissions
+            gid = -1
+        os.chown(dest, uid, gid)
         if mtime is not None:
             os.utime(dest, (-1, mtime))
         os.chmod(dest, mode)
