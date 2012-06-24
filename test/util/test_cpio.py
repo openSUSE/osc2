@@ -13,10 +13,53 @@ def suite():
     return unittest.makeSuite(TestCpio)
 
 
+# it is no good idea to hardcode uid and gid in a fixture
+# file if the testcases are executed in a different env...
+# the methods below are needed for copyin testcases
+def uid(exp_uid):
+    """Returns the used uid.
+
+    exp_uid is the expected uid.
+
+    """
+    uid = os.geteuid()
+    if uid != exp_uid or uid != 0:
+        return uid
+    return exp_uid
+
+
+def gid(exp_gid):
+    """Returns the used gid.
+
+    exp_gid is the expected gid.
+
+    """
+    gid = os.getegid()
+    if gid != exp_gid or gid != 0:
+        return gid
+    return exp_gid
+
+
 class TestCpio(OscTest):
     def __init__(self, *args, **kwargs):
         kwargs['fixtures_dir'] = os.path.join('util', 'test_cpio_fixtures')
         super(TestCpio, self).__init__(*args, **kwargs)
+
+    def replace_uid_gid(self, filename):
+        """Sets uid and gid in cpio archive"""
+        # only needed in order to make jenkins happy
+        # additionally it is no good idea to hardcode uid and gid in a
+        # fixture file if the testcases are executed in a different env...
+        fname = self.fixture_file(filename)
+        fname_replaced = self.fixture_file(filename + '.replaced')
+        uid = '%08X' % os.geteuid()
+        gid = '%08X' % os.getegid()
+        with open(fname, 'r') as source:
+            with open(fname_replaced, 'w') as f:
+                data = source.read().replace('@UID@', uid)
+                data = data.replace('@GID@', gid)
+                f.write(data)
+        return filename + '.replaced'
 
     def test1(self):
         """test FileWrapper with filename (no mmap)"""
@@ -458,8 +501,8 @@ class TestCpio(OscTest):
         st = os.stat(fname)
         self.assertEqual(st.st_mode, 33188)
         self.assertEqual(st.st_mtime, 1340493596)
-        self.assertEqual(st.st_uid, 1000)
-        self.assertEqual(st.st_gid, 100)
+        self.assertEqual(st.st_uid, uid(1000))
+        self.assertEqual(st.st_gid, gid(100))
         # copyin file foobar
         archive_file = archive_reader.next_file()
         archive_file.copyin(dest)
@@ -470,8 +513,8 @@ class TestCpio(OscTest):
         st = os.stat(fname)
         self.assertEqual(st.st_mode, 33188)
         self.assertEqual(st.st_mtime, 1340493602)
-        self.assertEqual(st.st_uid, 1000)
-        self.assertEqual(st.st_gid, 100)
+        self.assertEqual(st.st_uid, uid(1000))
+        self.assertEqual(st.st_gid, gid(100))
 
     def test16(self):
         """test CpioFile's copyin method unseekable fobj (dest is directory)"""
@@ -479,6 +522,7 @@ class TestCpio(OscTest):
         dest = self.fixture_file('copyin')
         os.mkdir(dest)
         fname = self.fixture_file('new_ascii_reader3.cpio')
+        st = os.stat(fname)
         sio = StringIO(open(fname, 'r').read())
         f = FileWrapper(fobj=sio)
         archive_reader = NewAsciiReader(f)
@@ -492,8 +536,8 @@ class TestCpio(OscTest):
         st = os.stat(fname)
         self.assertEqual(st.st_mode, 33188)
         self.assertEqual(st.st_mtime, 1340493596)
-        self.assertEqual(st.st_uid, 1000)
-        self.assertEqual(st.st_gid, 100)
+        self.assertEqual(st.st_uid, uid(1000))
+        self.assertEqual(st.st_gid, gid(100))
         # copyin file foobar
         archive_file = archive_reader.next_file()
         archive_file.copyin(dest)
@@ -504,8 +548,8 @@ class TestCpio(OscTest):
         st = os.stat(fname)
         self.assertEqual(st.st_mode, 33188)
         self.assertEqual(st.st_mtime, 1340493602)
-        self.assertEqual(st.st_uid, 1000)
-        self.assertEqual(st.st_gid, 100)
+        self.assertEqual(st.st_uid, uid(1000))
+        self.assertEqual(st.st_gid, gid(100))
 
     def test17(self):
         """test CpioFile's copyin method (dest is a file-like object)"""
@@ -543,8 +587,9 @@ class TestCpio(OscTest):
         self.assertEqual(hdr.magic, '070701')
 #        self.assertEqual(hdr.ino, 1788176)
         self.assertEqual(hdr.mode, 33188)
-        self.assertEqual(hdr.uid, 1000)
-        self.assertEqual(hdr.gid, 100)
+        st = os.stat(fname)
+        self.assertEqual(hdr.uid, st.st_uid)
+        self.assertEqual(hdr.gid, st.st_gid)
         self.assertEqual(hdr.nlink, 1)
         self.assertEqual(hdr.mtime, 1340493596)
         self.assertEqual(hdr.filesize, 9)
@@ -564,8 +609,8 @@ class TestCpio(OscTest):
         archive_writer = NewAsciiWriter(sio)
         archive_writer.append('foo', fobj=sio_fobj)
         self.assertEqual(archive_writer._bytes_written, 128)
-        self.assertEqualFile(sio.getvalue(),
-                             'new_ascii_writer_foo_header_default')
+        fname = self.replace_uid_gid('new_ascii_writer_foo_header_default')
+        self.assertEqualFile(sio.getvalue(), fname)
 
     def test20(self):
         """test NewAsciiWriter's _append_trailer method"""
@@ -601,7 +646,8 @@ class TestCpio(OscTest):
         archive_writer.append('last_file', fobj=sio)
         archive_writer.copyout()
         self.assertEqual(archive_writer._bytes_written, 1024)
-        self.assertEqualFile(f.getvalue(), 'new_ascii_writer_sio.cpio')
+        fname = self.replace_uid_gid('new_ascii_writer_sio.cpio')
+        self.assertEqualFile(f.getvalue(), fname)
 
     def test23(self):
         """test CpioArchive class"""
