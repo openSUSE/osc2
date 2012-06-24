@@ -13,7 +13,7 @@ def suite():
     return unittest.makeSuite(TestCpio)
 
 
-# it is no good idea to hardcode uid and gid in a fixture
+# it is not a good idea to hardcode uid and gid in a fixture
 # file if the testcases are executed in a different env...
 # the methods below are needed for copyin testcases
 def uid(exp_uid):
@@ -48,7 +48,7 @@ class TestCpio(OscTest):
     def replace_uid_gid(self, filename):
         """Sets uid and gid in cpio archive"""
         # only needed in order to make jenkins happy
-        # additionally it is no good idea to hardcode uid and gid in a
+        # additionally it is not a good idea to hardcode uid and gid in a
         # fixture file if the testcases are executed in a different env...
         fname = self.fixture_file(filename)
         fname_replaced = self.fixture_file(filename + '.replaced')
