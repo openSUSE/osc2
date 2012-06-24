@@ -11,6 +11,7 @@ from test.wc import test_project
 from test.wc import test_package
 from test.wc import test_convert
 from test.util import test_xpath
+from test.util import test_cpio
 
 
 def additional_tests():
@@ -25,6 +26,7 @@ def additional_tests():
     suite.addTests(test_package.suite())
     suite.addTests(test_convert.suite())
     suite.addTests(test_xpath.suite())
+    suite.addTests(test_cpio.suite())
     return suite
 
 if __name__ == '__main__':
