@@ -403,8 +403,6 @@ class NewAsciiReader(ArchiveReader):
             return None
         self._move_next_header_pos()
         hdr = self._read_header()
-        if hdr is None:
-            return None
         self._calculate_file_offset(hdr)
         self._calculate_next_header_pos(hdr)
         return hdr
@@ -580,6 +578,7 @@ class CpioArchive(object):
         self._reader = None
         self._readers = CpioArchive.DEFAULT_READERS.copy()
         self._readers.update(readers)
+        self._init_reader()
 
     def _init_reader(self):
         """Initialize the archive reader based on the archive's magic.
@@ -621,8 +620,6 @@ class CpioArchive(object):
 
     def __iter__(self):
         global TRAILER
-        if self._reader is None:
-            self._init_reader()
         for archive_file in self._files:
             yield archive_file
         if not self._reader.trailer_seen:
