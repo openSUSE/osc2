@@ -178,6 +178,20 @@ class TestCpio(OscTest):
             f.seek(8, os.SEEK_SET)
             self.assertEqual(f.read(), 'a simple\ntext file.\n')
 
+    def test7_1(self):
+        """test FileWrapper's peek method (peek data and complete read)"""
+        fname = self.fixture_file('filewrapper1.txt')
+        with open(fname, 'r') as fobj:
+            f = FileWrapper(fobj=fobj, use_mmap=False)
+            self.assertFalse(isinstance(f._fobj, mmap.mmap))
+            self.assertEqual(f.peek(5), 'This ')
+            self.assertEqual(f.tell(), 0)
+            # read 3 bytes (arbitrarily chosen)
+            self.assertEqual(f.read(3), 'Thi')
+            self.assertEqual(f.tell(), 3)
+            # read rest of file (2 bytes of peek data are still available)
+            self.assertEqual(f.read(), 's is a simple\ntext file.\n')
+
     def test8(self):
         """test NewAsciiReader (no padding after file contents)"""
         fname = self.fixture_file('new_ascii_reader1.cpio')
@@ -744,6 +758,49 @@ class TestCpio(OscTest):
             # try to find non existent file
             self.assertIsNone(archive.find('unknown'))
             self.assertEqual(archive.magic, '070701')
+
+    def test27(self):
+        """test invalid cpio archive (simple text file)"""
+        fname = self.fixture_file('foo')
+        sio = StringIO(open(fname, 'r').read())
+        self.assertRaises(ValueError, CpioArchive, filename=fname)
+
+    def test28(self):
+        """test NewAsciiReader: premature end of archive"""
+        fname = self.fixture_file('new_ascii_reader1_premature_end.cpio')
+        f = FileWrapper(filename=fname)
+        archive_reader = NewAsciiReader(f)
+        # first header is ok
+        hdr = archive_reader.next_header()
+        self.assertEqual(hdr.magic, '070701')
+        self.assertEqual(hdr.ino, 1788112)
+        self.assertEqual(hdr.mode, 33188)
+        self.assertEqual(hdr.uid, 1000)
+        self.assertEqual(hdr.gid, 100)
+        self.assertEqual(hdr.nlink, 1)
+        self.assertEqual(hdr.mtime, 1340459653)
+        self.assertEqual(hdr.filesize, 28)
+        self.assertEqual(hdr.dev_maj, 8)
+        self.assertEqual(hdr.dev_min, 10)
+        self.assertEqual(hdr.rdev_maj, 0)
+        self.assertEqual(hdr.rdev_min, 0)
+        self.assertEqual(hdr.namesize, 17)
+        self.assertEqual(hdr.chksum, 0)
+        self.assertEqual(hdr.name, 'filewrapper1.txt')
+        # second header is incomplete
+        self.assertRaises(CpioError, archive_reader.next_header)
+
+    def test29(self):
+        """test NewAsciiReader: modify FileWrapper while reading"""
+        fname = self.fixture_file('new_ascii_reader1.cpio')
+        f = FileWrapper(filename=fname)
+        archive_reader = NewAsciiReader(f)
+        self.assertIsNotNone(archive_reader.next_header())
+        # seeking _after_ the calculated next header position is not
+        # allowed (even if the file is seekable)
+        # next header position: 156
+        f.seek(158, os.SEEK_SET)
+        self.assertRaises(CpioError, archive_reader.next_header)
 
 if __name__ == '__main__':
     unittest.main()
