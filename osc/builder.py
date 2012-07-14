@@ -42,7 +42,7 @@ def escape(value):
 
 
 class ListDelegate(object):
-    """Delegete for a list.
+    """Delegate for a list.
 
     It's sole purpose is to simplify the Builder interface
     so that multiple options can be specified like this:
