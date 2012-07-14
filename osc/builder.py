@@ -3,6 +3,7 @@
 It can be used to perform a local build.
 """
 
+import os
 import subprocess
 
 
@@ -12,7 +13,7 @@ def su_cmd(cmd, options):
     The options are options for cmd.
 
     """
-    l = ['su', '--shell', escape(cmd), 'root', '--']
+    l = ['su', '--shell', cmd, 'root', '--']
     return l + options
 
 
@@ -22,23 +23,19 @@ def sudo_cmd(cmd, options):
     The options are an options list for cmd.
 
     """
-    l = ['sudo', escape(cmd)]
+    l = ['sudo', cmd]
     return l + options
 
 
-def escape(value):
-    """Escapes value.
-
-    This method simply puts double quotes around value (unless it is
-    an int).
-
-    """
-    try:
-        return str(int(value))
-    except ValueError:
-        pass
-    # ok it is a string
-    return '"' + value + '"'
+def hostarch():
+    """Returns the hostarch of the machine."""
+    # XXX: no testcases exist for this method
+    arch = os.uname()[4]
+    if arch == 'i686':
+        return 'i586'
+    elif arch == 'parisc':
+        return 'hppa'
+    return arch
 
 
 class ListDelegate(object):
@@ -74,6 +71,53 @@ class ListDelegate(object):
         return iter(self._list)
 
 
+def can_build(hostarch, buildarch, cando):
+    """Checks whether hostarch can build buildarch.
+
+    hostarch is the arch of the buildhost and buildarch is
+    the arch of the resulting binary _or_ the arch which
+    is needed for building.
+    cando is a dict. If no hostarch key exists in cando
+    a ValueError is raised.
+    True is returned if the hostarch can build the buildarch.
+    Otherwise False is returned.
+
+    """
+    if not hostarch in cando.keys():
+        raise ValueError("hostarch \"%s\" is not supported" % hostarch)
+    return buildarch in cando[hostarch].keys()
+
+
+def build_helper(hostarch, buildarch, cando):
+    """Returns a build helper to build buildarch on hostarch.
+
+    hostarch is the arch of the buildhost and buildarch is
+    the arch of the resulting binary _or_ the arch which
+    is needed for building.
+    cando is a dict. If no hostarch key exists in cando
+    a ValueError is raised. A ValueError is raised if hostarch
+    cannot build buildarch.
+    Either a helper is returned or the empty str if no
+    helper is needed.
+
+    """
+    if not can_build(hostarch, buildarch, cando):
+        msg = "hostarch \"%s\" cannot build buildarch \"%s\"" % (hostarch,
+                                                                 buildarch)
+        raise ValueError(msg)
+    return cando[hostarch][buildarch]
+
+
+# maps hostarch to a dict of supported buildarches which maps the
+# supported arch to a "build helper" (like linux32) or to the empty str ''
+CANDO = {'i586': {'i586': ''},
+         'i686': {'i686': '', 'i586': ''},
+         'x86_64': {'x86_64': '', 'i586': 'linux32', 'i686': 'linux32'},
+         'ppc': {'ppc': ''},
+         'ppc64': {'ppc64': '', 'ppc': 'powerpc32'},
+         'ia64': {'ia64': ''}}
+
+
 class Builder(object):
     """Wrapper around the build script."""
 
@@ -81,19 +125,33 @@ class Builder(object):
     SU = 'su'
     SUDO = 'sudo'
 
-    def __init__(self, build_cmd='/usr/bin/build', su_cmd='su', **opts):
+    def __init__(self, build_cmd='/usr/bin/build', su_cmd='su',
+                 buildarch=None, cando=None, **opts):
         """Constructs a new Builder object.
+
+        A ValueError is raised if the hostarch does not support the buildarch.
 
         Keyword arguments:
         build_cmd -- name or path to the build script (default: /usr/bin/build)
         su_cmd -- specifies which suwrapper should be used (if None is
                   specified no suwrapper is used) (default: Builder.SU)
+        buildarch -- the arch we build for or the arch which is needed for
+                     building (e.g. if an ARM package should be build on a
+                     x86_64 host) (default: hostarch)
+        cando -- maps a hostarch to a dict of supported buildarches
+                 (default: global CANDO dict)
         **opts -- options for the build script
 
         """
+        global CANDO
         super(Builder, self).__init__()
         self.__dict__['_build_cmd'] = build_cmd
         self.__dict__['_su_cmd'] = su_cmd
+        can = CANDO.copy()
+        can.update(cando or {})
+        harch = hostarch()
+        buildarch = buildarch or harch
+        self.__dict__['_build_helper'] = build_helper(harch, buildarch, can)
         self.__dict__['_options'] = {}
         for opt, val in opts.iteritems():
             self.set(opt, val)
@@ -123,43 +181,51 @@ class Builder(object):
             values.append(val)
 
     def opts(self):
-        """Returns the option list.
-
-        Note all values except ints will be escaped with double
-        quotes.
-
-        """
+        """Returns the option list."""
         l = []
         for opt in sorted(self._options.keys()):
-#            print opt, self._options[opt]
             for val in self._options[opt]:
                 l.append("--%s" % opt.replace('_', '-'))
                 if val != True:
                     # option has a value
-                    l.append(escape(val))
+                    l.append(str(val))
         return l
 
-    def cmd(self):
-        """Returns the complete cmd list."""
-        cmd = ''
-        if self._su_cmd == Builder.SU:
-            return su_cmd(self._build_cmd, self.opts())
-        elif self._su_cmd == Builder.SUDO:
-            return sudo_cmd(self._build_cmd, self.opts())
-        return [self._build_cmd] + self.opts()
+    def cmd(self, build_descr=None):
+        """Returns the complete cmd list.
+        
+        Keyword arguments:
+        build_descr -- build description (default: None)
 
-    def run(self, **kwargs):
+        """
+        cmd = ''
+        opts = self.opts()
+        if build_descr is not None:
+            opts.append(build_descr)
+        if self._su_cmd == Builder.SU:
+            cmd = su_cmd(self._build_cmd, opts)
+        elif self._su_cmd == Builder.SUDO:
+            cmd = sudo_cmd(self._build_cmd, opts)
+        else:
+            cmd = [self._build_cmd] + opts
+        # check if we need a build helper like linux32
+        if self._build_helper:
+            cmd = [self._build_helper] + cmd
+        return cmd
+
+    def run(self, build_descr=None, **kwargs):
         """Executes the build script.
 
         The retcode of the build script is returned.
 
         Keyword arguments:
+        build_descr -- build description (default: None)
         **kwargs -- optional arguments for the subprocess.call method
 
         """
         # make sure shell is disabled (for security reasons)
         kwargs['shell'] = False
-        return subprocess.call(self.cmd(), **kwargs)
+        return subprocess.call(self.cmd(build_descr), **kwargs)
 
     def __delattr__(self, name):
         self.set(name, None)
