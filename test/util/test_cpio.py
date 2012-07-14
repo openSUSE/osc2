@@ -584,6 +584,7 @@ class TestCpio(OscTest):
     def test18(self):
         """test NewAsciiWriter's append method"""
         fname = self.fixture_file('foo')
+        st = os.stat(fname)
         sio = StringIO()
         archive_writer = NewAsciiWriter(sio)
         archive_writer.append(fname)
@@ -601,11 +602,10 @@ class TestCpio(OscTest):
         self.assertEqual(hdr.magic, '070701')
 #        self.assertEqual(hdr.ino, 1788176)
         self.assertEqual(hdr.mode, 33188)
-        st = os.stat(fname)
         self.assertEqual(hdr.uid, st.st_uid)
         self.assertEqual(hdr.gid, st.st_gid)
         self.assertEqual(hdr.nlink, 1)
-        self.assertEqual(hdr.mtime, 1340493596)
+        self.assertEqual(float(hdr.mtime), 1340493596)
         self.assertEqual(hdr.filesize, 9)
 #        self.assertEqual(hdr.dev_maj, 8)
 #        self.assertEqual(hdr.dev_min, 10)
