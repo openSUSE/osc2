@@ -1,10 +1,11 @@
 import unittest
+from cStringIO import StringIO
 
 from lxml import etree
 
-from osc.build import BuildResult, BinaryList
+from osc.build import BuildResult, BinaryList, BuildInfo, BuildDependency
 from test.osctest import OscTest
-from test.httptest import GET
+from test.httptest import GET, POST
 
 
 def suite():
@@ -242,6 +243,307 @@ class TestBuild(OscTest):
         BuildResult.BUILDDEPINFO_SCHEMA = self.fixture_file(schema_filename)
         br = BuildResult('test', repository='repo', arch='x86_64')
         self.assertRaises(etree.DocumentInvalid, br.builddepinfo)
+
+    @GET(('http://localhost/build/project/openSUSE_Factory/x86_64/package/'
+          '_buildinfo'),
+          file='buildinfo1.xml')
+    def test_buildinfo1(self):
+        """test BuildInfo (simple get)"""
+        binfo = BuildInfo('project', 'package', 'openSUSE_Factory', 'x86_64')
+        self.assertEqual(binfo.get('project'), 'project')
+        self.assertEqual(binfo.get('package'), 'package')
+        self.assertEqual(binfo.get('repository'), 'openSUSE_Factory')
+        self.assertEqual(binfo.arch, 'x86_64')
+        self.assertEqual(binfo.file, 'package.spec')
+        # in this case we can calculate it from binfo.file
+        self.assertEqual(binfo.get('binarytype'), 'rpm')
+        self.assertEqual(len(binfo.bdep[:]), 4)
+        # test preinstall
+        preinstall = list(binfo.preinstall())
+        self.assertEqual(len(preinstall), 2)
+        self.assertEqual(preinstall[0].get('name'), 'aaa_base')
+        self.assertEqual(preinstall[0].get('version'), '12.2')
+        self.assertEqual(preinstall[0].get('release'), '7.1')
+        self.assertEqual(preinstall[0].get('arch'), 'x86_64')
+        self.assertEqual(preinstall[0].get('project'), 'openSUSE:Factory')
+        self.assertEqual(preinstall[0].get('repository'), 'snapshot')
+        # second preinstall package
+        self.assertEqual(preinstall[1].get('name'), 'attr')
+        self.assertEqual(preinstall[1].get('version'), '2.4.46')
+        self.assertEqual(preinstall[1].get('release'), '10.2')
+        self.assertEqual(preinstall[1].get('arch'), 'x86_64')
+        self.assertEqual(preinstall[1].get('project'), 'openSUSE:Factory')
+        self.assertEqual(preinstall[1].get('repository'), 'snapshot')
+        # test third bdep
+        self.assertEqual(binfo.bdep[2].get('name'), 'python-devel')
+        self.assertEqual(binfo.bdep[2].get('version'), '2.7.3')
+        self.assertEqual(binfo.bdep[2].get('release'), '4.8')
+        self.assertEqual(binfo.bdep[2].get('arch'), 'x86_64')
+        self.assertEqual(binfo.bdep[2].get('project'), 'openSUSE:Factory')
+        self.assertEqual(binfo.bdep[2].get('repository'), 'snapshot')
+        # test 4th bdep
+        self.assertEqual(binfo.bdep[3].get('name'), 'perl')
+        self.assertEqual(binfo.bdep[3].get('version'), '5.16.0')
+        self.assertEqual(binfo.bdep[3].get('release'), '4.8')
+        self.assertEqual(binfo.bdep[3].get('arch'), 'x86_64')
+        self.assertEqual(binfo.bdep[3].get('project'), 'openSUSE:Factory')
+        self.assertEqual(binfo.bdep[3].get('repository'), 'snapshot')
+        # test path elements
+        self.assertEqual(binfo.path[0].get('project'), 'openSUSE:Tools')
+        self.assertEqual(binfo.path[0].get('repository'), 'openSUSE_Factory')
+        self.assertEqual(binfo.path[1].get('project'), 'openSUSE:Factory')
+        self.assertEqual(binfo.path[1].get('repository'), 'snapshot')
+
+    @GET('http://localhost/build/foo/openSUSE_Factory/x86_64/bar/_buildinfo',
+         file='buildinfo2.xml')
+    def test_buildinfo2(self):
+        """test BuildInfo (preinstall, runscripts etc.)"""
+        binfo = BuildInfo('foo', 'bar', 'openSUSE_Factory', 'x86_64')
+        # check preinstall
+        preinstall = list(binfo.preinstall())
+        self.assertEqual(len(preinstall), 2)
+        self.assertEqual(preinstall[0].get('name'), 'aaa_base')
+        self.assertEqual(preinstall[1].get('name'), 'attr')
+        # check noinstall
+        noinstall = list(binfo.noinstall())
+        self.assertEqual(len(noinstall), 4)
+        self.assertEqual(noinstall[0].get('name'), 'install-initrd')
+        self.assertEqual(noinstall[1].get('name'),
+                         'install-initrd-branding-openSUSE')
+        self.assertEqual(noinstall[2].get('name'),
+                         'install-initrd-branding-SLED')
+        self.assertEqual(noinstall[3].get('name'), 'installation-images')
+        # check cbinstall
+        cbinstall = list(binfo.cbinstall())
+        self.assertEqual(len(cbinstall), 2)
+        self.assertEqual(cbinstall[0].get('name'), 'foobar')
+        self.assertEqual(cbinstall[1].get('name'), 'baz')
+        # check cbpreinstall
+        cbpreinstall = list(binfo.cbpreinstall())
+        self.assertEqual(len(cbpreinstall), 2)
+        self.assertEqual(cbpreinstall[0].get('name'), 'abc')
+        self.assertEqual(cbpreinstall[1].get('name'), 'def')
+        # check vminstall
+        vminstall = list(binfo.vminstall())
+        self.assertEqual(len(vminstall), 3)
+        self.assertEqual(vminstall[0].get('name'), 'libsepol1')
+        self.assertEqual(vminstall[1].get('name'), 'libblkid1')
+        self.assertEqual(vminstall[2].get('name'), 'libuuid1')
+        # check runscripts
+        runscripts = list(binfo.runscripts())
+        self.assertEqual(len(runscripts), 1)
+        self.assertEqual(runscripts[0].get('name'), 'aaa_base')
+
+    @POST(('http://localhost/build/foo/openSUSE_Factory/x86_64/_repository/'
+           '_buildinfo'),
+          file='buildinfo_uploaded_descr.xml', expfile='test.spec')
+    def test_buildinfo3(self):
+        """test BuildInfo (specify binarytype)"""
+        fname = self.fixture_file('test.spec')
+        # if no package is specified _repository is used
+        binfo = BuildInfo('foo', repository='openSUSE_Factory', arch='x86_64',
+                          binarytype='rpm', data=open(fname, 'r').read())
+        self.assertEqual(binfo.get('binarytype'), 'rpm')
+        self.assertEqual(binfo.bdep[0].get('name'), 'aaa_base')
+        self.assertEqual(len(list(binfo.preinstall())), 1)
+        self.assertEqual(len(list(binfo.noinstall())), 0)
+        self.assertEqual(len(list(binfo.cbpreinstall())), 0)
+        self.assertEqual(len(list(binfo.cbinstall())), 0)
+        self.assertEqual(len(list(binfo.vminstall())), 0)
+        self.assertEqual(len(list(binfo.runscripts())), 1)
+
+    @POST('http://localhost/build/prj/repo/i586/pkg/_buildinfo',
+          file='buildinfo_uploaded_descr.xml', exp='123')
+    def test_buildinfo4(self):
+        """test BuildInfo (invalid arguments)"""
+        self.assertRaises(ValueError, BuildInfo)
+        self.assertRaises(ValueError, BuildInfo, project='project')
+        self.assertRaises(ValueError, BuildInfo, project='project',
+                          repository='repo')
+        self.assertRaises(ValueError, BuildInfo, project='project',
+                          arch='i586')
+        self.assertRaises(ValueError, BuildInfo, arch='i586')
+        self.assertRaises(ValueError, BuildInfo, repo='repo')
+        self.assertRaises(ValueError, BuildInfo, repo='repo', arch='i586')
+        # if data is specified we need a binarytype (we cannot guess it because
+        # we haven't enough information - ideally the binarytype is stored in
+        # the buildinfo but we can also retrieve it from buildconfig)
+        self.assertRaises(ValueError, BuildInfo, 'prj', 'pkg', 'repo', 'i586',
+                          data='123')
+        self.assertRaises(ValueError, BuildInfo, 'prj',
+                          xml_data='<buildinfo />')
+
+    @POST('http://localhost/build/foo/repo/x86_64/bar/_buildinfo',
+          file='buildinfo_uploaded_descr.xml', exp='12345')
+    def test_buildinfo5(self):
+        """test BuildInfo (specify binarytype)"""
+        binfo = BuildInfo('foo', 'bar', 'repo', 'x86_64', binarytype='rpm',
+                          data='12345')
+        self.assertEqual(binfo.path[1].get('project'), 'openSUSE:Factory')
+        sio = StringIO()
+        binfo.write_to(sio)
+        self.assertEqualFile(sio.getvalue(),
+                             'buildinfo_uploaded_descr_stored.xml')
+
+    def test_buildinfo6(self):
+        """test BuildInfo (from xml data)"""
+        fname = self.fixture_file('buildinfo2.xml')
+        binfo = BuildInfo(xml_data=open(fname, 'r').read())
+        self.assertEqual(binfo.get('binarytype'), 'rpm')
+        self.assertEqual(binfo.bdep[1].get('name'), 'attr')
+
+    def test_buildinfo7(self):
+        """test BuildInfo (from xml data - specify binarytype)"""
+        fname = self.fixture_file('buildinfo_uploaded_descr.xml')
+        binfo = BuildInfo(xml_data=open(fname, 'r').read(), binarytype='rpm')
+        self.assertEqual(binfo.get('binarytype'), 'rpm')
+        self.assertEqual(binfo.path[1].get('project'), 'openSUSE:Factory')
+
+    def test_buildinfo8(self):
+        """test BuildInfo (from xml data - no binarytype specified)"""
+        fname = self.fixture_file('buildinfo_uploaded_descr.xml')
+        # cannot calculate binarytype from buildinfo
+        self.assertRaises(ValueError, BuildInfo,
+                          xml_data=open(fname, 'r').read())
+        # the stored xml contains the binarytype attribute
+        fname = self.fixture_file('buildinfo_uploaded_descr_stored.xml')
+        binfo = BuildInfo(xml_data=open(fname, 'r').read())
+        self.assertEqual(binfo.get('binarytype'), 'rpm')
+
+    @GET(('http://localhost/build/openSUSE%3ATools/Debian_5.0/x86_64/osc/'
+          '_buildinfo'),
+          file='buildinfo_deb.xml')
+    def test_buildinfo9(self):
+        """test BuildInfo (deb binarytype)"""
+        binfo = BuildInfo('openSUSE:Tools', 'osc', 'Debian_5.0', 'x86_64')
+        self.assertEqual(binfo.file, 'osc.dsc')
+        self.assertEqual(binfo.get('binarytype'), 'deb')
+
+    def test_buildinfo10(self):
+        """test BuildInfo (invalid file text)"""
+        # file text has no file extension
+        fname = self.fixture_file('buildinfo_invalid_file1.xml')
+        self.assertRaises(ValueError, BuildInfo,
+                          xml_data=open(fname, 'r').read())
+        # file text has unsupported file extension
+        fname = self.fixture_file('buildinfo_invalid_file2.xml')
+        self.assertRaises(ValueError, BuildInfo,
+                          xml_data=open(fname, 'r').read())
+
+    def test_builddependency1(self):
+        """teste BuildDependency (rpm filename)"""
+        fname = self.fixture_file('buildinfo2.xml')
+        binfo = BuildInfo(xml_data=open(fname, 'r').read())
+        self.assertEqual(binfo.get('binarytype'), 'rpm')
+        self.assertEqual(binfo.bdep[0].get('name'), 'aaa_base')
+        self.assertEqual(binfo.bdep[0].get('version'), '12.2')
+        self.assertEqual(binfo.bdep[0].get('release'), '7.1')
+        self.assertEqual(binfo.bdep[0].get('arch'), 'x86_64')
+        self.assertEqual(binfo.bdep[0].get('filename'),
+                         'aaa_base-12.2-7.1.x86_64.rpm')
+        self.assertEqual(binfo.bdep[7].get('name'), 'installation-images')
+        self.assertEqual(binfo.bdep[7].get('version'), '13.49')
+        self.assertEqual(binfo.bdep[7].get('release'), '3.6')
+        self.assertEqual(binfo.bdep[7].get('arch'), 'src')
+        self.assertEqual(binfo.bdep[7].get('binary'),
+                         'installation-images-13.49-3.6.src.rpm')
+        # binary element is present (in this case filename is not constructed
+        # and the binary value is returned)
+        self.assertEqual(binfo.bdep[7].get('filename'),
+                         'installation-images-13.49-3.6.src.rpm')
+        # test noarch
+        self.assertEqual(binfo.bdep[11].get('name'), 'def')
+        self.assertEqual(binfo.bdep[11].get('version'), '1.9')
+        self.assertEqual(binfo.bdep[11].get('release'), '0')
+        self.assertEqual(binfo.bdep[11].get('arch'), 'noarch')
+        self.assertEqual(binfo.bdep[11].get('filename'),
+                         'def-1.9-0.noarch.rpm')
+
+    def test_builddependency2(self):
+        """test BuildDependency (deb filename)"""
+        fname = self.fixture_file('buildinfo_deb.xml')
+        binfo = BuildInfo(xml_data=open(fname, 'r').read())
+        self.assertEqual(binfo.get('binarytype'), 'deb')
+        self.assertEqual(binfo.bdep[0].get('name'), 'bash')
+        self.assertEqual(binfo.bdep[0].get('version'), '3.2')
+        self.assertEqual(binfo.bdep[0].get('release'), '4')
+        self.assertEqual(binfo.bdep[0].get('arch'), 'amd64')
+        self.assertEqual(binfo.bdep[0].get('filename'),
+                         'bash_3.2-4_amd64.deb')
+        # test all arch
+        self.assertEqual(binfo.bdep[2].get('name'), 'autoconf')
+        self.assertEqual(binfo.bdep[2].get('version'), '2.61')
+        self.assertEqual(binfo.bdep[2].get('release'), '8')
+        self.assertEqual(binfo.bdep[2].get('arch'), 'all')
+        self.assertEqual(binfo.bdep[2].get('filename'),
+                         'autoconf_2.61-8_all.deb')
+        # test without release
+        self.assertEqual(binfo.bdep[3].get('name'), 'debhelper')
+        self.assertEqual(binfo.bdep[3].get('version'), '7.0.15')
+        self.assertIsNone(binfo.bdep[3].get('release'))
+        self.assertEqual(binfo.bdep[3].get('arch'), 'all')
+        self.assertEqual(binfo.bdep[3].get('filename'),
+                         'debhelper_7.0.15_all.deb')
+
+    def test_builddependency3(self):
+        """test BuildDependency (fromdata binarytype rpm)"""
+        bdep = BuildDependency.fromdata('rpm', 'i586', 'foo', '1.4', '0')
+        self.assertEqual(bdep.get('binarytype'), 'rpm')
+        self.assertEqual(bdep.get('arch'), 'i586')
+        self.assertEqual(bdep.get('name'), 'foo')
+        self.assertEqual(bdep.get('version'), '1.4')
+        self.assertEqual(bdep.get('release'), '0')
+        self.assertEqual(bdep.get('filename'), 'foo-1.4-0.i586.rpm')
+        self.assertIsNone(bdep.get('project'))
+        self.assertIsNone(bdep.get('repository'))
+        # release is required for rpm
+        self.assertRaises(ValueError, BuildDependency.fromdata,
+                          binarytype='rpm', arch='noarch', name='bar',
+                          version='3.0')
+        # test project and repository
+        bdep = BuildDependency.fromdata('rpm', 'noarch', 'bar', '2.7', '1',
+                                        'openSUSE:Factory', 'snapshot')
+        self.assertEqual(bdep.get('binarytype'), 'rpm')
+        self.assertEqual(bdep.get('arch'), 'noarch')
+        self.assertEqual(bdep.get('name'), 'bar')
+        self.assertEqual(bdep.get('version'), '2.7')
+        self.assertEqual(bdep.get('release'), '1')
+        self.assertEqual(bdep.get('filename'), 'bar-2.7-1.noarch.rpm')
+        self.assertEqual(bdep.get('project'), 'openSUSE:Factory')
+        self.assertEqual(bdep.get('repository'), 'snapshot')
+
+    def test_builddependency4(self):
+        """test BuildDependency (fromdata binarytype deb)"""
+        bdep = BuildDependency.fromdata('deb', 'amd64', 'foo', '1.4', '4')
+        self.assertEqual(bdep.get('binarytype'), 'deb')
+        self.assertEqual(bdep.get('arch'), 'amd64')
+        self.assertEqual(bdep.get('name'), 'foo')
+        self.assertEqual(bdep.get('version'), '1.4')
+        self.assertEqual(bdep.get('release'), '4')
+        self.assertEqual(bdep.get('filename'), 'foo_1.4-4_amd64.deb')
+        self.assertIsNone(bdep.get('project'))
+        self.assertIsNone(bdep.get('repository'))
+        # no release is ok
+        bdep = BuildDependency.fromdata('deb', 'all', 'baz', '4.2')
+        self.assertEqual(bdep.get('binarytype'), 'deb')
+        self.assertEqual(bdep.get('arch'), 'all')
+        self.assertEqual(bdep.get('name'), 'baz')
+        self.assertEqual(bdep.get('version'), '4.2')
+        self.assertIsNone(bdep.get('release'))
+        self.assertEqual(bdep.get('filename'), 'baz_4.2_all.deb')
+        self.assertIsNone(bdep.get('project'))
+        self.assertIsNone(bdep.get('repository'))
+        # test project and repository
+        bdep = BuildDependency.fromdata('deb', 'amd64', 'bar', '1.0.0', '0',
+                                        'Debian:Etch', 'standard')
+        self.assertEqual(bdep.get('binarytype'), 'deb')
+        self.assertEqual(bdep.get('arch'), 'amd64')
+        self.assertEqual(bdep.get('name'), 'bar')
+        self.assertEqual(bdep.get('version'), '1.0.0')
+        self.assertEqual(bdep.get('release'), '0')
+        self.assertEqual(bdep.get('filename'), 'bar_1.0.0-0_amd64.deb')
+        self.assertEqual(bdep.get('project'), 'Debian:Etch')
+        self.assertEqual(bdep.get('repository'), 'standard')
 
 if __name__ == '__main__':
     unittest.main()
