@@ -3,9 +3,12 @@
 To access the remote build data use the class BuildResult.
 """
 
-from lxml import objectify
+from cStringIO import StringIO
+
+from lxml import etree, objectify
 
 from osc.remote import RORemoteFile, RWRemoteFile
+from osc.util.io import copy_file
 from osc.util.xml import fromstring
 from osc.core import Osc
 
@@ -184,3 +187,216 @@ class BuildResult(object):
         f = request.get(path, view=view, **kwargs)
         # no custom parser needed atm
         return fromstring(f.read())
+
+
+class BuildInfo(object):
+    """Provides methods to work with a buildinfo element."""
+
+    def __init__(self, project='', package='', repository='', arch='',
+                 xml_data='', binarytype='', data=None, **kwargs):
+        """Constructs a new BuildInfo object.
+
+        A ValueError is raised if xml_data is specified and project or
+        package or repository or arch.
+        A ValueError is raised if no binarytype is specified and the
+        buildinfo has no file element.
+
+        Keyword arguments:
+        project -- the project (default: '')
+        package -- the package (default: '')
+        repository -- the repository (default: '_repository')
+        arch -- the architecture (default: '')
+        xml_data -- a xml str which contains a buildinfo element (default: '')
+        binarytype -- the package type of the bdep elements (rpm, deb etc.)
+                      (default: '')
+        data -- a specfile or cpio archive which is POSTed to the server
+                (default: None)
+        **kwargs -- optional parameters for the http request
+
+        """
+        if ((project or package or repository or arch) and xml_data
+            or not (project and repository and arch) and not xml_data):
+            msg = 'Either project, package, repository, arch or xml_data'
+            raise ValueError(msg)
+        elif not xml_data:
+            package = package or '_repository'
+            path = "/build/%s/%s/%s/%s/_buildinfo" % (project, repository,
+                                                      arch, package)
+            request = Osc.get_osc().get_reqobj()
+            if data is None:
+                f = request.get(path, **kwargs)
+            else:
+                f = request.post(path, data=data, **kwargs)
+            xml_data = f.read()
+        self._xml = fromstring(xml_data, bdep=BuildDependency)
+        self._calculate_binarytype(binarytype)
+
+    def _calculate_binarytype(self, binarytype):
+        """Calculates the binarytype of the bdep elements.
+
+        A ValueError is raised if the binarytype cannot be
+        calculated (that is the xml has no file element
+        or the passed binarytype is None/the empty str).
+
+        """
+        binarytype = binarytype or self._xml.get('binarytype')
+        if binarytype:
+            self._xml.set('binarytype', binarytype)
+            return
+        spec = self._xml.find('file')
+        if spec is None:
+            msg = 'specify binarytype (cannot be calculated from xml)'
+            raise ValueError(msg)
+        data = spec.text.rsplit('.', 1)
+        if len(data) != 2:
+            # TODO: support Arch's PKGBUILD
+            raise ValueError('unsupported file type')
+        ext = data[1]
+        if ext in ('spec', 'kiwi'):
+            binarytype = 'rpm'
+        elif ext == 'dsc':
+            binarytype = 'deb'
+        else:
+            raise ValueError("unsupported file ext: \"%s\"" % ext)
+        self._xml.set('binarytype', binarytype)
+
+    def _bdep_filter(self, attr):
+        """Filters bdeps by attribute attr.
+
+        A bdep object is yielded if attribute attr is set
+        to "1".
+
+        """
+        for bdep in self._xml.iterfind('bdep'):
+            if bdep.get(attr) == '1':
+                yield bdep
+
+    def preinstall(self):
+        """Returns generator to preinstall bdeps"""
+        return self._bdep_filter('preinstall')
+
+    def noinstall(self):
+        """Returns generator to noinstall bdeps"""
+        return self._bdep_filter('noinstall')
+
+    def cbinstall(self):
+        """Returns generator to cbinstall bdeps"""
+        return self._bdep_filter('cbinstall')
+
+    def cbpreinstall(self):
+        """Returns generator to cbpreinstall bdeps"""
+        return self._bdep_filter('cbpreinstall')
+
+    def vminstall(self):
+        """Returns generator to vminstall bdeps"""
+        return self._bdep_filter('vminstall')
+
+    def runscripts(self):
+        """Returns generator to runscripts bdeps"""
+        return self._bdep_filter('runscripts')
+
+    def write_to(self, dest):
+        """Write buildinfo xml to dest.
+
+        Either dest is a path to a file or a file-like object
+        (that is it has a write method).
+
+        """
+        xml_data = etree.tostring(self._xml, pretty_print=True)
+        sio = StringIO(xml_data)
+        copy_file(sio, dest)
+
+    def __getattr__(self, name):
+        return getattr(self._xml, name)
+
+
+class BuildDependency(objectify.ObjectifiedElement):
+    """Represents a build dependency (bdep element)."""
+
+    def get(self, name, *args, **kwargs):
+        if name not in ('filename', 'binarytype'):
+            return super(BuildDependency, self).get(name, *args, **kwargs)
+        elif name == 'binarytype':
+            return self._calculate_binarytype()
+        elif 'binary' in self.keys():
+            # no need to construct the filename (this is set by the backend)
+            return self.get('binary')
+        # construct filename (refactor code in rpm, deb etc. module)
+        binarytype = self.get('binarytype')
+        if binarytype == 'rpm':
+            return self.rpmfilename()
+        elif binarytype == 'deb':
+            return self.debfilename()
+
+    def _calculate_binarytype(self):
+        """Returns the binarytype.
+
+        A ValueError is raised if the binarytype cannot be
+        calculated.
+
+        """
+        binarytype = super(BuildDependency, self).get('binarytype')
+        parent = self.getparent()
+        if binarytype is None and parent is None:
+            raise ValueError("binarytype and parent are None")
+        elif binarytype is None:
+            return parent.get('binarytype')
+        return binarytype
+
+    def rpmfilename(self):
+        """Returns a rpm filename.
+
+        A ValueError is raised if the binarytype is not rpm.
+
+        """
+        if self.get('binarytype') != 'rpm':
+            raise ValueError('illegal rpmfilename call')
+        return "%s-%s-%s.%s.rpm" % (self.get('name'), self.get('version'),
+                                    self.get('release'), self.get('arch'))
+
+    def debfilename(self):
+        """Returns a deb filename.
+
+        A ValueError is raised if the binarytpe is not deb.
+
+        """
+        if self.get('binarytype') != 'deb':
+            raise ValueError('illegal debfilename call')
+        if self.get('release') is None:
+            # release is optional
+            return "%s_%s_%s.deb" % (self.get('name'), self.get('version'),
+                                     self.get('arch'))
+        return "%s_%s-%s_%s.deb" % (self.get('name'), self.get('version'),
+                                    self.get('release'), self.get('arch'))
+
+    @staticmethod
+    def fromdata(binarytype, arch, name, version, release='', project='',
+                 repository=''):
+        """Creates a new BuildDependency object.
+
+        binarytype is the binarytype, arch the arch, name the name, version
+        the version of the dependency.
+        If binarytype is rpm and a release is not specified a ValueError is
+        raised.
+
+        Keyword arguments:
+        release -- optional release (default: '')
+        project -- the project to which the dependency belongs to (default: '')
+        repository -- the repository where the dependency can be found
+                      (default: '')
+
+        """
+        if binarytype == 'rpm' and not release:
+            raise ValueError("binarytype rpm requires a release")
+        xml = fromstring('<bdep />', bdep=BuildDependency)
+        xml.set('binarytype', binarytype)
+        xml.set('name', name)
+        xml.set('version', version)
+        if release:
+            xml.set('release', release)
+        xml.set('arch', arch)
+        if project:
+            xml.set('project', project)
+        if repository:
+            xml.set('repository', repository)
+        return xml
