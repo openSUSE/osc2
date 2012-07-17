@@ -1,0 +1,19 @@
+<buildinfo project="project" repository="openSUSE_Factory" package="package" downloadurl="http://download.opensuse.org/repositories">
+  <arch>x86_64</arch>
+  <srcmd5>5f25ebcf25fbbd82a7903dfda8c89a93</srcmd5>
+  <verifymd5>f64b2755c2b90422a0e2930abbd77778</verifymd5>
+  <rev>121</rev>
+  <specfile>package.spec</specfile>
+  <file>package.spec</file>
+  <versrel>0.135.1-82</versrel>
+  <bcnt>2</bcnt>
+  <release>82.2</release>
+  <debuginfo>1</debuginfo>
+  <subpack>package</subpack>
+  <bdep name="aaa_base" preinstall="1" runscripts="1" notmeta="1" version="12.2" release="7.1" arch="x86_64" project="openSUSE:Factory" repository="snapshot" />
+  <bdep name="attr" preinstall="1" notmeta="1" version="2.4.46" release="10.2" arch="x86_64" project="openSUSE:Factory" repository="snapshot" />
+  <bdep name="python-devel" version="2.7.3" release="4.8" arch="x86_64" project="openSUSE:Factory" repository="snapshot" />
+  <bdep name="perl" notmeta="1" version="5.16.0" release="4.8" arch="x86_64" project="openSUSE:Factory" repository="snapshot" />
+  <path project="openSUSE:Tools" repository="openSUSE_Factory" />
+  <path project="openSUSE:Factory" repository="snapshot" />
+</buildinfo>

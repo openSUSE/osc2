@@ -1,0 +1,17 @@
+<buildinfo project="openSUSE:Tools" repository="XYZ" package="osc" downloadurl="http://download.opensuse.org/repositories">
+  <arch>x86_64</arch>
+  <srcmd5>5f25ebcf25fbbd82a7903dfda8c89a93</srcmd5>
+  <verifymd5>f64b2755c2b90422a0e2930abbd77778</verifymd5>
+  <rev>121</rev>
+  <specfile>invalid</specfile>
+  <file>invalid</file>
+  <versrel>0.135.1-82</versrel>
+  <bcnt>1</bcnt>
+  <release>82.1</release>
+  <debuginfo>1</debuginfo>
+  <subpack>osc</subpack>
+  <bdep name="bash" preinstall="1" notmeta="1" version="3.2" release="4" arch="amd64" project="X:Y:Z" repository="standard" />
+  <bdep name="perl" preinstall="1" version="5.10.0" release="1" arch="amd64" project="X:Y:Z" repository="standard" />
+  <path project="openSUSE:Tools" repository="XYZ" />
+  <path project="X:Y:Z" repository="standard" />
+</buildinfo>

@@ -1,0 +1,8 @@
+<buildinfo project="foo" repository="openSUSE_Factory" package="bar" downloadurl="http://download.opensuse.org/repositories" binarytype="rpm">
+  <arch>x86_64</arch>
+  <debuginfo>1</debuginfo>
+  <subpack>bar</subpack>
+  <bdep name="aaa_base" preinstall="1" runscripts="1" notmeta="1" version="12.2" release="7.1" arch="x86_64" project="openSUSE:Factory" repository="snapshot"/>
+  <path project="openSUSE:Tools" repository="openSUSE_Factory"/>
+  <path project="openSUSE:Factory" repository="snapshot"/>
+</buildinfo>
