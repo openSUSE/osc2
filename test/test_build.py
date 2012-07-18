@@ -458,6 +458,8 @@ class TestBuild(OscTest):
         self.assertEqual(binfo.bdep[11].get('arch'), 'noarch')
         self.assertEqual(binfo.bdep[11].get('filename'),
                          'def-1.9-0.noarch.rpm')
+        # raise ValueError if debfilename is invoked
+        self.assertRaises(ValueError, binfo.bdep[0].debfilename)
 
     def test_builddependency2(self):
         """test BuildDependency (deb filename)"""
@@ -484,6 +486,8 @@ class TestBuild(OscTest):
         self.assertEqual(binfo.bdep[3].get('arch'), 'all')
         self.assertEqual(binfo.bdep[3].get('filename'),
                          'debhelper_7.0.15_all.deb')
+        # raise ValueError if debfilename is invoked
+        self.assertRaises(ValueError, binfo.bdep[0].rpmfilename)
 
     def test_builddependency3(self):
         """test BuildDependency (fromdata binarytype rpm)"""
