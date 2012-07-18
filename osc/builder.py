@@ -193,7 +193,7 @@ class Builder(object):
 
     def cmd(self, build_descr=None):
         """Returns the complete cmd list.
-        
+
         Keyword arguments:
         build_descr -- build description (default: None)
 
