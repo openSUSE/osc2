@@ -183,6 +183,50 @@ class TestBuild(OscTest):
         BinaryList.SCHEMA = self.fixture_file('binarylist_simple.xsd')
         self.assertRaises(etree.DocumentInvalid, br.binarylist)
 
+    @GET('http://localhost/build/test/repo/x86_64/_repository?view=cpio',
+         file='binarylist_cpio1.cpio')
+    def test_binarylist4(self):
+        """test the cpio view (complete repo)"""
+        br = BuildResult('test', repository='repo', arch='x86_64')
+        archive = br.binarylist(view='cpio')
+        it = iter(archive)
+        archive_file = it.next()
+        self.assertEqual(archive_file.read(), 'foo\n')
+        archive_file = it.next()
+        self.assertEqual(archive_file.read(), 'bar\n')
+        archive_file = it.next()
+        self.assertEqual(archive_file.read(), 'glibc\n')
+        self.assertRaises(StopIteration, it.next)
+
+    @GET(('http://localhost/build/test/repo/x86_64/_repository?binary=foo&'
+          'binary=bar&view=cpio'),
+         file='binarylist_cpio2.cpio')
+    def test_binarylist5(self):
+        """test the cpio view (only some binaries)"""
+        br = BuildResult('test', repository='repo', arch='x86_64')
+        archive = br.binarylist(view='cpio', binary=['foo', 'bar'])
+        it = iter(archive)
+        archive_file = it.next()
+        self.assertEqual(archive_file.read(), 'foo\n')
+        archive_file = it.next()
+        self.assertEqual(archive_file.read(), 'bar\n')
+        self.assertRaises(StopIteration, it.next)
+
+    @GET(('http://localhost/build/test/repo/x86_64/pkg?binary=foo&'
+          'binary=bar&view=cpio'),
+         file='binarylist_cpio2.cpio')
+    def test_binarylist6(self):
+        """test the cpio view (only some binaries + specify package)"""
+        br = BuildResult('test', package='pkg', repository='repo',
+                         arch='x86_64')
+        archive = br.binarylist(view='cpio', binary=['foo', 'bar'])
+        it = iter(archive)
+        archive_file = it.next()
+        self.assertEqual(archive_file.read(), 'foo\n')
+        archive_file = it.next()
+        self.assertEqual(archive_file.read(), 'bar\n')
+        self.assertRaises(StopIteration, it.next)
+
     @GET('http://localhost/build/test/repo/i586/osc/_log', text='logfile')
     def test_logfile1(self):
         """get the logfile"""
