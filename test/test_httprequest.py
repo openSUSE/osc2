@@ -151,15 +151,12 @@ class TestHTTPRequest(OscTest):
     def test14(self):
         """test exception handling (check exception object)"""
         r = Urllib2HTTPRequest('http://localhost', True, '', '', '', False)
-        try:
+        with self.assertRaises(HTTPError) as cm:
             f = r.get('/source')
-        except HTTPError as e:
-            self.assertEqual(e.url, 'http://localhost/source')
-            self.assertEqual(e.code, 403)
-            self.assertEqual(e.headers['foo'], 'bar')
-            self.assertIsNotNone(e.orig_exc)
-        else:
-            raise AssertionError()
+        self.assertEqual(cm.exception.url, 'http://localhost/source')
+        self.assertEqual(cm.exception.code, 403)
+        self.assertEqual(cm.exception.headers['foo'], 'bar')
+        self.assertIsNotNone(cm.exception.orig_exc)
 
     @GET('http://apiurl/source', text='foobar')
     def test15(self):
