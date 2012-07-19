@@ -101,6 +101,11 @@ class AbstractHTTPRequest(object):
 
     All parameters passed to the methods which make up the url will be quoted
     before issuing the request.
+    There are 2 ways of passing a query parameter:
+    - key=val or
+    - key=['val1', ..., 'valn'] if a query parameter is used more than once
+    Additionally if val is the empty str or None the complete query parameter
+    is ignored.
 
     """
 
@@ -284,11 +289,14 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
 
     def _build_request(self, method, path, apiurl, **query):
         quoted_path = '/'.join([urllib.quote_plus(p) for p in path.split('/')])
+        # rewrite to internal key -> ['val'] representation
+        query.update([(k, [query[k]]) for k in query.keys()
+                                      if not hasattr(query[k], 'pop')])
         # sort query keys (to get a reproduceable url)
         sorted_keys = sorted(query.keys())
         quoted_query = '&'.join([urllib.quote_plus(k) + '=' +
-                                 urllib.quote_plus(query[k])
-                                 for k in sorted_keys if query[k]])
+                                 urllib.quote_plus(v)
+                                 for k in sorted_keys for v in query[k] if v])
         if not apiurl:
             apiurl = self.apiurl
         scheme, host = urlparse.urlsplit(apiurl)[0:2]
