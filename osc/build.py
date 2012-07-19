@@ -10,6 +10,7 @@ from lxml import etree, objectify
 from osc.remote import RORemoteFile, RWRemoteFile
 from osc.util.io import copy_file
 from osc.util.xml import fromstring
+from osc.util.cpio import CpioArchive
 from osc.core import Osc
 
 __all__ = ['BuildResult']
@@ -32,6 +33,52 @@ class BinaryList(objectify.ObjectifiedElement):
     SCHEMA = ''
 
     @staticmethod
+    def _perform_request(project, repository, arch, package, **kwargs):
+        """Performs http request and returns response object.
+
+        Keyword arguments:
+        kwargs -- optional parameters for the http request (like query
+                  parameters)
+
+        """
+        path = "/build/%s/%s/%s/%s" % (project, repository, arch, package)
+        request = Osc.get_osc().get_reqobj()
+        return request.get(path, **kwargs)
+
+    @staticmethod
+    def _create_xml(project, repository, arch, package, **kwargs):
+        """Creates and returns a new BinaryList object.
+
+        Keyword arguments:
+        kwargs -- optional parameters for the http request (like query
+                  parameters)
+
+        """
+        if not 'schema' in kwargs:
+            kwargs['schema'] = BinaryList.SCHEMA
+        f = BinaryList._perform_request(project, repository, arch, package,
+                                        **kwargs)
+        bl = fromstring(f.read(), binarylist=BinaryList, binary=Binary)
+        bl.set('project', project)
+        bl.set('package', package)
+        bl.set('repository', repository)
+        bl.set('arch', arch)
+        return bl
+
+    @staticmethod
+    def _create_cpio(project, repository, arch, package, **kwargs):
+        """Creates and returns a CpioArchive object.
+
+        Keyword arguments:
+        kwargs -- optional parameters for the http request (like query
+                  parameters)
+
+        """
+        f = BinaryList._perform_request(project, repository, arch, package,
+                                        **kwargs)
+        return CpioArchive(fobj=f)
+
+    @staticmethod
     def create(project, repository, arch, package='_repository', **kwargs):
         """Creates a new BinaryList object.
 
@@ -43,17 +90,12 @@ class BinaryList(objectify.ObjectifiedElement):
                   parameters)
 
         """
-        path = "/build/%s/%s/%s/%s" % (project, repository, arch, package)
-        request = Osc.get_osc().get_reqobj()
-        if not 'schema' in kwargs:
-            kwargs['schema'] = BinaryList.SCHEMA
-        f = request.get(path, **kwargs)
-        bl = fromstring(f.read(), binarylist=BinaryList, binary=Binary)
-        bl.set('project', project)
-        bl.set('package', package)
-        bl.set('repository', repository)
-        bl.set('arch', arch)
-        return bl
+        # TODO: support other views (like cache) as well
+        if kwargs.get('view', '') == 'cpio':
+            return BinaryList._create_cpio(project, repository, arch, package,
+                                           **kwargs)
+        return BinaryList._create_xml(project, repository, arch, package,
+                                      **kwargs)
 
 
 class Binary(objectify.ObjectifiedElement):
