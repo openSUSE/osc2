@@ -438,7 +438,7 @@ class RORemoteFile(object):
     """
 
     def __init__(self, path, stream_bufsize=8192, method='GET',
-                 mtime=None, mode=0644, **kwargs):
+                 mtime=None, mode=0644, lazy_open=True, **kwargs):
         """Constructs a new RemoteFile object.
 
         path is the remote path which is used for the http request.
@@ -451,6 +451,8 @@ class RORemoteFile(object):
         method -- the http method which is used for the request (default: GET)
         mtime -- the mtime of the file (only used by write_to) (default: None)
         mode -- the mode of the file (only used by write_to) (default: 0644)
+        lazy_open -- open the url lazily that is when a read request is issued
+                     (default: True)
         kwargs -- optional arguments for the http request (like query
                   parameters)
 
@@ -469,6 +471,8 @@ class RORemoteFile(object):
             self.mode = int(mode)
         except ValueError as e:
             raise ValueError("mtime and mode must be integers")
+        if not lazy_open:
+            self._init_read()
 
     def _init_read(self):
         request = Osc.get_osc().get_reqobj()
