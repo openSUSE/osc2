@@ -597,6 +597,19 @@ class TestRemoteModel(OscTest):
         # default mode is 0644
         self.assertEqual(stat.S_IMODE(st.st_mode), 420)
 
+    def test_remotefile6(self):
+        """test lazy_open=True (default)"""
+        # the url is opened lazily (that is when a read request is issued)
+        f = RORemoteFile('/path/to/file', lazy_open=True)
+        f.close()
+
+    @GET('http://localhost/path/to/file', text='some data')
+    def test_remotefile7(self):
+        """test lazy_open=False"""
+        # directly open the url (even if no read request is issued)
+        f = RORemoteFile('/path/to/file', lazy_open=False)
+        f.close()
+
     @GET('http://localhost/source/project/package/fname?rev=123',
          file='remotefile1', Content_Length='52')
     def test_rwremotefile1(self):
