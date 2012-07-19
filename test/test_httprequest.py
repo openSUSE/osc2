@@ -212,5 +212,21 @@ class TestHTTPRequest(OscTest):
         self.assertRaises(ValueError, r.post, '/source', data='bar',
                           content_type='foo', urlencoded=True)
 
+    @GET('http://localhost/test?binary=foo&binary=bar&binary=foobar&other=ok',
+         text='foobar')
+    def test22(self):
+        """test use same query parameter more than once"""
+        r = Urllib2HTTPRequest('http://localhost', True, '', '', '', False)
+        resp = r.get('/test', binary=['foo', 'bar', 'foobar'], other='ok')
+        self.assertEqual(resp.read(), 'foobar')
+
+    @GET('http://localhost/test?binary=foo&test=4', text='foo')
+    def test23(self):
+        """test ignore empty query keys"""
+        r = Urllib2HTTPRequest('http://localhost', True, '', '', '', False)
+        resp = r.get('/test', binary=['', 'foo'], test='4', x='', y=None,
+                     z=[''], a=['', None])
+        self.assertEqual(resp.read(), 'foo')
+
 if __name__ == '__main__':
     unittest.main()
