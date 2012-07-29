@@ -1,0 +1,30 @@
+<buildinfo project="foo" repository="openSUSE_Factory" package="bar" downloadurl="http://download.opensuse.org/repositories">
+  <arch>x86_64</arch>
+  <srcmd5>5f25ebcf25fbbd82a7903dfda8c89a93</srcmd5>
+  <verifymd5>f64b2755c2b90422a0e2930abbd77778</verifymd5>
+  <rev>121</rev>
+  <specfile>bar.spec</specfile>
+  <file>bar.spec</file>
+  <versrel>0.135.1-82</versrel>
+  <bcnt>2</bcnt>
+  <release>82.2</release>
+  <debuginfo>1</debuginfo>
+  <subpack>bar</subpack>
+  <bdep name="aaa_base" preinstall="1" runscripts="1" notmeta="1" version="12.2" release="7.1" arch="x86_64" project="openSUSE:Factory" repository="snapshot" />
+  <bdep name="attr" preinstall="1" notmeta="1" version="2.4.46" release="10.2" arch="x86_64" project="openSUSE:Factory" repository="snapshot" />
+  <bdep name="python-devel" version="2.7.3" release="4.8" arch="x86_64" project="openSUSE:Factory" repository="snapshot" />
+  <bdep name="perl" notmeta="1" version="5.16.0" release="4.8" arch="x86_64" project="openSUSE:Factory" repository="snapshot" />
+  <bdep name="install-initrd" noinstall="1" version="13.49" release="3.3" arch="i586" project="openSUSE:Factory" repository="standard" repoarch="i586" binary="install-initrd-13.49-3.3.i586.rpm" package="installation-images" />
+  <bdep name="install-initrd-branding-openSUSE" noinstall="1" version="13.49" release="3.3" arch="i586" project="openSUSE:Factory" repository="standard" repoarch="i586" binary="install-initrd-branding-openSUSE-13.49-3.3.i586.rpm" package="installation-images" />
+  <bdep name="install-initrd-branding-SLED" noinstall="1" version="13.49" release="3.3" arch="i586" project="openSUSE:Factory" repository="standard" repoarch="i586" binary="install-initrd-branding-SLED-13.49-3.3.i586.rpm" package="installation-images" />
+  <bdep name="installation-images" noinstall="1" version="13.49" release="3.6" arch="src" project="openSUSE:Factory" repository="standard" binary="installation-images-13.49-3.6.src.rpm" package="installation-images" />
+  <bdep name="foobar" cbinstall="1" version="1.2.3" release="0" arch="x86_64" project="openSUSE:Factory" repository="standard" />
+  <bdep name="baz" cbinstall="1" version="3.0" release="0" arch="x86_64" project="openSUSE:Factory" repository="standard" />
+  <bdep name="abc" cbpreinstall="1" version="9.9" release="0" arch="x86_64" project="openSUSE:Factory" repository="standard" />
+  <bdep name="def" cbpreinstall="1" version="1.9" release="0" arch="noarch" project="openSUSE:Factory" repository="standard" />
+  <bdep name="libsepol1" vminstall="1" notmeta="1" version="2.0.41" release="16.18" arch="x86_64" project="openSUSE:Factory" repository="standard" />
+  <bdep name="libblkid1" vminstall="1" notmeta="1" version="2.21.2" release="6.3" arch="x86_64" project="openSUSE:Factory" repository="standard" />
+  <bdep name="libuuid1" vminstall="1" notmeta="1" version="2.21.2" release="6.3" arch="x86_64" project="openSUSE:Factory" repository="standard" />
+  <path project="openSUSE:Tools" repository="openSUSE_Factory" />
+  <path project="openSUSE:Factory" repository="snapshot" />
+</buildinfo>
