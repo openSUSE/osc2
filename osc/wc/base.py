@@ -3,6 +3,8 @@ project and package wc's."""
 
 import os
 
+from osc.util.notify import Notifier
+
 
 def no_pending_transaction(meth):
     """Raise PendingTransactionError if a pending transaction exists.
@@ -36,53 +38,6 @@ def no_conflicts(meth):
             raise FileConflictError(conflicts)
         return meth(self, *args, **kwargs)
     return wrapper
-
-
-class ListInfo(object):
-    """Manage various lists."""
-
-    def __init__(self, *listnames, **listdata):
-        """Constructs a new ListInfo object.
-
-        For each listname in listnames an empty
-        list will be created.
-        For each listname in listdata an attribute
-        will be created which is initialized with the
-        corresponding data.
-
-        """
-        super(ListInfo, self).__init__()
-        self._listnames = list(listnames)
-        for listname in self._listnames:
-            setattr(self, listname, [])
-        self._listnames.extend(listdata.keys())
-        for listname, data in listdata.iteritems():
-            setattr(self, listname, data)
-
-    def append(self, entry, listname):
-        """Append entry to list listname."""
-        getattr(self, listname).append(entry)
-
-    def remove(self, entry):
-        """Remove entry from each list."""
-        for listname in self._listnames:
-            l = getattr(self, listname)
-            setattr(self, listname, [f for f in l if f != entry])
-
-    def _list_iter(self):
-        for listname in self._listnames:
-            yield getattr(self, listname)
-
-    def __contains__(self, entry):
-        for l in self._list_iter():
-            if entry in l:
-                return True
-        return False
-
-    def __iter__(self):
-        for l in self._list_iter():
-            for entry in l:
-                yield entry
 
 
 class TransactionListener(object):
@@ -136,19 +91,8 @@ class TransactionListener(object):
         raise NotImplementedError()
 
 
-class TransactionNotifier(object):
+class TransactionNotifier(Notifier):
     """Notify all transaction listener."""
-
-    def __init__(self, listener):
-        super(TransactionNotifier, self).__init__()
-        self.listener = listener
-
-    def _notify(self, method, *args, **kwargs):
-        rets = []
-        for listener in self.listener:
-            meth = getattr(listener, method)
-            rets.append(meth(*args, **kwargs))
-        return rets
 
     def begin(self, *args, **kwargs):
         """Return True if the transaction can start - otherwise False."""

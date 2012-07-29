@@ -7,7 +7,7 @@ import shutil
 from lxml import objectify, etree
 
 from osc.wc.base import (WorkingCopy, UpdateStateMixin, CommitStateMixin,
-                         PendingTransactionError, FileConflictError, ListInfo)
+                         PendingTransactionError, FileConflictError)
 from osc.wc.package import Package
 from osc.wc.util import (wc_read_project, wc_read_apiurl, wc_read_packages,
                          wc_init, wc_write_apiurl, wc_write_project,
@@ -18,6 +18,7 @@ from osc.wc.util import (wc_read_project, wc_read_apiurl, wc_read_packages,
                          _PKG_DATA, wc_write_version)
 from osc.source import Project as SourceProject
 from osc.remote import RemotePackage
+from osc.util.listinfo import ListInfo
 
 
 class PackageUpdateInfo(ListInfo):

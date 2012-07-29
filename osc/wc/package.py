@@ -15,9 +15,10 @@ from osc.source import Package as SourcePackage
 from osc.remote import RWLocalFile
 from osc.util.xml import fromstring
 from osc.util.io import copy_file
+from osc.util.listinfo import ListInfo
 from osc.wc.base import (WorkingCopy, UpdateStateMixin, CommitStateMixin,
                          FileConflictError, PendingTransactionError,
-                         ListInfo, no_pending_transaction)
+                         no_pending_transaction)
 from osc.wc.util import (wc_read_package, wc_read_project, wc_read_apiurl,
                          wc_init, wc_lock, wc_write_package, wc_write_project,
                          wc_write_apiurl, wc_write_files, wc_read_files,
