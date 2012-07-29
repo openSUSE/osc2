@@ -26,6 +26,32 @@ __all__ = ['AbstractHTTPRequest', 'AbstractHTTPResponse', 'HTTPError',
            'Urllib2HTTPResponse', 'Urllib2HTTPError', 'Urllib2HTTPRequest']
 
 
+def build_url(apiurl, path, **query):
+    """Returns an url str.
+
+    apiurl has the form <protocol>://host and path is the path.
+
+    This method should be used by all methods which need to construct
+    an url manually.
+
+    Keyword arguments:
+    **query -- optional query parameters (default: {})
+
+    """
+    quoted_path = '/'.join([urllib.quote_plus(p) for p in path.split('/')])
+    # rewrite to internal key -> ['val'] representation
+    query.update([(k, [query[k]]) for k in query.keys()
+                                  if not hasattr(query[k], 'pop')])
+    # sort query keys (to get a reproduceable url)
+    sorted_keys = sorted(query.keys())
+    quoted_query = '&'.join([urllib.quote_plus(k) + '=' +
+                             urllib.quote_plus(v)
+                             for k in sorted_keys for v in query[k] if v])
+    scheme, host = urlparse.urlsplit(apiurl)[0:2]
+    return urlparse.urlunsplit((scheme, host, quoted_path, quoted_query,
+                                ''))
+
+
 class AbstractHTTPResponse(object):
     """Base class for an http response object.
 
@@ -288,20 +314,9 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
         return authhandler
 
     def _build_request(self, method, path, apiurl, **query):
-        quoted_path = '/'.join([urllib.quote_plus(p) for p in path.split('/')])
-        # rewrite to internal key -> ['val'] representation
-        query.update([(k, [query[k]]) for k in query.keys()
-                                      if not hasattr(query[k], 'pop')])
-        # sort query keys (to get a reproduceable url)
-        sorted_keys = sorted(query.keys())
-        quoted_query = '&'.join([urllib.quote_plus(k) + '=' +
-                                 urllib.quote_plus(v)
-                                 for k in sorted_keys for v in query[k] if v])
         if not apiurl:
             apiurl = self.apiurl
-        scheme, host = urlparse.urlsplit(apiurl)[0:2]
-        url = urlparse.urlunsplit((scheme, host, quoted_path, quoted_query,
-                                   ''))
+        url = build_url(apiurl, path, **query)
         request = urllib2.Request(url)
         request.get_method = lambda: method
         return request
