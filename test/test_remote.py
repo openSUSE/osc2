@@ -545,6 +545,26 @@ class TestRemoteModel(OscTest):
         self.assertEqual(req.review[2].get('state'), 'accepted')
         self.assertEqual(req.review[2].comment, 'Thanks')
 
+    @GET('http://localhost/request/120703', file='request4.xml')
+    @POST('http://localhost/request/120703?cmd=diff',
+          text='some diff content\n')
+    def test_request17(self):
+        """test request diff"""
+        req = Request.find('120703')
+        f = req.diff()
+        self.assertEqual(f.read(), 'some diff content\n')
+
+    @GET('http://localhost/request/120703', file='request4.xml')
+    @POST('http://localhost/request/120703?cmd=diff',
+          text='some diff content\n')
+    def test_request18(self):
+        """test request diff (returned object should have a write_to method"""
+        req = Request.find('120703')
+        f = req.diff()
+        sio = StringIO()
+        f.write_to(sio)
+        self.assertEqual(sio.getvalue(), 'some diff content\n')
+
     @GET('http://localhost/source/project/package/fname', file='remotefile1')
     def test_remotefile1(self):
         """get a simple file1"""
