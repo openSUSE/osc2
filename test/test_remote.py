@@ -565,6 +565,35 @@ class TestRemoteModel(OscTest):
         f.write_to(sio)
         self.assertEqual(sio.getvalue(), 'some diff content\n')
 
+    @POST('http://localhost/request?cmd=create', file='request_created.xml',
+          expfile='request_create.xml',
+          exp_content_type='application/xml')
+    def test_request19(self):
+        """create a request (test None attrib filter in class ElementFactory"""
+        # nearly identical to test_request2 (except the None's here and there)
+        req = Request()
+        action = req.add_action(type='submit', xyz=None)
+        action.add_source(project='foo', package='bar', rev='12345')
+        action.add_target(project='foobar', package=None)
+        options = action.add_options()
+        options.add_sourceupdate('cleanup', attr=None)
+        req.description = 'some description'
+        req.store()
+        self.assertEqual(req.get('id'), '42')
+        self.assertTrue(len(req.action) == 1)
+        self.assertEqual(req.action[0].get('type'), 'submit')
+        self.assertEqual(req.action[0].source.get('project'), 'foo')
+        self.assertEqual(req.action[0].source.get('package'), 'bar')
+        self.assertEqual(req.action[0].source.get('rev'), '12345')
+        self.assertEqual(req.action[0].target.get('project'), 'foobar')
+        self.assertIsNone(req.action[0].target.get('package'))
+        self.assertEqual(req.action[0].options.sourceupdate, 'cleanup')
+        self.assertIsNone(req.action[0].options.sourceupdate.get('attr'))
+        self.assertEqual(req.state.get('name'), 'new')
+        self.assertEqual(req.state.get('who'), 'username')
+        self.assertEqual(req.state.get('when'), '2011-06-10T14:33:55')
+        self.assertEqual(req.description, 'some description')
+
     @GET('http://localhost/source/project/package/fname', file='remotefile1')
     def test_remotefile1(self):
         """get a simple file1"""
