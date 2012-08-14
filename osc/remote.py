@@ -474,7 +474,7 @@ class RORemoteFile(object):
         super(RORemoteFile, self).__init__()
         self.path = path
         self.stream_bufsize = stream_bufsize
-        self.method = 'GET'
+        self.method = method
         self.kwargs = kwargs
         self._remote_size = -1
         self._fobj = None
