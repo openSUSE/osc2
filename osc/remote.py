@@ -55,8 +55,21 @@ class ElementFactory(object):
         self._element = element
         self._tag = tag
 
+    def _attrib_filter(self, attribs):
+        """Filter out attributes with value None.
+
+        A filtered dict is returned.
+
+        """
+        # simply creating a new dict is not possible because
+        # otherwise our testcases fail (we need an OrderedDict...)
+        remove = [k for k, v in attribs.iteritems() if v is None]
+        for k in remove:
+            del attribs[k]
+
     def _add_data(self, data, attribs):
         data_elm = objectify.DataElement(data)
+        self._attrib_filter(attribs)
         target_elm = self._element.makeelement(self._tag, **attribs)
         existing = self._element.findall(self._tag)
         if existing:
@@ -70,6 +83,7 @@ class ElementFactory(object):
         return data_elm
 
     def _add_tree(self, attribs):
+        self._attrib_filter(attribs)
         elm = self._element.makeelement(self._tag, **attribs)
         existing = self._element.findall(self._tag)
         if existing:
