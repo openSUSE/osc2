@@ -441,6 +441,22 @@ class Request(RemoteModel):
         """
         self._change_state('superseded', superseded_by=reqid, **kwargs)
 
+    def diff(self, **kwargs):
+        """Performs a request diff.
+
+        A RORemoteFile object is returned which contains the
+        diff.
+
+        Keyword arguments:
+        **kwargs -- optional parameters for the RORemoteFile's __init__
+                    method
+
+        """
+        path = Request.GET_PATH % {'reqid': self.get('id')}
+        query = {'cmd': 'diff'}
+        query.update(kwargs)
+        return RORemoteFile(path, method='POST', **query)
+
 
 class RORemoteFile(object):
     """Provides basic methods to read and to store a remote file.
