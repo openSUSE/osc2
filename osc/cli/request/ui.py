@@ -129,7 +129,7 @@ class RequestCreate(CommandDescription, Request):
     cmd = 'create'
     opt_message = Option('m', 'message', 'specify a message')
     opt_submit = Option('', 'submit', 'create new submit action',
-                        oargs=('api://src_project/src_package '
+                        oargs=('api://src_project/src_package@rev? '
                                'api://tgt_project/tgt_package?'),
                         nargs=2, action='append', default=[])
     opt_changedevel = Option('', 'changedevel',

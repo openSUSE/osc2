@@ -81,7 +81,8 @@ def _create_submit_actions(request, submit):
     """Creates a new submit actions for the request request."""
     for info in submit:
         action = request.add_action(type='submit')
-        action.add_source(project=info.src_project, package=info.src_package)
+        action.add_source(project=info.src_project, package=info.src_package,
+                          rev=info.rev)
         action.add_target(project=info.tgt_project, package=info.tgt_package)
 
 
