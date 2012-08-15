@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+  elementFormDefault="qualified">
+
+  <xs:include schemaLocation="request_simple.xsd" />
+
+  <xs:element name="collection">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="request" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="matches" type="xs:int"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

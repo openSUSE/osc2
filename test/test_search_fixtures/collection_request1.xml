@@ -1,0 +1,71 @@
+<collection matches="3">
+  <request id="1">
+    <action type="submit">
+      <source project="foo" package="bar" rev="241" />
+      <target project="openSUSE:Factory" />
+    </action>
+    <state name="new" who="user" when="2012-03-12T21:04:46">
+      <comment>Thanks</comment>
+    </state>
+    <review state="accepted" by_group="legal-auto" who="licensedigger" when="2012-03-12T16:20:43">
+      <comment>some long comment</comment>
+    </review>
+    <review state="accepted" by_group="factory-auto" who="factory-auto" when="2012-03-12T17:01:44">
+      <comment>Builds for repo openSUSE_Factory</comment>
+    </review>
+    <review state="accepted" by_group="autobuild-team" who="user" when="2012-03-12T21:04:46">
+      <comment>Thanks</comment>
+    </review>
+    <history name="review" who="factory-maintainer" when="2012-03-12T16:10:13" />
+    <history name="review" who="factory-auto" when="2012-03-12T17:01:42">
+      <comment>Please review sources</comment>
+    </history>
+    <description>Automatic submission by obs-autosubmit</description>
+  </request>
+  <request id="42">
+    <action type="submit">
+      <source project="foo" package="some_package" rev="133" />
+      <target project="openSUSE:Factory" />
+    </action>
+    <state name="new" who="user" when="2012-03-12T21:05:04">
+      <comment>Thanks</comment>
+    </state>
+    <review state="accepted" by_group="legal-auto" who="licensedigger" when="2012-03-12T16:20:49">
+      <comment>yet another long comment</comment>
+    </review>
+    <review state="accepted" by_group="factory-auto" who="factory-auto" when="2012-03-12T17:02:03">
+      <comment>Builds for repo openSUSE_Factory</comment>
+    </review>
+    <review state="accepted" by_group="autobuild-team" who="user" when="2012-03-12T21:05:04">
+      <comment>Thanks</comment>
+    </review>
+    <history name="review" who="factory-maintainer" when="2012-03-12T16:10:16" />
+    <history name="review" who="factory-auto" when="2012-03-12T17:02:02">
+      <comment>Please review sources</comment>
+    </history>
+    <description>Automatic submission by obs-autosubmit</description>
+  </request>
+  <request id="108">
+    <action type="submit">
+      <source project="foo" package="libxyz" rev="290" />
+      <target project="openSUSE:Factory" />
+    </action>
+    <state name="new" who="user" when="2012-03-12T21:05:12">
+      <comment>Thanks</comment>
+    </state>
+    <review state="accepted" by_group="legal-auto" who="licensedigger" when="2012-03-12T16:20:55">
+      <comment>even longer comment</comment>
+    </review>
+    <review state="accepted" by_group="factory-auto" who="factory-auto" when="2012-03-12T17:02:52">
+      <comment>Builds for repo openSUSE_Factory</comment>
+    </review>
+    <review state="accepted" by_group="autobuild-team" who="user" when="2012-03-12T21:05:12">
+      <comment>Thanks</comment>
+    </review>
+    <history name="review" who="factory-maintainer" when="2012-03-12T16:10:19" />
+    <history name="review" who="factory-auto" when="2012-03-12T17:02:50">
+      <comment>Please review sources</comment>
+    </history>
+    <description>Automatic submission by obs-autosubmit</description>
+  </request>
+</collection>
