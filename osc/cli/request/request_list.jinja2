@@ -1,0 +1,42 @@
+{% import 'request/macros.jinja2' as macros %}
+{%- block header -%}
+    {{- '%-6s  State:%-10s By:%-12s When:%-19s' | format(request.get('id'),
+                                                         request.state.get('name'),
+                                                         request.state.get('who'),
+                                                         request.state.get('when'))
+                                                         -}}
+{%- endblock header -%}
+{% block actions -%}
+{%- if request.findall('action') -%}
+{% for action in request.action[:] %}
+{{ macros.format_action_list(action) -}}
+{% endfor -%}
+{%- endif -%}
+{% endblock actions -%}
+{% block reviews -%}
+{%- if request.findall('review') -%}
+{% for review in request.review[:] %}
+{{ macros.format_review_list(review) -}}
+{% endfor -%}
+{%- endif -%}
+{% endblock reviews -%}
+{% block history -%}
+{%- if request.findall('history') -%}
+{%- set history = [] %}
+{% for hist in request.history[:] -%}
+    {%- do history.append("%s(%s)" | format(hist.get('name'), hist.get('who'))) -%} 
+{% endfor -%}
+{{ "        From: %s" | format(history | join(" -> ")) }}
+{%- endif -%}
+{% endblock history -%}
+{% block description -%}
+{% if request.description.text is not none %}
+        Descr: {{ request.description.text | indent(15, false) }}
+{%- endif -%}
+{% endblock description -%}
+{% block comment -%}
+{%- if request.state.find('comment') is not none and request.state.comment.text is not none %}
+        Comment: {{ request.state.comment.text | indent(15, false) -}}
+{% endif %}
+
+{% endblock comment %}

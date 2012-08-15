@@ -1,0 +1,52 @@
+{% import 'request/macros.jinja2' as macros %}
+{%- block header -%}
+Request: #{{ request.get('id') }}
+{% endblock header -%}
+{% block actions -%}
+{%- if request.findall('action') -%}
+{% for action in request.action[:] %}
+{{ macros.format_action_show(action) -}}
+{% endfor -%}
+{%- endif -%}
+{% endblock actions %}
+{% block description %}
+
+Message:
+{% if request.description.text is not none -%}
+{{ request.description.text }}
+{%- else -%}
+no message
+{% endif -%}
+{% endblock description %}
+
+{% block state -%}
+{{ "State:   %-10s %-12s %s" | format(request.state.get('name'), request.state.get('when'), request.state.get('who')) }}
+{%- if request.state.find('comment') is not none and request.state.comment.text is not none %}
+Comment: {{ request.state.comment.text }}
+{% else %}
+Comment: no comment
+{%- endif -%}
+{% endblock state %}
+{%- block reviews -%}
+{%- if request.findall('review') %}
+Review:  {% for review in request.review[:] | reverse %}
+{%- if loop.first -%}
+{{ macros.format_review_show(review) }}
+{%- else %}
+         {{ macros.format_review_show(review) }}
+{% endif -%}
+{% endfor -%}
+{%- endif %}
+{% endblock reviews -%}
+{%- block history -%}
+{%- if request.findall('history') -%}
+{%- set tmpl = "%-10s %-12s %s" -%}
+History: {% for hist in request.history[:] | reverse %}
+{%- if loop.first -%}
+{{ tmpl | format(hist.get('name'), hist.get('when'), hist.get('who')) }}
+{%- else %}
+         {{ tmpl | format(hist.get('name'), hist.get('when'), hist.get('who')) -}}
+{% endif -%}
+{% endfor -%}
+{%- endif %}
+{% endblock history %}

@@ -1,0 +1,111 @@
+{% macro format_action(action, tmpl, show_srcupdate=true) -%}
+    {%- set type = action.get('type') %}
+    {%- if type == 'submit' -%}
+        {%- set srcupdate = '' %}
+        {%- if show_srcupdate and action.find('options') is not none %}
+            {%- set srcupdate = '(%s)' | format(action.options.sourceupdate.text) %}
+        {%- endif %}
+        {%- set source = "%s%s ->" | format(prj_pkg_join(action.source), srcupdate) %}
+        {%- set target = prj_pkg_join(action.target) %}
+        {%- if action.source.get('package') == action.target.get('package') %}
+            {%- set target = action.target.get('project') %}
+        {%- endif %}
+    {%- elif type == 'set_bugowner' -%}
+        {%- set source = action.person.get('name') %}
+        {%- set target = prj_pkg_join(action.target) %}
+    {%- elif type == 'change_devel' -%}
+        {%- set source = prj_pkg_join(action.target) %}
+        {%- set target = "developed in (%s)" | format(prj_pkg_join(action.source)) %}
+    {%- elif type == 'maintenance_incident' -%}
+        {%- set source = "%s ->" | format(prj_pkg_join(action.source)) %}
+        {%- set target = action.target.get('project') %}
+        {%- if action.target.get('releaseproject') %}
+            {%- set target = "release in %s" | format(action.target.get('releaseproject')) %}
+        {%- endif %}
+    {%- elif type == 'maintenance_release' %}
+        {%- set source = "%s ->" | format(prj_pkg_join(action.source)) %}
+        {%- set target = prj_pkg_join(action.target) %}
+    {%- elif type == 'add_role' %}
+        {%- set roles = [] %}
+        {%- if action.find('person') is not none %}
+            {%- do roles.append("person: %s as %s" | format(action.person.get('name'), action.person.get('role'))) %}
+        {%- endif %}
+        {%- if action.find('group') is not none %}
+            {%- do roles.append("group: %s as %s" | format(action.group.get('name'), action.group.get('role'))) %}
+        {%- endif %}
+        {%- set source = roles | join(", ") %}
+        {%- set target = prj_pkg_join(action.target) %}
+    {%- elif type == 'delete' %}
+        {%- set source = '' %}
+        {%- set target = prj_pkg_join(action.target) %}
+    {%- endif %}
+    {{- tmpl | format("%s: " | format(type), source, target) -}}
+{%- endmacro %}
+
+{%- macro format_action_list(action, show_srcupdate=true) -%}
+    {%- set tmpl = "        %-16s %-50s %s"  %}
+    {{- format_action(action, tmpl, show_srcupdate) -}}
+{%- endmacro %}
+
+{%- macro format_action_show(action, show_srcupdate=true) -%}
+    {%- set tmpl = "  %-13s %s %s"  %}
+    {%- if action.get('type') == 'delete' -%}
+        {%- set tmpl = "  %-12s %s %s"  %}
+    {%- endif %}
+    {{- format_action(action, tmpl, show_srcupdate) -}}
+{%- endmacro %}
+
+{%- macro format_review_list(review) -%}
+    {%- set tmpl = '        Review by %-10s is %-10s %-50s' %}
+    {%- if review.get('by_package') %}
+        {%- set by = "%s/%s" | format(review.get('by_project') ,review.get('by_package')) %}
+        {%- set type = 'Package' %}
+    {%- elif review.get('by_project') %}
+        {%- set by = review.get('by_project') %}
+        {%- set type = 'Project' %}
+    {%- elif review.get('by_group') %}
+        {%- set by = review.get('by_group') %}
+        {%- set type = 'Group' %}
+    {%- else %}
+        {%- set by = review.get('by_user') %}
+        {%- set type = 'User' %}
+    {%- endif %}
+    {%- if review.get('who') %}
+        {%- set by = by + "(%s)" | format(review.get('who')) %}
+    {%- endif %}
+    {{- tmpl | format(type, review.get('state'), by) }}
+{%- endmacro %}
+
+{%- macro format_review_show(review) -%}
+    {%- set tmpl = "%-10s %-50s %-12s %-20s  %s" %}
+    {%- if review.get('by_user') %}
+        {%- set by = "User: %s" | format(review.get('by_user')) %}
+    {%- elif review.get('by_group') %}
+        {%- set by = "Group: %s" | format(review.get('by_group')) %}
+    {%- elif review.get('by_package') %}
+        {%- set by = "Package: %s/%s" | format(review.get('by_project') ,review.get('by_package')) %}
+    {%- else %}
+        {%- set by = "Project: %s" | format(review.get('by_project')) %}
+    {%- endif %}
+    {%- set who = '' %}
+    {%- if review.get('who') %}
+        {%- set who = review.get('who') %}
+    {%- endif %}
+    {%- set when = '' %}
+    {%- if review.get('when') %}
+        {%- set when = review.get('when') %}
+    {%- endif %}
+    {%- set comment = '' %}
+    {%- if review.find('comment') is not none and review.comment.text is not none %}
+        {%- set comment = review.comment.text %}
+    {%- endif %}
+    {{- tmpl | format(review.get('state'), by, when, who, comment) }}
+{%- endmacro %}
+
+{% macro prj_pkg_join(dest) -%}
+    {% if dest.get('package') is not none%}
+        {{- dest.get('project') }}/{{ dest.get('package') -}}
+    {% else %}
+        {{- dest.get('project') -}}
+    {% endif %}
+{%- endmacro %}
