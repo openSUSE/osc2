@@ -9,6 +9,11 @@ def suite():
     return unittest.makeSuite(TestOscArgs)
 
 
+class Sub(OscArgs):
+    def unresolved(self, info, name):
+        info.add(name, None)
+
+
 class TestOscArgs(OscTest):
     def __init__(self, *args, **kwargs):
         kwargs['fixtures_dir'] = os.path.join('wc', 'test_util_fixtures')
@@ -357,11 +362,7 @@ class TestOscArgs(OscTest):
         self.assertFalse(hasattr(info, 'package'))
 
     def test15(self):
-        """test subclassing"""
-        class Sub(OscArgs):
-            def unresolved(self, info, name):
-                info.add(name, None)
-
+        """test subclassing 1"""
         oargs = Sub('api://project/package?')
         args = 'obs://foo/bar'
         info = oargs.resolve(args)
@@ -373,6 +374,21 @@ class TestOscArgs(OscTest):
         info = oargs.resolve(args)
         self.assertEqual(info.apiurl, 'obs')
         self.assertEqual(info.project, 'foo')
+        self.assertIsNone(info.package)
+
+    def test16(self):
+        """test subclassing 2"""
+        oargs = Sub('api://project?/package?')
+        args = 'obs://foo/bar'
+        info = oargs.resolve(args)
+        self.assertEqual(info.apiurl, 'obs')
+        self.assertEqual(info.project, 'foo')
+        self.assertEqual(info.package, 'bar')
+        # leave out project and package
+        args = 'obs://'
+        info = oargs.resolve(args)
+        self.assertEqual(info.apiurl, 'obs')
+        self.assertIsNone(info.project)
         self.assertIsNone(info.package)
 
 if __name__ == '__main__':
