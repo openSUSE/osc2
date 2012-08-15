@@ -519,7 +519,6 @@ class TestRemoteModel(OscTest):
         self.assertEqual(req.review[2].get('state'), 'superseded')
         self.assertEqual(req.review[2].comment, 'see rq12345')
 
-
     @GET('http://localhost/request/120703', file='request4.xml')
     @POST(('http://localhost/request/120703?by_package=package'
            '&by_project=project&cmd=changereviewstate&comment=Thanks'
@@ -593,6 +592,25 @@ class TestRemoteModel(OscTest):
         self.assertEqual(req.state.get('who'), 'username')
         self.assertEqual(req.state.get('when'), '2011-06-10T14:33:55')
         self.assertEqual(req.description, 'some description')
+
+    def test_request20(self):
+        """test Request's __cmp__ method"""
+        l = []
+        l.append(Request(id='2'))
+        l.append(Request(id='5'))
+        l.append(Request(id='4'))
+        l.append(Request(id='9'))
+        l.append(Request())
+        l.append(Request(id='11'))
+        l.append(Request(id='1'))
+        l.sort()
+        self.assertIsNone(l[0].get('id'))
+        self.assertEqual(l[1].get('id'), '1')
+        self.assertEqual(l[2].get('id'), '2')
+        self.assertEqual(l[3].get('id'), '4')
+        self.assertEqual(l[4].get('id'), '5')
+        self.assertEqual(l[5].get('id'), '9')
+        self.assertEqual(l[6].get('id'), '11')
 
     @GET('http://localhost/source/project/package/fname', file='remotefile1')
     def test_remotefile1(self):
