@@ -39,7 +39,15 @@ class ResolvedInfo(object):
         self._data[name] = value
 
     def __getattr__(self, name):
-        return self._data[name]
+        if name in self._data.keys():
+            return self._data[name]
+        return getattr(self._data, name)
+
+    def __contains__(self, name):
+        return name in self._data
+
+    def __iter__(self):
+        return self._data.iterkeys()
 
     def __str__(self):
         return str(self._data)
@@ -241,7 +249,7 @@ class OscArgs(object):
             else:
                 info.add(k, v)
         for name in unresolved:
-            self.unresolved(info, k)
+            self.unresolved(info, name)
 
     def _resolve(self, args, use_wc=False, path=''):
         entries = self._entries[:]
