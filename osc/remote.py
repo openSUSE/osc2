@@ -217,6 +217,7 @@ class RemoteModel(object):
             kwargs['data'] = self.tostring()
         if not 'schema' in kwargs:
             kwargs['schema'] = self._store_schema
+        # FIXME: api.o.o does not like this for requests
         kwargs['content_type'] = 'application/xml'
         return http_method(path, **kwargs)
 
@@ -456,6 +457,11 @@ class Request(RemoteModel):
         query = {'cmd': 'diff'}
         query.update(kwargs)
         return RORemoteFile(path, method='POST', **query)
+
+    def __cmp__(self, other):
+        my_id = int(self.get('id', -1))
+        other_id = int(other.get('id', -1))
+        return cmp(my_id, other_id)
 
 
 class RORemoteFile(object):
