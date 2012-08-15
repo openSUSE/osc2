@@ -371,6 +371,50 @@ class TestXPath(OscTest):
         self.assertEqual(base_xp.tostring(), base_exp)
         self.assertEqual(base_gen.tostring(), base_exp)
 
+    def test_generator7(self):
+        """test a xpath generator (the root node is a BinaryExpression)"""
+        xpb = XPathBuilder()
+        xp1 = xp2 = None
+        base_xp = xpb.foo.bar & xpb.x.y
+        base_gen = None
+        with base_xp as b:
+            base_gen = b
+            xp1 = b() | xpb.c
+            xp2 = b() | xpb.d
+        xp1_exp = '/foo/bar and /x/y or /c'
+        xp2_exp = '/foo/bar and /x/y or /d'
+        base_exp = '/foo/bar and /x/y'
+        # check tree structure
+        self.assertTrue(base_xp._parent is None)
+        self.assertTrue(base_gen._parent is None)
+        # check xpath
+        self.assertEqual(xp1.tostring(), xp1_exp)
+        self.assertEqual(xp2.tostring(), xp2_exp)
+        self.assertEqual(base_xp.tostring(), base_exp)
+        self.assertEqual(base_gen.tostring(), base_exp)
+
+    def test_generator8(self):
+        """test a xpath generator (root node is a ParenthesizedExpression)"""
+        xpb = XPathBuilder()
+        xp1 = xp2 = None
+        base_xp = (xpb.foo.bar | xpb.x.y).parenthesize()
+        base_gen = None
+        with base_xp as b:
+            base_gen = b
+            xp1 = b() & xpb.c
+            xp2 = b() & xpb.d
+        xp1_exp = '(/foo/bar or /x/y) and /c'
+        xp2_exp = '(/foo/bar or /x/y) and /d'
+        base_exp = '(/foo/bar or /x/y)'
+        # check tree structure
+        self.assertTrue(base_xp._parent is None)
+        self.assertTrue(base_gen._parent is None)
+        # check xpath
+        self.assertEqual(xp1.tostring(), xp1_exp)
+        self.assertEqual(xp2.tostring(), xp2_exp)
+        self.assertEqual(base_xp.tostring(), base_exp)
+        self.assertEqual(base_gen.tostring(), base_exp)
+
     def test_context_item1(self):
         """test context item for the initial expression"""
         xpb = XPathBuilder(context_item=True)
@@ -508,6 +552,26 @@ class TestXPath(OscTest):
         d = {}
         self.assertRaises(TypeError, hash, xp)
         self.assertRaises(TypeError, d.setdefault, xp, 'key')
+
+    def test_dummy1(self):
+        """test dummy method 1"""
+        xpb = XPathBuilder()
+        xp = xpb.dummy()
+        self.assertFalse(xp)
+        xp = xp & xpb.foo.bar
+        self.assertTrue(xp)
+        exp = '/foo/bar'
+        self.assertEqual(xp.tostring(), exp)
+
+    def test_dummy2(self):
+        """test dummy method 2"""
+        xpb = XPathBuilder()
+        xp = xpb.dummy()
+        self.assertFalse(xp)
+        xp = xp & (xpb.attr('foo') == 'xyz')
+        self.assertTrue(xp)
+        exp = '@foo = "xyz"'
+        self.assertEqual(xp.tostring(), exp)
 
 if __name__ == '__main__':
     unittest.main()
