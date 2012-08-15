@@ -81,15 +81,15 @@ class Entry(object):
         regex = ''
         prev = None
         for c in self._components:
-            sep = '/'
-            if c.opt:
+            sep = c.left_sep
+            if sep and c.opt:
                 sep += '?'
             if prev is not None and prev.api:
                 # no separator if preceeding component was a api
                 sep = ''
             regex += sep + c.regex
             prev = c
-        regex = regex.lstrip('/').lstrip('?')
+        regex = regex.lstrip('?')
         regex = '^' + regex
         regex += '$'
         return regex
@@ -152,22 +152,25 @@ class Entry(object):
 class Component(object):
     """Represents a regex for a component"""
     APIURL_RE = "(?P<%s>.+)://"
-    COMPONENT_RE = "(?P<%s>[^/]+)"
+    COMPONENT_RE = "(?P<%s>[^%s]+)"
 
-    def __init__(self, format, api=False):
+    def __init__(self, format, separators, left_sep='', api=False):
         """Constructs a new Regex object.
 
-        format is a component.
+        format is a component. separators is a list of
+        component separators.
 
         Keyword arguments:
         api -- if True APIURL_RE will be used (default: False)
+        left_sep -- the left side separator of this component (default: '')
 
         """
         super(Component, self).__init__()
         self.opt = format.endswith('?')
         self.api = api
         self.name = format.rstrip('?')
-        self.regex = Component.COMPONENT_RE % self.name
+        self.left_sep = left_sep
+        self.regex = Component.COMPONENT_RE % (self.name, ''.join(separators))
         if self.api:
             if self.name:
                 self.name += '_'
@@ -198,14 +201,41 @@ class OscArgs(object):
         path -- path to a project or package working copy
                 (default: ''). path might be used for component
                 resolving.
+        separators -- list of component separators (default: ['/', '@'])
 
         """
         super(OscArgs, self).__init__()
         self._logger = logging.getLogger(__name__)
         self._entries = []
-        self._parse_entries(format_entries, kwargs.pop('path', ''))
+        self._parse_entries(format_entries, kwargs.pop('path', ''),
+                            kwargs.pop('separators', ['/', '@']))
 
-    def _parse_entries(self, format_entries, path):
+    def _parse_component(self, format_entry, separators):
+        """Yields a 2 tuple.
+
+        The first entry is the left side separator and the second
+        entry is the name of the component. The left side separator
+        might be None (if the component is the first component in the
+        format_entry str).
+        format_entry is the format_entry str and separators a list
+        of component separators.
+
+        """
+        left_sep = ''
+        i = 0
+        while i < len(format_entry):
+            if format_entry[i] in separators:
+                component = format_entry[:i]
+                yield left_sep, component
+                # set new left_sep
+                left_sep = format_entry[i]
+                format_entry = format_entry[i+1:]
+                i = 0
+            i += 1
+        # no separator left
+        yield left_sep, format_entry
+
+    def _parse_entries(self, format_entries, path, separators):
         """Parse each entry and each component into a Entry or
         Component object.
 
@@ -215,10 +245,10 @@ class OscArgs(object):
             m = re.match(OscArgs.APIURL_RE, entry)
             if m is not None:
                 api = m.group(1) or ''
-                e.append(Component(api, api=True))
+                e.append(Component(api, separators, api=True))
                 entry = re.sub(OscArgs.APIURL_RE, '', entry)
-            for component in entry.split('/'):
-                r = Component(component)
+            for sep, component in self._parse_component(entry, separators):
+                r = Component(component, separators, left_sep=sep)
                 e.append(r)
             self._entries.append(e)
 
