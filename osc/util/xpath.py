@@ -79,6 +79,15 @@ class XPathBuilder(object):
         kwargs.setdefault('in_pred', True)
         return self._factory.create_AttributeExpression(*args, **kwargs)
 
+    def dummy(self):
+        """Returns a new DummyExpression object.
+
+        *args and **kwargs are additional arguments for the
+        DummyExpression's __init__ method.
+
+        """
+        return self._factory.create_DummyExpression()
+
     def __getattr__(self, name):
         """Delegetates the call to a new PathExpression object.
 
@@ -170,15 +179,72 @@ class XPathFactory(object):
         kwargs.setdefault('factory', self)
         return LiteralExpression(*args, **kwargs)
 
-    def create_GeneratorDelegate(self, *args, **kwargs):
+    def create_GeneratorPathDelegate(self, *args, **kwargs):
+        """Constructs a new GeneratorPathDelegate object.
+
+        *args and **kwargs are additional arguments for the
+        GeneratorPathDelegate's __init__ method.
+
+        """
+        kwargs.setdefault('factory', self)
+        return GeneratorPathDelegate(*args, **kwargs)
+
+    def create_GeneratorDelegate(self, delegate, *args, **kwargs):
         """Constructs a new GeneratorDelegate object.
 
         *args and **kwargs are additional arguments for the
         GeneratorDelegate's __init__ method.
 
         """
+        base_cls = delegate.__class__
+        class GeneratorDelegate(base_cls):
+            """Used to generate expressions from a common base expression.
+
+            Its main purpose is to wrap the base expression object so that
+            all tree operations are executed on this object instead of the
+            delegate.
+            No children are added and just reparent operations are executed. In
+            fact we could avoid this class if we wouldn't remove the child from
+            the "old" parent if a reparent operation is executed.
+
+            """
+
+            def __init__(self, delegate, *args, **kwargs):
+                """Constructs a new GeneratorDelegate object.
+
+                delegate is the expression object which should be wrapped.
+                *args, **kwargs are additional arguments for the base class'
+                __init__ method.
+
+                """
+                super(self.__class__, self).__init__(*args, **kwargs)
+                self._delegate = delegate
+
+            def __call__(self):
+                return self._factory.create_GeneratorDelegate(self._delegate)
+
+            def tostring(self):
+                return self._delegate.tostring()
+
         kwargs.setdefault('factory', self)
-        return GeneratorDelegate(*args, **kwargs)
+        # build dummy __init__ arguments
+        dummy_args = []
+        if delegate.__class__.__name__ != 'ParenthesizedExpression':
+            # only a ParenthesizedExpression needs no dummy arg
+            # (a PredicateExpression does not have to be considered because
+            # it should never be passed to this method (use
+            # createGeneratorPathDelegate instead))
+            dummy_args.append('')
+        return GeneratorDelegate(delegate, *dummy_args, **kwargs)
+
+    def create_DummyExpression(self, *args, **kwargs):
+        """Creates a new DummyExpression object.
+
+        *args and **kwargs are additional arguments for the
+        DummyExpression's __init__ method.
+
+        """
+        return DummyExpression(*args, **kwargs)
 
 
 class Tree(object):
@@ -399,6 +465,12 @@ class Expression(Tree):
             expr = self._factory.create_LiteralExpression(expr)
         return expr
 
+    def __enter__(self):
+        return self._factory.create_GeneratorDelegate(self)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
     @disable_in_tree_mode()
     def __and__(self, other):
         return self.log_and(other)
@@ -527,10 +599,7 @@ class PathExpression(Expression):
         return self.where(key)
 
     def __enter__(self):
-        return self._factory.create_GeneratorDelegate(self)
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        pass
+        return self._factory.create_GeneratorPathDelegate(self)
 
     @children(0, 1)
     def tostring(self):
@@ -705,7 +774,7 @@ class ParenthesizedExpression(Expression):
         return "(%s)" % self._children[0].tostring()
 
 
-class GeneratorDelegate(PathExpression):
+class GeneratorPathDelegate(PathExpression):
     """Used to generate expressions from a common base PathExpression.
 
     Its main purpose is to wrap the base PathExpression (or subclass)
@@ -715,7 +784,7 @@ class GeneratorDelegate(PathExpression):
     """
 
     def __init__(self, delegate, **kwargs):
-        """Constructs a new GeneratorDelegate object.
+        """Constructs a new GeneratorPathDelegate object.
 
         delegate is the PathExpression (or subclass) object
         which should be wrapped.
@@ -723,11 +792,11 @@ class GeneratorDelegate(PathExpression):
         __init__ method.
 
         """
-        super(GeneratorDelegate, self).__init__('', **kwargs)
+        super(GeneratorPathDelegate, self).__init__('', **kwargs)
         self._delegate = delegate
 
     def __call__(self):
-        return self._factory.create_GeneratorDelegate(self._delegate)
+        return self._factory.create_GeneratorPathDelegate(self._delegate)
 
     @children(0, 1)
     def tostring(self):
@@ -735,3 +804,28 @@ class GeneratorDelegate(PathExpression):
         if self._children:
             res = self._children[0].tostring()
         return res + self._delegate.tostring()
+
+
+class DummyExpression(object):
+    """This class represents a dummy expression.
+
+    Its sole purpose is to make the xpath code
+    easier to read (we can avoid "xp is None" tests
+    in a loop).
+
+    """
+
+    def __and__(self, other):
+        return other
+
+    def __or__(self, other):
+        return other
+
+    def __eq__(self, other):
+        return other
+
+    def __ne__(self, other):
+        return other
+
+    def __nonzero__(self):
+        return False
