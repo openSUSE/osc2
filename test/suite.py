@@ -8,6 +8,7 @@ from test import test_source
 from test import test_oscargs
 from test import test_builder
 from test import test_fetch
+from test import test_search
 from test.wc import test_util
 from test.wc import test_project
 from test.wc import test_package
@@ -25,6 +26,7 @@ def additional_tests():
     suite.addTests(test_oscargs.suite())
     suite.addTests(test_builder.suite())
     suite.addTests(test_fetch.suite())
+    suite.addTests(test_search.suite())
     suite.addTests(test_util.suite())
     suite.addTests(test_project.suite())
     suite.addTests(test_package.suite())
