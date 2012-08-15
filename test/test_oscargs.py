@@ -391,5 +391,76 @@ class TestOscArgs(OscTest):
         self.assertIsNone(info.project)
         self.assertIsNone(info.package)
 
+    def test17(self):
+        """test @ separator"""
+        oargs = OscArgs('api://project/package@rev')
+        args = 'api://prj/pkg@123'
+        info = oargs.resolve(args)
+        self.assertEqual(info.apiurl, 'api')
+        self.assertEqual(info.project, 'prj')
+        self.assertEqual(info.package, 'pkg')
+        self.assertEqual(info.rev, '123')
+
+    def test18(self):
+        """test @ separator (optional)"""
+        oargs = OscArgs('api://project/package@rev?')
+        args = 'api://prj/pkg'
+        info = oargs.resolve(args)
+        self.assertEqual(info.apiurl, 'api')
+        self.assertEqual(info.project, 'prj')
+        self.assertEqual(info.package, 'pkg')
+        self.assertFalse(hasattr(info, 'rev'))
+        # this time with rev
+        args = 'api://prj/pkg@123'
+        info = oargs.resolve(args)
+        self.assertEqual(info.apiurl, 'api')
+        self.assertEqual(info.project, 'prj')
+        self.assertEqual(info.package, 'pkg')
+        self.assertEqual(info.rev, '123')
+
+    def test19(self):
+        """test @ separator (pathological cases)"""
+        oargs = OscArgs('api://project/package?@rev?')
+        args = 'api://prj/pkg'
+        info = oargs.resolve(args)
+        self.assertEqual(info.apiurl, 'api')
+        self.assertEqual(info.project, 'prj')
+        self.assertEqual(info.package, 'pkg')
+        self.assertFalse(hasattr(info, 'rev'))
+        # this time with rev
+        args = 'api://prj/pkg@123'
+        info = oargs.resolve(args)
+        self.assertEqual(info.apiurl, 'api')
+        self.assertEqual(info.project, 'prj')
+        self.assertEqual(info.package, 'pkg')
+        self.assertEqual(info.rev, '123')
+        # now leave out package
+        args = 'api://prj/@123'
+        info = oargs.resolve(args)
+        self.assertEqual(info.apiurl, 'api')
+        self.assertEqual(info.project, 'prj')
+        self.assertFalse(hasattr(info, 'package'))
+        self.assertEqual(info.rev, '123')
+
+    def test20(self):
+        """test mix between @ and / separators"""
+        oargs = OscArgs('foo/bar@baz')
+        args = 'foo@bar/baz'
+        self.assertRaises(ValueError, oargs.resolve, args)
+        args = 'foo/bar/baz'
+        self.assertRaises(ValueError, oargs.resolve, args)
+        args = 'foo@bar@baz'
+        self.assertRaises(ValueError, oargs.resolve, args)
+
+    def test21(self):
+        """test mix between @ and / separators"""
+        oargs = OscArgs('foo@bar/baz@foobar')
+        args = 'x@y/z@w'
+        info = oargs.resolve(args)
+        self.assertEqual(info.foo, 'x')
+        self.assertEqual(info.bar, 'y')
+        self.assertEqual(info.baz, 'z')
+        self.assertEqual(info.foobar, 'w')
+
 if __name__ == '__main__':
     unittest.main()
