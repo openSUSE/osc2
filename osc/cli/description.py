@@ -132,15 +132,22 @@ class CommandDescription(object):
     help_str = None
     func = None  # function/callable which should be executed
     func_defaults = None  # kwargs mapping for default params
+    # list of parent's subcommand options which should be consumed
+    # empty list: consume all, None: consume no option otherwise
+    # consume options which are specified in the list
+    consume_parent_options = []
 
     @classmethod
-    def add_arguments(cls, parser):
+    def add_arguments(cls, parser, parent_options=[]):
         """Add arguments to the parser.
 
         The parser is an argparse.ArgumentParser (or subparser)
         instance.
         Additionally options and subcommands are added to the
         parser parser.
+
+        Keyword arguments:
+        parent_options -- the parent's subcommand options (default: [])
 
         """
         defaults = {'oargs': [], 'oargs_use_wc': cls.use_wc,
@@ -155,8 +162,8 @@ class CommandDescription(object):
             # TODO: investigate why it does not work with a simple
             #       else
             parser.set_defaults(**defaults)
-        cls._add_options(parser)
-        cls._add_subcommands(parser)
+        sub_options = cls._add_options(parser, parent_options)
+        cls._add_subcommands(parser, sub_options)
 
     @classmethod
     def _options(cls):
@@ -194,16 +201,42 @@ class CommandDescription(object):
         return parser
 
     @classmethod
-    def _add_options(cls, parser):
-        """Adds options to the parser parser."""
+    def _add_options(cls, parser, parent_options):
+        """Adds options to the parser parser.
+
+        A list of subcommand options is returned.
+        parent_options is a list containing the parent's
+        subcommand options.
+
+        """
+        def add_option(opt, parser):
+            p = cls._mutexgroup_or_parser(opt, parser)
+            p.set_defaults(**opt.parse_info())
+            p.add_argument(*opt.options(), **opt.kwargs)
+        sub_options = []
+        for opt in parent_options:
+            if cls.consume_parent_options is None:
+                sub_options.append(opt)
+            elif (not cls.consume_parent_options or
+                  opt in cls.consume_parent_options):
+                add_option(opt, parser)
+            else:
+                sub_options.append(opt)
         for opt in cls._options():
-            parser = cls._mutexgroup_or_parser(opt, parser)
-            parser.set_defaults(**opt.parse_info())
-            parser.add_argument(*opt.options(), **opt.kwargs)
+            if opt.is_sub:
+                sub_options.append(opt)
+            else:
+                add_option(opt, parser)
+        return sub_options
 
     @classmethod
-    def _add_subcommands(cls, parser):
-        """Adds subcommands to the parser parser."""
+    def _add_subcommands(cls, parser, sub_options):
+        """Adds subcommands to the parser parser.
+
+        sub_options is a list containing this command's
+        subcommand options.
+
+        """
         # add subcommands
         subcmds = commands().get(cls.__name__, [])
         if subcmds:
@@ -216,7 +249,7 @@ class CommandDescription(object):
                 if sub_cls.help() is not None:
                     kw['help'] = sub_cls.help()
                 subparser = subparsers.add_parser(sub_cls.cmd, **kw)
-                sub_cls.add_arguments(subparser)
+                sub_cls.add_arguments(subparser, sub_options)
 
     @classmethod
     def description(cls):
@@ -250,7 +283,8 @@ SubcommandFilterMeta.filter_cls = CommandDescription
 class Option(object):
     """Encapsulates data for an option."""
 
-    def __init__(self, shortname, fullname, help='', oargs=None, **kwargs):
+    def __init__(self, shortname, fullname, help='', oargs=None, sub=False,
+                 **kwargs):
         """Creates a new Option object.
 
         shortname is the shortname and fullname the fullname of an
@@ -258,6 +292,8 @@ class Option(object):
 
         Keyword arguments:
         help -- an optional description for the option (default: '')
+        oargs -- an optional oargs str (default: None)
+        sub -- if True this option is passed to a subcommand (default: False)
         **kwargs -- optional arguments argparse's add_argument method
 
         """
@@ -268,6 +304,7 @@ class Option(object):
         self.fullname = '--' + fullname
         kwargs['help'] = help
         self.kwargs = kwargs
+        self.is_sub = sub
         self.oargs = oargs
         if self.oargs is not None:
             self.kwargs.setdefault('metavar', oargs)
