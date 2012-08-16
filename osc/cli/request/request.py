@@ -119,7 +119,6 @@ def _create_delete_actions(request, delete):
 
 def _find_requests(project, package, info):
     """Returns a collection of requests."""
-    todo = {}
     xpb = XPathBuilder()
     pred = xpb.dummy()
     xp = xpb.dummy()
