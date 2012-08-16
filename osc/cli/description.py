@@ -139,6 +139,8 @@ class CommandDescription(object):
 
         The parser is an argparse.ArgumentParser (or subparser)
         instance.
+        Additionally options and subcommands are added to the
+        parser parser.
 
         """
         defaults = {'oargs': [], 'oargs_use_wc': cls.use_wc,
@@ -153,12 +155,19 @@ class CommandDescription(object):
             # TODO: investigate why it does not work with a simple
             #       else
             parser.set_defaults(**defaults)
-        # add options
+        cls._add_options(parser)
+        cls._add_subcommands(parser)
+
+    def _add_options(cls, parser):
+        """Adds options to the parser parser."""
         for key in cls.__dict__.keys():
             if key.startswith('opt_'):
                 opt = getattr(cls, key)
                 parser.set_defaults(**opt.parse_info())
                 parser.add_argument(*opt.options(), **opt.kwargs)
+
+    def _add_subcommands(cls, parser):
+        """Adds subcommands to the parser parser."""
         # add subcommands
         subcmds = commands().get(cls.__name__, [])
         if subcmds:
