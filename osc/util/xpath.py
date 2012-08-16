@@ -815,6 +815,9 @@ class DummyExpression(object):
 
     """
 
+    def parenthesize(self):
+        return self
+
     def __and__(self, other):
         return other
 
