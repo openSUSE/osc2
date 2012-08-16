@@ -579,5 +579,27 @@ class TestXPath(OscTest):
         xp = xpb.dummy()
         self.assertTrue(xp.parenthesize() is xp)
 
+    def test_dummy4(self):
+        """test DummyExpression negate (log_not)"""
+        xpb = XPathBuilder()
+        xp = xpb.dummy()
+        self.assertTrue(xp.log_not() is xp)
+
+    def test_dummy5(self):
+        """test DummyExpression on the right hand side of "and" op"""
+        xpb = XPathBuilder()
+        xp = xpb.dummy()
+        xp = xpb.foo & xp
+        exp = '/foo'
+        self.assertEqual(xp.tostring(), exp)
+
+    def test_dummy6(self):
+        """test DummyExpression on the right hand side of "or" op"""
+        xpb = XPathBuilder()
+        xp = xpb.dummy()
+        xp = xpb.bar | xp
+        exp = '/bar'
+        self.assertEqual(xp.tostring(), exp)
+
 if __name__ == '__main__':
     unittest.main()
