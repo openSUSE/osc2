@@ -158,14 +158,50 @@ class CommandDescription(object):
         cls._add_options(parser)
         cls._add_subcommands(parser)
 
-    def _add_options(cls, parser):
-        """Adds options to the parser parser."""
+    @classmethod
+    def _options(cls):
+        """Yields a Option instance (if available)."""
         for key in cls.__dict__.keys():
             if key.startswith('opt_'):
-                opt = getattr(cls, key)
-                parser.set_defaults(**opt.parse_info())
-                parser.add_argument(*opt.options(), **opt.kwargs)
+                yield getattr(cls, key)
 
+    @classmethod
+    def _mutex_groups(cls, parser):
+        """Yields a MutexGroup instance (if available).
+
+        parser is the parser.
+
+        """
+        for key in cls.__dict__.keys():
+            if key.startswith('mutex_'):
+                mutex_group = getattr(cls, key)
+                if hasattr(mutex_group, 'extend'):
+                    # rewrite from list to MutexGroup instance
+                    mutex_group = MutexGroup(mutex_group, parser)
+                    setattr(cls, key, mutex_group)
+                yield mutex_group
+
+    @classmethod
+    def _mutexgroup_or_parser(cls, opt, parser):
+        """Returns an argparse mutually exclusive group or parser.
+
+        opt is an Option instance and parser is the parser.
+
+        """
+        for mutex_group in cls._mutex_groups(parser):
+            if opt in mutex_group:
+                return mutex_group.group()
+        return parser
+
+    @classmethod
+    def _add_options(cls, parser):
+        """Adds options to the parser parser."""
+        for opt in cls._options():
+            parser = cls._mutexgroup_or_parser(opt, parser)
+            parser.set_defaults(**opt.parse_info())
+            parser.add_argument(*opt.options(), **opt.kwargs)
+
+    @classmethod
     def _add_subcommands(cls, parser):
         """Adds subcommands to the parser parser."""
         # add subcommands
@@ -258,3 +294,27 @@ class Option(object):
         if self.shortname:
             return (self.shortname, self.fullname)
         return (self.fullname, )
+
+
+class MutexGroup(object):
+    """Encapsulates list of mutually exclusive options."""
+
+    def __init__(self, options, parser):
+        """Constructs a new MutexGroup object.
+
+        options is a list of mutually exclusive options.
+        parser is the parser.
+
+        """
+        self._options = options
+        self._parser = parser
+        self._group = None
+
+    def group(self):
+        """Returns result of parser.add_mutually_exclusive_group()"""
+        if self._group is None:
+            self._group = self._parser.add_mutually_exclusive_group()
+        return self._group
+
+    def __contains__(self, item):
+        return item in self._options
