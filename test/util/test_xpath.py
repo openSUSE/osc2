@@ -573,5 +573,11 @@ class TestXPath(OscTest):
         exp = '@foo = "xyz"'
         self.assertEqual(xp.tostring(), exp)
 
+    def test_dummy3(self):
+        """test DummyExpression's parenthesize method"""
+        xpb = XPathBuilder()
+        xp = xpb.dummy()
+        self.assertTrue(xp.parenthesize() is xp)
+
 if __name__ == '__main__':
     unittest.main()
