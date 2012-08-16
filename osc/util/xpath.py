@@ -33,6 +33,21 @@ def children(minimum, maximum):
     return decorate
 
 
+def no_dummy(f):
+    """Decorator which checks that expr is no DummyExpression.
+
+    If it is a DummyExpression the method is not executed
+    and self is returned.
+
+    """
+    def checker(self, expr, *args, **kwargs):
+        if isinstance(expr, DummyExpression):
+            return self
+        return f(self, expr, *args, **kwargs)
+    checker.func_name = f.func_name
+    return checker
+
+
 class XPathSyntaxError(SyntaxError):
     """Raised if the expression tree is (syntactically) invalid."""
     pass
@@ -397,6 +412,7 @@ class Expression(Tree):
         super(Expression, self).__init__(children)
         self._factory = factory
 
+    @no_dummy
     def log_and(self, expr):
         """Connects self and expr via "and".
 
@@ -406,6 +422,7 @@ class Expression(Tree):
         children = [self, expr]
         return self._factory.create_BinaryExpression('and', children=children)
 
+    @no_dummy
     def log_or(self, expr):
         """Connects self and expr via "or".
 
@@ -816,6 +833,9 @@ class DummyExpression(object):
     """
 
     def parenthesize(self):
+        return self
+
+    def log_not(self):
         return self
 
     def __and__(self, other):
