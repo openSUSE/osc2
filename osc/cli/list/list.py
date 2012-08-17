@@ -1,5 +1,6 @@
 """Provides various functions for the "list" command."""
 
+from osc.cli.cli import illegal_options
 from osc.source import Project, Package
 
 
@@ -15,6 +16,7 @@ def list(renderer, project, package, info):
         list_project_or_all(renderer, project, info)
 
 
+@illegal_options('deleted')
 def list_package(renderer, project, package, info):
     """Lists package contents."""
     global FILE_LIST_TEMPLATE
@@ -30,13 +32,14 @@ def list_package(renderer, project, package, info):
     renderer.render(FILE_LIST_TEMPLATE, directory=directory, info=info)
 
 
+@illegal_options('revision', 'verbose', 'expand', 'meta')
 def list_project_or_all(renderer, project, info):
     """Lists projects content or all projects."""
     global PRJ_PKG_LIST_TEMPLATE
     if project is None:
         # FIXME: this is a bit hacky - better use a SourceListing class
         project = ''
-    query = {}
+    query = {'apiurl': info.apiurl}
     if info.deleted:
         query['deleted'] = '1'
     prj = Project(project)

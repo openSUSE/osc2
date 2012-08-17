@@ -16,6 +16,7 @@ class List(CommandDescription, OscCommand):
     """
     cmd = 'list'
     args = 'api://project?/package?'
+    args_opt = [0]
     use_wc = True
     opt_verbose = Option('v', 'verbose', 'verbose listing (for files only)',
                          action='store_true')
