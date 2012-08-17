@@ -128,6 +128,10 @@ class CommandDescription(object):
 
     cmd = None
     args = None
+    # list which contains indices of optional positional args
+    # (use case: the cmd is context sensitive so a positional argument
+    # can be omitted)
+    args_opt = None
     use_wc = False  # set to True if command is context sensitive
     help_str = None
     func = None  # function/callable which should be executed
@@ -154,16 +158,40 @@ class CommandDescription(object):
                     'func': cls.func, 'func_defaults': cls.func_defaults}
         if cls.args is not None:
             oargs = cls.args.split()
+            oargs_opt = cls._optional_arguments(oargs)
             defaults['oargs'] = oargs
             parser.set_defaults(**defaults)
             for arg in oargs:
-                parser.add_argument(arg)
+                kwargs = {}
+                if arg in oargs_opt:
+                    # default value is the empty str (so it's still parsable
+                    # by the oscargs module)
+                    kwargs = {'nargs': '?', 'default': ''}
+                parser.add_argument(arg, **kwargs)
         elif cls.func is not None:
             # TODO: investigate why it does not work with a simple
             #       else
             parser.set_defaults(**defaults)
         sub_options = cls._add_options(parser, parent_options)
         cls._add_subcommands(parser, sub_options)
+
+    @classmethod
+    def _optional_arguments(cls, oargs):
+        """Returns a list which contains optional arguments.
+
+        oargs is a list of oargs str.
+        A ValueError is raised if cls.args_opt references an
+        index which does not fit into oargs' bounds.
+
+        """
+        args_opt = []
+        for i in cls.args_opt or []:
+            try:
+                args_opt.append(oargs[i])
+            except IndexError:
+                msg = "args_opt: illegal index '%s' (out of bounds)" % i
+                raise ValueError(msg)
+        return args_opt
 
     @classmethod
     def _options(cls):
