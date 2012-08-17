@@ -139,6 +139,7 @@ def import_ui():
     """Imports the commands"""
     import osc.cli.request.ui
     import osc.cli.review.ui
+    import osc.cli.list.ui
 
 
 def call(func):
