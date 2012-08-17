@@ -397,6 +397,26 @@ class Request(RemoteModel):
         f = request.get(path)
         self._read_xml_data(f.read())
 
+    def add_review(self, **kwargs):
+        """Adds a review to the request.
+
+        Keyword arguments:
+        by_user -- adds a by_user review (default: None)
+        by_group -- adds a by_group review (default: None)
+        by_project -- adds a by_project review (default: None)
+        by_package -- adds a by_package review (default: None)
+        comment -- an optional comment (default: None)
+        **kwargs -- optional parameters for the http request
+
+        """
+        path = Request.GET_PATH % {'reqid': self.get('id')}
+        query = {'cmd': 'addreview'}
+        query.update(kwargs)
+        request = Osc.get_osc().get_reqobj()
+        request.post(path, **query)
+        f = request.get(path)
+        self._read_xml_data(f.read())
+
     def accept(self, **kwargs):
         """Accepts the request.
 
