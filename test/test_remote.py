@@ -612,6 +612,40 @@ class TestRemoteModel(OscTest):
         self.assertEqual(l[5].get('id'), '9')
         self.assertEqual(l[6].get('id'), '11')
 
+    @GET('http://localhost/request/120703', file='request4.xml')
+    @POST(('http://localhost/request/120703?by_project=project&by_user=foo'
+           '&cmd=addreview&comment=Please+review+sources'),
+          text='<OK/>')
+    @GET('http://localhost/request/120703',
+         file='request4_review_added1.xml')
+    def test_request21(self):
+        """test Request's add_review method (by_user, by_project)"""
+        req = Request.find('120703')
+        req.add_review(by_user='foo', by_project='project',
+                       comment='Please review sources')
+
+    @GET('http://localhost/request/120703', file='request4.xml')
+    @POST(('http://localhost/request/120703?by_group=group'
+           '&by_package=pkg&by_project=prj&cmd=addreview&comment=review'),
+          text='<OK/>')
+    @GET('http://localhost/request/120703',
+         file='request4_review_added2.xml')
+    def test_request22(self):
+        """test Request's add_review method (by_group, by_package)"""
+        req = Request.find('120703')
+        req.add_review(by_group='group', by_project='prj', by_package='pkg',
+                       comment='review')
+
+    @GET('http://localhost/request/120703', file='request4.xml')
+    @POST('http://localhost/request/120703?by_group=group&cmd=addreview',
+          text='<OK/>')
+    @GET('http://localhost/request/120703',
+         file='request4_review_added2.xml')
+    def test_request23(self):
+        """test Request's add_review method (no comment)"""
+        req = Request.find('120703')
+        req.add_review(by_group='group')
+
     @GET('http://localhost/source/project/package/fname', file='remotefile1')
     def test_remotefile1(self):
         """get a simple file1"""
