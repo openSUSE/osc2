@@ -126,9 +126,9 @@ class CommandDescription(object):
 
     __metaclass__ = SubcommandFilterMeta
 
+    cmd = None
     args = None
     use_wc = False  # set to True if command is context sensitive
-    cmd = None
     help_str = None
     func = None  # function/callable which should be executed
     func_defaults = None  # kwargs mapping for default params
