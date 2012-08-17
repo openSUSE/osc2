@@ -135,6 +135,38 @@ class OscCommand(CommandDescription):
     """open Build Service commandline tool"""
 
 
+def illegal_options(*args, **kwargs):
+    """Decorator which checks that certain options are not specified.
+
+    *args is a tuple of illegal options. Each of them is checked
+    whether "not opt" evaluates to True (if not an invalid option
+    was specified).
+    **kwargs is option name, value mapping. If opt == value
+    evaluates to True an illegal option was specified.
+    If an illegal option was specified a ValueError is raised.
+
+    """
+    def decorate(f):
+        def checker(*f_args, **f_kwargs):
+            params = inspect.getargspec(f)[0]
+            if not 'info' in params:
+                return f(*f_args, **f_kwargs)
+            i = params.index('info')
+            info = f_kwargs.get('info', f_args[i])
+            for opt in args:
+                if info.get(opt):
+                    msg = "illegal option \"%s\" specified" % opt
+                    raise ValueError(msg)
+            for opt, value in kwargs.iteritems():
+                if info.get(opt) == value:
+                    msg = "illegal option \"%s\" specified" % opt
+                    raise ValueError(msg)
+            return f(*f_args, **f_kwargs)
+        checker.func_name = f.func_name
+        return checker
+    return decorate
+
+
 def import_ui():
     """Imports the commands"""
     import osc.cli.request.ui
