@@ -2,7 +2,7 @@
 
 from osc.cli.cli import OscCommand, call
 from osc.cli.description import CommandDescription, Option
-from osc.cli.request import request
+from osc.cli.request.request import RequestController
 
 
 class Request(CommandDescription, OscCommand):
@@ -30,7 +30,7 @@ class RequestList(CommandDescription, Request):
                        choices=['new', 'review', 'accepted', 'revoked',
                                 'declined', 'superseded'], action='append',
                        default=['new', 'review'])
-    func = call(request.list)
+    func = call(RequestController.list)
 
 
 class RequestShow(CommandDescription, Request):
@@ -45,7 +45,7 @@ class RequestShow(CommandDescription, Request):
     """
     cmd = 'show'
     args = 'api://reqid'
-    func = call(request.show)
+    func = call(RequestController.show)
     opt_diff = Option('d', 'diff', 'generate a diff for the request',
                       action='store_true')
 
@@ -62,7 +62,7 @@ class RequestAccept(CommandDescription, Request):
     cmd = 'accept'
     args = 'api://reqid'
     opt_message = Option('m', 'message', 'specify a message')
-    func = call(request.change_request_state)
+    func = call(RequestController.change_request_state)
     func_defaults = {'method': 'accept'}
 
 
@@ -78,7 +78,7 @@ class RequestDecline(CommandDescription, Request):
     cmd = 'decline'
     args = 'api://reqid'
     opt_message = Option('m', 'message', 'specify a message')
-    func = call(request.change_request_state)
+    func = call(RequestController.change_request_state)
     func_defaults = {'method': 'decline'}
 
 
@@ -94,7 +94,7 @@ class RequestRevoke(CommandDescription, Request):
     cmd = 'revoke'
     args = 'api://reqid'
     opt_message = Option('m', 'message', 'specify a message')
-    func = call(request.change_request_state)
+    func = call(RequestController.change_request_state)
     func_defaults = {'method': 'revoke'}
 
 
@@ -108,7 +108,7 @@ class RequestSupersede(CommandDescription, Request):
     cmd = 'supersede'
     args = 'api://reqid api://supersede_id'
     opt_message = Option('m', 'message', 'specify a message')
-    func = call(request.change_request_state)
+    func = call(RequestController.change_request_state)
     func_defaults = {'method': 'supersede'}
 
 
@@ -146,4 +146,4 @@ class RequestCreate(CommandDescription, Request):
     opt_delete = Option('', 'delete', 'create new delete action',
                         oargs='api://project/package?',
                         nargs=1, action='append', default=[])
-    func = call(request.create)
+    func = call(RequestController.create)
