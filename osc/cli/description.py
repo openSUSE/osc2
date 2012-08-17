@@ -184,7 +184,9 @@ class CommandDescription(object):
                 mutex_group = getattr(cls, key)
                 if hasattr(mutex_group, 'extend'):
                     # rewrite from list to MutexGroup instance
-                    mutex_group = MutexGroup(mutex_group, parser)
+                    data = key.split('_')  # at least 2 elements
+                    required = data[1] == 'req'
+                    mutex_group = MutexGroup(mutex_group, parser, required)
                     setattr(cls, key, mutex_group)
                 yield mutex_group
 
@@ -336,21 +338,25 @@ class Option(object):
 class MutexGroup(object):
     """Encapsulates list of mutually exclusive options."""
 
-    def __init__(self, options, parser):
+    def __init__(self, options, parser, required):
         """Constructs a new MutexGroup object.
 
         options is a list of mutually exclusive options.
-        parser is the parser.
+        parser is the parser. If required is True it indicates
+        that at exactly one option of the mutually exclusive
+        group has to be specified.
 
         """
         self._options = options
         self._parser = parser
         self._group = None
+        self._required = required
 
     def group(self):
         """Returns result of parser.add_mutually_exclusive_group()"""
         if self._group is None:
-            self._group = self._parser.add_mutually_exclusive_group()
+            kwargs = {'required': self._required}
+            self._group = self._parser.add_mutually_exclusive_group(**kwargs)
         return self._group
 
     def __contains__(self, item):
