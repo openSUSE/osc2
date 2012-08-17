@@ -11,8 +11,6 @@ from osc.core import Osc
 from osc.oscargs import OscArgs
 from osc.cli.description import CommandDescription
 from osc.cli.render import Renderer
-# import ui
-import osc.cli.request.ui
 
 
 class CustomOscArgs(OscArgs):
@@ -66,7 +64,8 @@ class _OscNamespace(argparse.Namespace):
         args = getattr(self, name)  # specified options (by the user)
         format_entries = getattr(self, opt)
         if not hasattr(args, 'extend'):
-            msg = 'list expected: please set "nargs" in the option definition'
+            msg = ('list expected: please set "nargs" in the option '
+                   'definition and/or default=[]')
             raise ValueError(msg)
         if not args:
             # no args specified - nothing to parse
@@ -136,6 +135,12 @@ class OscCommand(CommandDescription):
     """open Build Service commandline tool"""
 
 
+def import_ui():
+    """Imports the commands"""
+    import osc.cli.request.ui
+    import osc.cli.review.ui
+
+
 def call(func):
     """Calls function func.
 
@@ -156,6 +161,9 @@ def call(func):
             args.remove('renderer')
         required_args = args[:len(args) - len(defaults)]
         for arg in args:
+            # skip self and cls - that's just a convention
+            if arg in ('self', 'cls'):
+                continue
             if not arg in info and arg in required_args:
                 msg = ("cannot call \"%s\": cannot bind \"%s\" parameter"
                        % (func.__name__, arg))
@@ -194,12 +202,15 @@ def _parse():
 
 
 if __name__ == '__main__':
+    import_ui()
     logger = logging.StreamHandler()
     logger.setLevel(logging.DEBUG)
     logging.getLogger('osc.httprequest').addHandler(logger)
 #    logging.getLogger('osc.httprequest').setLevel(logging.DEBUG)
     logging.getLogger('osc.cli.request.request').addHandler(logger)
 #    logging.getLogger('osc.cli.request.request').setLevel(logging.DEBUG)
+    logging.getLogger('osc.cli.review.review').addHandler(logger)
+#    logging.getLogger('osc.cli.review.review').setLevel(logging.DEBUG)
     info = _parse()
     apiurl = 'api'
     if 'apiurl' in info:
