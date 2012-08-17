@@ -1,21 +1,29 @@
 """Provides methods and classes to render templates."""
 
 import sys
+import datetime
 
 from jinja2 import Environment, FileSystemLoader
+
+
+def dateformat(timestamp):
+    """Returns formatted timestamp (isoformat)"""
+    date = datetime.datetime.fromtimestamp(int(timestamp))
+    return date.isoformat()
 
 
 class Renderer(object):
     """Renders a template."""
 
-    def __init__(self, path=None, loader=None):
+    def __init__(self, path=None, loader=None, filters=None):
         """Constructs a new Renderer object.
 
         Either path or loader has to be specified.
 
         Keyword arguments:
-        loader -- a jinja2 template loader instance (default: None)
         path -- list or str which represents template locations
+        loader -- a jinja2 template loader instance (default: None)
+        filters -- dict containing filters (default: {})
 
         """
         if (path is None and loader is None
@@ -25,6 +33,16 @@ class Renderer(object):
             loader = FileSystemLoader(path)
         self._env = Environment(loader=loader)
         self._env.add_extension('jinja2.ext.do')
+        self._add_filters(filters)
+
+    def _add_filters(self, filters):
+        """Adds new filters to the jinja2 environment.
+
+        filters is a dict of filters.
+
+        """
+        self._env.filters['dateformat'] = dateformat
+        self._env.filters.update(filters or {})
 
     def _custom_template_names(self, template):
         """Returns a list of custom template names.
