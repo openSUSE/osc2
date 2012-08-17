@@ -90,6 +90,25 @@ class ReviewRevoke(CommandDescription, Review):
     func_defaults = {'method': 'revoke'}
 
 
+class ReviewSupersede(CommandDescription, Review):
+    """Supersede a specific review.
+
+    If no message is specified $EDITOR is opened.
+
+    Example:
+    osc review supersede api://reqid api://supersede_id [--message MESSAGE]
+        --user <user>
+
+    """
+    cmd = 'supersede'
+    args = 'api://reqid api://supersede_id'
+    opt_message = Option('m', 'message', 'specify a message')
+    mutex_req_group = [Review.opt_user, Review.opt_group, Review.opt_project,
+                       Review.opt_package]
+    func = call(ReviewController.change_review_state)
+    func_defaults = {'method': 'supersede'}
+
+
 class ReviewAdd(CommandDescription, Review):
     """Add a new review to the request.
 
