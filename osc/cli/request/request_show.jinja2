@@ -31,14 +31,14 @@ Comment: no comment
 {%- if request.findall('review') %}
 Review:  {% for review in request.review[:] | reverse %}
 {%- if loop.first -%}
-{{ macros.format_review_show(review) }}
-{%- else %}
-         {{ macros.format_review_show(review) }}
+{{ macros.format_review_show(review) -}}
+{% else %}
+         {{ macros.format_review_show(review) -}}
 {% endif -%}
 {% endfor -%}
 {%- endif %}
-{% endblock reviews -%}
-{%- block history -%}
+{% endblock reviews %}
+{% block history -%}
 {%- if request.findall('history') -%}
 {%- set tmpl = "%-10s %-12s %s" -%}
 History: {% for hist in request.history[:] | reverse %}
