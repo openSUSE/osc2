@@ -1,0 +1,12 @@
+{%- block header -%}
+{%- endblock header -%}
+{% for entry in directory -%}
+    {%- if info.verbose -%}
+        {%- block verbose scoped -%}
+            {#- unfortunately the filesizeformat filter does not work as expected (shows 0.0 MB etc.) -#}
+            {{ entry.get('md5') }}  {{ entry.get('mtime') | dateformat }}  {{ '%-15s' | format(entry.get('size')) }} {{ entry.get('name') }}
+        {%- endblock verbose %}
+    {%- else -%}
+        {{- entry.get('name') }}
+    {%- endif %}
+{% endfor %}

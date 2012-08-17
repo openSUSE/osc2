@@ -1,0 +1,10 @@
+{%- block header -%}
+{%- endblock header -%}
+{% for entry in directory -%}
+    {%- if info.verbose -%}
+        {#- user may want to override this -#}
+        {{- entry.get('name') }}
+    {%- else -%}
+        {{- entry.get('name') }}
+    {%- endif %}
+{% endfor %}
