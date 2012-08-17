@@ -388,7 +388,6 @@ class Request(RemoteModel):
         query = {'cmd': 'changestate', 'newstate': state}
         if review is not None:
             query['cmd'] = 'changereviewstate'
-            attrs = review.keys()
             for kind in ('by_user', 'by_group', 'by_project', 'by_package'):
                 query[kind] = review.get(kind, '')
         query.update(kwargs)
