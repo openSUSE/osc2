@@ -141,13 +141,28 @@ def illegal_options(*args, **kwargs):
     *args is a tuple of illegal options. Each of them is checked
     whether "not opt" evaluates to True (if not an invalid option
     was specified).
-    **kwargs is option name, value mapping. If opt == value
+    **kwargs is option name, value mapping. If opt != value
     evaluates to True an illegal option was specified.
     If an illegal option was specified a ValueError is raised.
 
     """
     def decorate(f):
         def checker(*f_args, **f_kwargs):
+            def parse_illegal_options_doc(doc):
+                doc = (doc or '').splitlines()
+                res = []
+                while doc:
+                    cur = doc.pop(0).strip()
+                    if cur.startswith('illegal options:'):
+                        res.append(cur)
+                        while doc:
+                            cur = doc.pop(0).strip()
+                            if cur:
+                                res.append(cur)
+                            else:
+                                break
+                        break
+                return '\n'.join(res)
             params = inspect.getargspec(f)[0]
             if not 'info' in params:
                 return f(*f_args, **f_kwargs)
@@ -155,11 +170,11 @@ def illegal_options(*args, **kwargs):
             info = f_kwargs.get('info', f_args[i])
             for opt in args:
                 if info.get(opt):
-                    msg = "illegal option \"%s\" specified" % opt
+                    msg = parse_illegal_options_doc(f.__doc__) % {'opt': opt}
                     raise ValueError(msg)
             for opt, value in kwargs.iteritems():
-                if info.get(opt) == value:
-                    msg = "illegal option \"%s\" specified" % opt
+                if info.get(opt) != value:
+                    msg = parse_illegal_options_doc(f.__doc__) % {'opt': opt}
                     raise ValueError(msg)
             return f(*f_args, **f_kwargs)
         checker.func_name = f.func_name
