@@ -1047,6 +1047,7 @@ class TestPackage(OscTest):
         self.assertEqual(cinfo.deleted, [])
         self.assertEqual(cinfo.modified, ['foo'])
         self.assertEqual(cinfo.conflicted, [])
+        self.assertEqual(cinfo.name, 'update_2')
 
     def test_calculate_commitinfo2(self):
         """test _calculate_commitinfo (modified file)"""
