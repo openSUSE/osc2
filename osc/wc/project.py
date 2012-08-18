@@ -636,15 +636,17 @@ class Project(WorkingCopy):
                     packages.write()
 
     @staticmethod
-    def init(path, project, apiurl):
+    def init(path, project, apiurl, *args, **kwargs):
         """Initializes a directory as a project working copy.
 
         path is a path to a directory, project is the name
         of the project and apiurl is the apiurl.
+        *args and **kwargs are additional arguments for the
+        Project's __init__ method.
 
         """
         wc_init(path)
         wc_write_project(path, project)
         wc_write_apiurl(path, apiurl)
         wc_write_packages(path, '<packages/>')
-        return Project(path)
+        return Project(path, *args, **kwargs)
