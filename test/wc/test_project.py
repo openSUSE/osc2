@@ -43,6 +43,36 @@ class TestProject(OscTest):
             self.assertEqual(prj.name, 'openSUSE:Tools')
             self.assertEqual(prj.apiurl, 'https://api.opensuse.org')
             self.assertTrue(len(prj.packages()) == 0)
+            self.assertTrue(len(prj.notifier.listener) == 0)
+        finally:
+            if tmpdir is not None:
+                shutil.rmtree(tmpdir)
+
+    def test1_2(self):
+        """init (pass additional arguments to the Project's __init__ method)"""
+        # nearly identical to test1
+        tmpdir = None
+        try:
+            tmpdir = tempfile.mkdtemp()
+            prj = Project.init(tmpdir, 'openSUSE:Tools',
+                               'https://api.opensuse.org',
+                               transaction_listener=[None])
+            prj_fname = os.path.join(tmpdir, '.osc', '_project')
+            self.assertTrue(os.path.exists(prj_fname))
+            self.assertEqual(open(prj_fname, 'r').read(), 'openSUSE:Tools\n')
+            pkgs_fname = os.path.join(tmpdir, '.osc', '_packages')
+            self.assertTrue(os.path.exists(pkgs_fname))
+            self.assertEqual(open(pkgs_fname, 'r').read(), '<packages/>\n')
+            apiurl_fname = os.path.join(tmpdir, '.osc', '_apiurl')
+            self.assertTrue(os.path.exists(apiurl_fname))
+            self.assertEqual(open(apiurl_fname, 'r').read(),
+                            'https://api.opensuse.org\n')
+            data_dir = os.path.join(tmpdir, '.osc', 'data')
+            self.assertTrue(os.path.exists(data_dir))
+            self.assertEqual(prj.name, 'openSUSE:Tools')
+            self.assertEqual(prj.apiurl, 'https://api.opensuse.org')
+            self.assertTrue(len(prj.packages()) == 0)
+            self.assertTrue(len(prj.notifier.listener) == 1)
         finally:
             if tmpdir is not None:
                 shutil.rmtree(tmpdir)
