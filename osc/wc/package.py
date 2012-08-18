@@ -323,6 +323,7 @@ class FileUpdateInfo(ListInfo):
                                              conflicted=conflicted)
         self.data = data
         self.remote_xml = remote_xml
+        self.name = remote_xml.get('name')
         self.rev = remote_xml.get('rev')
         self.srcmd5 = remote_xml.get('srcmd5')
 
