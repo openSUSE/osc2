@@ -136,6 +136,7 @@ class MockUrllib2Request(unittest.TestCase):
         dirname = os.path.dirname(__file__)
         fixtures_dir = kwargs.pop('fixtures_dir', os.curdir)
         self._fixtures_dir = os.path.join(dirname, fixtures_dir)
+        self._orig_build_opener = None
         super(MockUrllib2Request, self).__init__(*args, **kwargs)
 
     def fixture_file(self, *paths):
@@ -146,12 +147,11 @@ class MockUrllib2Request(unittest.TestCase):
         super(MockUrllib2Request, self).setUp()
         global EXPECTED_REQUESTS
         EXPECTED_REQUESTS = []
-        old_build_opener = urllib2.build_opener
-
+        self._orig_build_opener = urllib2.build_opener
         def build_opener(*handlers):
             handlers += (MyHTTPHandler(exp_requests=EXPECTED_REQUESTS,
                                        fixtures_dir=self._fixtures_dir), )
-            return old_build_opener(*handlers)
+            return self._orig_build_opener(*handlers)
         urllib2.build_opener = build_opener
         self._tmp_dir = tempfile.mkdtemp(prefix='osc_test')
         self._tmp_fixtures = os.path.join(self._tmp_dir, 'fixtures')
@@ -161,3 +161,6 @@ class MockUrllib2Request(unittest.TestCase):
         super(MockUrllib2Request, self).tearDown()
         shutil.rmtree(self._tmp_dir)
         self.assertTrue(len(EXPECTED_REQUESTS) == 0)
+        # _orig_build_opener should never be None
+        if self._orig_build_opener is not None:
+            urllib2.build_opener = self._orig_build_opener
