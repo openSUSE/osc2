@@ -350,11 +350,12 @@ class FileCommitInfo(ListInfo):
 
     """
 
-    def __init__(self, unchanged, added, deleted, modified, conflicted):
+    def __init__(self, name, unchanged, added, deleted, modified, conflicted):
         super(FileCommitInfo, self).__init__(unchanged=unchanged, added=added,
                                              deleted=deleted,
                                              modified=modified,
                                              conflicted=conflicted)
+        self.name = name
 
 
 class FileSkipHandler(object):
@@ -449,8 +450,9 @@ class PackageCommitState(XMLTransactionState, CommitStateMixin):
     @property
     def info(self):
         """Return the FileCommitInfo object."""
+        name = wc_read_package(self._path)
         lists = self._lists()
-        return FileCommitInfo(**lists)
+        return FileCommitInfo(name, **lists)
 
     @staticmethod
     def rollback(path):
@@ -786,7 +788,7 @@ class Package(WorkingCopy):
         for filename in filenames:
             if not filename in wc_filenames:
                 conflicted.append(filename)
-        return FileCommitInfo(unchanged, added, deleted,
+        return FileCommitInfo(self.name, unchanged, added, deleted,
                               modified, conflicted)
 
     def _apply_commit_policies(self, cinfo):
