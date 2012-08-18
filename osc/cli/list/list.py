@@ -18,7 +18,11 @@ def list(renderer, project, package, info):
 
 @illegal_options('deleted')
 def list_package(renderer, project, package, info):
-    """Lists package contents."""
+    """Lists package contents.
+
+    illegal options: --%(opt)s is not supported at package level.
+
+    """
     global FILE_LIST_TEMPLATE
     pkg = Package(project, package)
     query = {'apiurl': info.apiurl, 'rev': info.revision}
@@ -32,9 +36,13 @@ def list_package(renderer, project, package, info):
     renderer.render(FILE_LIST_TEMPLATE, directory=directory, info=info)
 
 
-@illegal_options('revision', 'verbose', 'expand', 'meta')
+@illegal_options('verbose', 'expand', 'meta', revision='latest')
 def list_project_or_all(renderer, project, info):
-    """Lists projects content or all projects."""
+    """Lists projects content or all projects.
+
+    illegal options: --%(opt)s is not supported at project or global level.
+
+    """
     global PRJ_PKG_LIST_TEMPLATE
     if project is None:
         # FIXME: this is a bit hacky - better use a SourceListing class
