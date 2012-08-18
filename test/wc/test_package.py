@@ -194,6 +194,9 @@ class TestPackage(OscTest):
         self.assertEqual(uinfo.modified, [])
         self.assertEqual(uinfo.conflicted, [])
         self.assertEqual(uinfo.skipped, [])
+        self.assertEqual(uinfo.name, 'foo')
+        self.assertEqual(uinfo.rev, '73')
+        self.assertEqual(uinfo.srcmd5, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
 
     @GET('http://localhost/source/prj/foo?rev=2', file='foo_list2.xml')
     def test11(self):
