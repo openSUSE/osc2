@@ -47,12 +47,12 @@ class TransactionListener(object):
     update and commit.
 
     """
-    def begin(self, name, uinfo):
+    def begin(self, name, info):
         """Signal the beginning of a transaction.
 
         name is the name of the transaction.
-        uinfo is an instance of class UpdateInfo or
-        FileUpdateInfo.
+        info is an instance of class PackageUpdateInfo or
+        FileUpdateInfo or PackageCommitInfo or FileCommitInfo.
         If this method returns False the transaction
         won't be executed.
 
@@ -80,12 +80,16 @@ class TransactionListener(object):
         """
         raise NotImplementedError()
 
-    def processed(self, filename, new_state):
-        """Operation was performed on file filename.
+    def processed(self, entity, new_state, old_state):
+        """Operation was performed on entity entity.
 
-        new_state is the new state of filename.
+        entity is either a filename or a package name.
+        new_state is the new state of the entity.
         new_state == None indicates that filename was
-        removed from the wc.
+        removed from the wc (update transaction).
+        old_state is the old state of the entity.
+        old_state == None indicates that the entity
+        was added (update transaction).
 
         """
         raise NotImplementedError()
