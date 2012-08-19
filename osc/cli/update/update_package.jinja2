@@ -1,0 +1,7 @@
+{% block updatepackage %}
+{%- if old_state is none and new_state == ' ' -%}
+A    {{ package }}
+{% elif new_state is none -%}
+D    {{ package }}
+{% endif -%}
+{% endblock updatepackage %}
