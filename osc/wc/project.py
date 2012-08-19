@@ -295,6 +295,7 @@ class Project(WorkingCopy):
         self._perform_deletes(ustate)
         self._perform_candidates(ustate, **kwargs)
         self._packages.merge(ustate.entrystates)
+        ustate.cleanup()
 
     def _perform_adds(self, ustate, **kwargs):
         uinfo = ustate.info
