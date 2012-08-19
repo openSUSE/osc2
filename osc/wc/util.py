@@ -854,3 +854,24 @@ def wc_verify_format(path):
         raise WCFormatVersionError(None)
     if format - _VERSION >= 1 or format - _VERSION <= -1:
         raise WCFormatVersionError(format)
+
+
+def wc_parent(path):
+    """Return the path of the wc which "contains" this wc.
+
+    path is a path to a working copy or to a file in
+    a working copy (the file does not have to exist).
+    None is returned if the working copy has no
+    parent working copy (for instance a project wc).
+
+    """
+    if _has_storedir(path):
+        if wc_is_package(path) and os.path.islink(_storedir(path)):
+            # link points to storedir/_PKG_DATA/name
+            par_dir = os.path.join(_storedir(path), os.pardir, os.pardir)
+            return os.path.normpath(par_dir)
+        return None
+    par_dir = os.path.normpath(os.path.join(path, os.pardir))
+    if _has_storedir(par_dir):
+        return par_dir
+    return None
