@@ -3,7 +3,7 @@ import unittest
 import tempfile
 import shutil
 
-from osc.wc.base import FileConflictError
+from osc.wc.base import FileConflictError, TransactionListener
 from osc.wc.project import Project
 from osc.wc.util import WCInconsistentError
 from test.osctest import OscTest
@@ -13,6 +13,32 @@ from test.wc.test_package import TL, UPLOAD_REV
 
 def suite():
     return unittest.makeSuite(TestProject)
+
+
+class ProjectTL(TransactionListener):
+    def __init__(self, abort=False):
+        self._begin = []
+        self._finished = []
+        self._transfer = []
+        self._processed = {}
+        self._abort = abort
+        self._prefix = []
+
+    def begin(self, name, uinfo):
+        self._begin.append(name)
+        self._prefix.insert(0, name)
+        return not self._abort
+
+    def finished(self, name, aborted=False, abort_reason=''):
+        self._prefix.pop(0)
+        self._finished.append(name)
+
+    def transfer(self, transfer_type, filename):
+        self._transfer.append((transfer_type, filename))
+
+    def processed(self, filename, new_state):
+        key = "%s:%s" % (self._prefix[0], filename)
+        self._processed[key] = new_state
 
 
 class TestProject(OscTest):
@@ -356,6 +382,8 @@ class TestProject(OscTest):
     def test_update4(self):
         """test update (delete package: local state ' ')"""
         path = self.fixture_file('prj2')
+        # it is ok to use the simple TL class because we have no
+        # duplicate keys (for instance a package and a file with the same name)
         tl = TL(abort=False)
         self._exists(path, 'foo')
         self._exists(path, '.osc', 'data', 'foo')
@@ -369,8 +397,11 @@ class TestProject(OscTest):
         self.assertEqual(tl._begin, ['prj_update', 'update'])
         self.assertEqual(tl._finished, ['update', 'prj_update'])
         self.assertEqual(tl._transfer, [])
-        self.assertEqual(tl._processed.keys(), ['file'])
-        self.assertEqual(tl._processed['file'], None)
+        keys = tl._processed.keys()
+        keys.sort()
+        self.assertEqual(keys, ['file', 'foo'])
+        self.assertIsNone(tl._processed['file'])
+        self.assertIsNone(tl._processed['foo'])
 
     @GET('http://apiurl/source/prj1', file='prj1_list.xml')
     @GET('http://apiurl/source/prj1', file='prj1_list.xml')
@@ -380,6 +411,8 @@ class TestProject(OscTest):
     def test_update5(self):
         """test update (add package)"""
         path = self.fixture_file('prj1')
+        # it is ok to use the simple TL class because we have no
+        # duplicate keys (for instance a package and a file with the same name)
         tl = TL(abort=False)
         tl_abort = TL(abort=True)
         prj = Project(path, transaction_listener=[tl, tl_abort])
@@ -400,8 +433,11 @@ class TestProject(OscTest):
         self.assertEqual(tl._begin, ['prj_update', 'update'])
         self.assertEqual(tl._finished, ['update', 'prj_update'])
         self.assertEqual(tl._transfer, [('download', 'file')])
-        self.assertEqual(tl._processed.keys(), ['file'])
+        keys = tl._processed.keys()
+        keys.sort()
+        self.assertEqual(keys, ['file', 'foo'])
         self.assertEqual(tl._processed['file'], ' ')
+        self.assertEqual(tl._processed['foo'], ' ')
 
     def test_update6(self):
         """test update (finish pending add transaction)"""
@@ -441,6 +477,53 @@ class TestProject(OscTest):
         self.assertEqual(prj._status('conflict'), ' ')
         pkg = prj.package('conflict')
         self.assertEqual(pkg.status('conflict'), 'C')
+
+    @GET('http://localhost/source/prj2', file='prj2_list4.xml')
+    @GET('http://localhost/source/prj2/add?rev=latest', file='add_list1.xml')
+    @GET(('http://localhost/source/prj2/add/file'
+          '?rev=daaaaaaaaaaaaaaaaaaaaaaaaaaaaaaf'), file='foo_file')
+    @GET('http://localhost/source/prj2/foo?rev=latest',
+         file='foo_list1.xml')
+    @GET(('http://localhost/source/prj2/foo/added'
+          '?rev=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), file='foo_added_file')
+    def test_update9(self):
+        """test update (with project transaction_listener)"""
+        path = self.fixture_file('prj2')
+        tl = ProjectTL()
+        prj = Project(path, transaction_listener=[tl])
+        self.assertEqual(prj._status('add'), '?')
+        self.assertEqual(prj._status('abc'), 'D')
+        self.assertEqual(prj._status('foo'), ' ')
+        prj.update('foo', 'abc', 'add')
+        # check status after update
+        self.assertEqual(prj._status('add'), ' ')
+        self.assertEqual(prj._status('foo'), ' ')
+        self.assertEqual(prj._status('abc'), '?')
+        fname = os.path.join('prj2', '.osc', '_transaction')
+        self.assertFalse(os.path.exists(self.fixture_file(fname)))
+        # check transaction listener
+        keys = tl._processed.keys()
+        keys.sort()
+        self.assertEqual(keys, ['prj_update:abc', 'prj_update:add',
+                                'prj_update:foo', 'update:added',
+                                'update:dummy', 'update:file', 'update:foo',
+                                'update:modified'])
+        self.assertEqual(tl._begin, ['prj_update', 'update', 'update',
+                                     'update'])
+        self.assertEqual(tl._finished, ['update', 'update', 'update',
+                                        'prj_update'])
+        self.assertEqual(tl._transfer, [('download', 'file'),
+                                        ('download', 'added')])
+        self.assertEqual(tl._processed['update:file'], ' ')
+        self.assertEqual(tl._processed['prj_update:add'], ' ')
+        # file belong to package foo
+        self.assertEqual(tl._processed['update:added'], ' ')
+        self.assertEqual(tl._processed['prj_update:foo'], ' ')
+        # files belong to package abc
+        self.assertIsNone(tl._processed['update:dummy'])
+        self.assertIsNone(tl._processed['update:foo'])
+        self.assertIsNone(tl._processed['update:modified'])
+        self.assertIsNone(tl._processed['prj_update:abc'])
 
     def test_commitinfo1(self):
         """test commitinfo (complete project)"""
