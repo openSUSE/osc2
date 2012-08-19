@@ -37,10 +37,11 @@ class PackageUpdateInfo(ListInfo):
 
     """
 
-    def __init__(self, candidates, added, deleted, conflicted):
+    def __init__(self, name, candidates, added, deleted, conflicted):
         super(PackageUpdateInfo, self).__init__(candidates=candidates,
                                                 added=added, deleted=deleted,
                                                 conflicted=conflicted)
+        self.name = name
 
 
 class PackageCommitInfo(ListInfo):
@@ -54,11 +55,12 @@ class PackageCommitInfo(ListInfo):
     - conflicted packages (packages with conflicts)
 
     """
-    def __init__(self, unchanged, added, deleted, modified, conflicted):
+    def __init__(self, name, unchanged, added, deleted, modified, conflicted):
         super(PackageCommitInfo, self).__init__(unchanged=unchanged,
                                                 added=added, deleted=deleted,
                                                 modified=modified,
                                                 conflicted=conflicted)
+        self.name = name
 
 
 class ProjectUpdateState(XMLTransactionState, UpdateStateMixin):
@@ -80,8 +82,9 @@ class ProjectUpdateState(XMLTransactionState, UpdateStateMixin):
     @property
     def info(self):
         """Return the ProjectUpdateInfo object."""
+        name = wc_read_project(self._path)
         lists = self._lists()
-        return PackageUpdateInfo(**lists)
+        return PackageUpdateInfo(name, **lists)
 
     @staticmethod
     def rollback(path):
@@ -112,8 +115,9 @@ class ProjectCommitState(XMLTransactionState, CommitStateMixin):
     @property
     def info(self):
         """Return the ProjectCommitInfo object."""
+        name = wc_read_project(self._path)
         lists = self._lists()
-        return PackageCommitInfo(**lists)
+        return PackageCommitInfo(name, **lists)
 
     @staticmethod
     def rollback(path):
@@ -230,7 +234,8 @@ class Project(WorkingCopy):
             added = [p for p in added if p in packages]
             deleted = [p for p in deleted if p in packages]
             conflicted = [p for p in conflicted if p in packages]
-        return PackageUpdateInfo(candidates, added, deleted, conflicted)
+        return PackageUpdateInfo(self.name, candidates, added, deleted,
+                                 conflicted)
 
     def _clear_uinfo(self, ustate):
         self._clear_info(ustate, 'candidates', 'added', 'deleted',
@@ -382,7 +387,7 @@ class Project(WorkingCopy):
                     conflicted.append(package)
                 else:
                     unchanged.append(package)
-        return PackageCommitInfo(unchanged, added, deleted,
+        return PackageCommitInfo(self.name, unchanged, added, deleted,
                                  modified, conflicted)
 
     def commit(self, *packages, **kwargs):
