@@ -710,7 +710,7 @@ class Package(WorkingCopy):
                 ustate.processed(filename, 'C')
             # copy over new storefile
             os.rename(your_filename, old_filename)
-            self.notifier.processed(filename, ustate.entrystates[filename])
+            self.notifier.processed(filename, ustate.entrystates[filename], st)
 
     def _perform_adds(self, ustate):
         uinfo = ustate.info
@@ -721,7 +721,7 @@ class Package(WorkingCopy):
             copy_file(new_filename, wc_filename)
             ustate.processed(filename, ' ')
             os.rename(new_filename, store_filename)
-            self.notifier.processed(filename, ' ')
+            self.notifier.processed(filename, ' ', None)
 
     def _perform_deletes(self, ustate):
         self._perform_deletes_or_skips(ustate, 'deleted', None)
@@ -735,6 +735,7 @@ class Package(WorkingCopy):
             wc_filename = os.path.join(self.path, filename)
             store_filename = wc_pkg_data_filename(self.path, filename)
             store_md5 = ''
+            st = self.status(filename)
             if os.path.exists(store_filename):
                 store_md5 = file_md5(store_filename)
             if (os.path.isfile(wc_filename)
@@ -743,7 +744,7 @@ class Package(WorkingCopy):
             if store_md5:
                 os.unlink(store_filename)
             ustate.processed(filename, new_state)
-            self.notifier.processed(filename, new_state)
+            self.notifier.processed(filename, new_state, st)
 
     def _download(self, location, data, *filenames):
         for filename in filenames:
@@ -941,6 +942,7 @@ class Package(WorkingCopy):
 
     def _commit_files(self, cstate, send_filenames):
         for filename in send_filenames:
+            st = self.status(filename)
             wc_filename = os.path.join(self.path, filename)
             path = "/source/%s/%s/%s" % (self.project, self.name, filename)
             lfile = RWLocalFile(wc_filename, wb_path=path, append=True)
@@ -950,7 +952,7 @@ class Package(WorkingCopy):
             commit_filename = os.path.join(cstate.location, filename)
             # move wcfile into transaction dir
             os.rename(lfile.path, commit_filename)
-            self.notifier.processed(filename, ' ')
+            self.notifier.processed(filename, ' ', st)
 
     def latest_revision(self):
         """Return the latest remote revision."""

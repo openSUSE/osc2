@@ -320,12 +320,13 @@ class Project(WorkingCopy):
                 os.symlink(path, old_storelink)
                 os.rename(tmp_dir, new_dir)
             ustate.processed(package, ' ')
-            self.notifier.processed(package, ' ')
+            self.notifier.processed(package, ' ', None)
 
     def _perform_deletes(self, ustate):
         uinfo = ustate.info
         global _STORE
         for package in uinfo.deleted:
+            st = self._status(package)
             # a delete is always possible
             ustate.state = UpdateStateMixin.STATE_UPDATING
             # XXX: None is not a good idea
@@ -333,7 +334,7 @@ class Project(WorkingCopy):
             self._remove_wc_dir(package, notify=True)
             ustate.processed(package, None)
             self.notifier.finished('update', aborted=False)
-            self.notifier.processed(package, None)
+            self.notifier.processed(package, None, st)
 
     def _perform_candidates(self, ustate, **kwargs):
         uinfo = ustate.info
@@ -345,16 +346,19 @@ class Project(WorkingCopy):
                 msg = "package \"%s\" is an invalid candidate." % package
                 raise ValueError(msg)
             pkg.update(**kwargs)
+            # FIXME: is ' ' the correct state?
             ustate.processed(package, ' ')
-            self.notifier.processed(package, ' ')
+            # FIXME: old state should be self._status(package)
+            self.notifier.processed(package, ' ', ' ')
 
     def _remove_wc_dir(self, package, notify=False):
         pkg = self.package(package)
         if pkg is not None:
             for filename in pkg.files():
+                st = pkg.status(filename)
                 pkg.remove(filename)
                 if notify:
-                    self.notifier.processed(filename, None)
+                    self.notifier.processed(filename, None, st)
             store = os.path.join(pkg.path, _STORE)
             if os.path.exists(store) and os.path.islink(store):
                 os.unlink(store)
@@ -458,6 +462,7 @@ class Project(WorkingCopy):
                 pkg.commit(*filenames, comment=comment)
                 cstate.state = CommitStateMixin.STATE_COMMITTING
             cstate.processed(package, ' ')
+            self.notifier.processed(package, ' ', 'A')
 
     def _commit_deletes(self, cstate):
         cinfo = cstate.info
@@ -467,6 +472,7 @@ class Project(WorkingCopy):
                 cstate.state = CommitStateMixin.STATE_COMMITTING
             self._remove_wc_dir(package, notify=True)
             cstate.processed(package, None)
+            self.notifier.processed(package, None, 'D')
 
     def _commit_modified(self, cstate, package_filenames, comment):
         cinfo = cstate.info
@@ -478,6 +484,7 @@ class Project(WorkingCopy):
                 pkg.commit(*filenames, comment=comment)
                 cstate.state = CommitStateMixin.STATE_COMMITTING
             cstate.processed(package, ' ')
+            self.notifier.processed(package, ' ', ' ')
 
     def add(self, package, *filenames, **kwargs):
         """Add a new package to the project.
