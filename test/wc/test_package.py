@@ -42,8 +42,8 @@ class TL(TransactionListener):
     def transfer(self, transfer_type, filename):
         self._transfer.append((transfer_type, filename))
 
-    def processed(self, filename, new_state):
-        self._processed[filename] = new_state
+    def processed(self, filename, new_state, old_state=None):
+        self._processed[filename] = (new_state, old_state)
 
 
 class UD(UnifiedDiff):
@@ -542,9 +542,9 @@ class TestPackage(OscTest):
                                         ('download', 'asdf')])
         self.assertEqual(set(tl._processed.keys()),
                          set(['added', 'asdf', 'foobar']))
-        self.assertEqual(tl._processed['added'], ' ')
-        self.assertEqual(tl._processed['asdf'], ' ')
-        self.assertIsNone(tl._processed['foobar'])
+        self.assertEqual(tl._processed['added'], (' ', None))
+        self.assertEqual(tl._processed['asdf'], (' ', None))
+        self.assertEqual(tl._processed['foobar'], (None, ' '))
 
     @GET('http://localhost/source/prj/update_6?rev=latest',
          file='update_6_files.xml')
@@ -1258,7 +1258,7 @@ class TestPackage(OscTest):
         self.assertEqual(tl._finished, ['commit'])
         self.assertEqual(tl._transfer, [('upload', 'foo')])
         self.assertEqual(tl._processed.keys(), ['foo'])
-        self.assertEqual(tl._processed['foo'], ' ')
+        self.assertEqual(tl._processed['foo'], (' ', 'M'))
 
     @GET('http://localhost/source/prj/update_11?rev=latest',
          file='commit_2_latest.xml')

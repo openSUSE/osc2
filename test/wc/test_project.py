@@ -16,6 +16,8 @@ def suite():
 
 
 class ProjectTL(TransactionListener):
+    """Avoids package name and filename clashes"""
+
     def __init__(self, abort=False):
         self._begin = []
         self._finished = []
@@ -36,9 +38,9 @@ class ProjectTL(TransactionListener):
     def transfer(self, transfer_type, filename):
         self._transfer.append((transfer_type, filename))
 
-    def processed(self, filename, new_state):
+    def processed(self, filename, new_state, old_state):
         key = "%s:%s" % (self._prefix[0], filename)
-        self._processed[key] = new_state
+        self._processed[key] = (new_state, old_state)
 
 
 class TestProject(OscTest):
@@ -400,8 +402,8 @@ class TestProject(OscTest):
         keys = tl._processed.keys()
         keys.sort()
         self.assertEqual(keys, ['file', 'foo'])
-        self.assertIsNone(tl._processed['file'])
-        self.assertIsNone(tl._processed['foo'])
+        self.assertEqual(tl._processed['file'], (None, ' '))
+        self.assertEqual(tl._processed['foo'], (None, ' '))
 
     @GET('http://apiurl/source/prj1', file='prj1_list.xml')
     @GET('http://apiurl/source/prj1', file='prj1_list.xml')
@@ -436,8 +438,8 @@ class TestProject(OscTest):
         keys = tl._processed.keys()
         keys.sort()
         self.assertEqual(keys, ['file', 'foo'])
-        self.assertEqual(tl._processed['file'], ' ')
-        self.assertEqual(tl._processed['foo'], ' ')
+        self.assertEqual(tl._processed['file'], (' ', None))
+        self.assertEqual(tl._processed['foo'], (' ', None))
 
     def test_update6(self):
         """test update (finish pending add transaction)"""
@@ -514,16 +516,16 @@ class TestProject(OscTest):
                                         'prj_update'])
         self.assertEqual(tl._transfer, [('download', 'file'),
                                         ('download', 'added')])
-        self.assertEqual(tl._processed['update:file'], ' ')
-        self.assertEqual(tl._processed['prj_update:add'], ' ')
+        self.assertEqual(tl._processed['update:file'], (' ', None))
+        self.assertEqual(tl._processed['prj_update:add'], (' ', None))
         # file belong to package foo
-        self.assertEqual(tl._processed['update:added'], ' ')
-        self.assertEqual(tl._processed['prj_update:foo'], ' ')
+        self.assertEqual(tl._processed['update:added'], (' ', None))
+        self.assertEqual(tl._processed['prj_update:foo'], (' ', ' '))
         # files belong to package abc
-        self.assertIsNone(tl._processed['update:dummy'])
-        self.assertIsNone(tl._processed['update:foo'])
-        self.assertIsNone(tl._processed['update:modified'])
-        self.assertIsNone(tl._processed['prj_update:abc'])
+        self.assertEqual(tl._processed['update:dummy'], (None, 'D'))
+        self.assertEqual(tl._processed['update:foo'], (None, 'D'))
+        self.assertEqual(tl._processed['update:modified'], (None, 'D'))
+        self.assertEqual(tl._processed['prj_update:abc'], (None, 'D'))
 
     def test_commitinfo1(self):
         """test commitinfo (complete project)"""
@@ -704,8 +706,10 @@ class TestProject(OscTest):
         self.assertEqual(tl._begin, ['prj_commit', 'commit'])
         self.assertEqual(tl._finished, ['commit', 'prj_commit'])
         self.assertEqual(tl._transfer, [('upload', 'foo')])
-        self.assertEqual(tl._processed.keys(), ['foo'])
-        self.assertEqual(tl._processed['foo'], ' ')
+        self.assertEqual(set(tl._processed.keys()),
+                         set(['foo', 'added']))
+        self.assertEqual(tl._processed['foo'], (' ', 'A'))
+        self.assertEqual(tl._processed['added'], (' ', 'A'))
 
     @DELETE('http://apiurl/source/prj1/missing', text='<ok/>')
     def test_commit8(self):
@@ -723,7 +727,8 @@ class TestProject(OscTest):
         self.assertEqual(tl._begin, ['prj_commit'])
         self.assertEqual(tl._finished, ['prj_commit'])
         self.assertEqual(tl._transfer, [])
-        self.assertEqual(tl._processed, {})
+        self.assertEqual(tl._processed.keys(), ['missing'])
+        self.assertEqual(tl._processed['missing'], (None, 'D'))
 
     @GET('http://localhost/source/prj2/foo_modified?rev=latest',
          file='commit_1_latest.xml')
