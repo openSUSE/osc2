@@ -3,7 +3,7 @@ import unittest
 
 from test.osctest import OscTest
 from osc.wc.util import (wc_is_project, wc_is_package, wc_read_project,
-                         wc_read_package, wc_read_apiurl, WCLock)
+                         wc_read_package, wc_read_apiurl, WCLock, wc_parent)
 
 
 def suite():
@@ -131,6 +131,86 @@ class TestWCUtil(OscTest):
         self.assertTrue(wc.has_lock())
         wc.unlock()
         self.assertFalse(os.path.exists(lock))
+
+    def test22(self):
+        """test wc_parent (package)"""
+        path = self.fixture_file('prj1', 'added')
+        self.assertTrue(os.path.isdir(path))
+        par_dir = wc_parent(path)
+        self.assertIsNotNone(par_dir)
+        self.assertTrue(wc_is_project(par_dir))
+        self.assertEqual(wc_read_project(par_dir), 'prj1')
+
+    def test23(self):
+        """test wc_parent (cwd)"""
+        pkg_path = self.fixture_file('prj1', 'added')
+        path = os.curdir
+        cwd = os.getcwd()
+        try:
+            os.chdir(pkg_path)
+            self.assertTrue(os.path.isdir(path))
+            par_dir = wc_parent(path)
+            self.assertIsNotNone(par_dir)
+            self.assertTrue(wc_is_project(par_dir))
+            self.assertEqual(wc_read_project(par_dir), 'prj1')
+        finally:
+            os.chdir(cwd)
+
+    def test24(self):
+        """test wc_parent (package/file)"""
+        path = self.fixture_file('prj1', 'added', 'foo')
+        self.assertTrue(os.path.isfile(path))
+        par_dir = wc_parent(path)
+        self.assertIsNotNone(par_dir)
+        self.assertTrue(wc_is_package(par_dir))
+        self.assertEqual(wc_read_package(par_dir), 'added')
+
+    def test25(self):
+        """test wc_parent (package/non_existent)"""
+        path = self.fixture_file('prj1', 'added', 'non_existent')
+        self.assertFalse(os.path.exists(path))
+        par_dir = wc_parent(path)
+        self.assertIsNotNone(par_dir)
+        self.assertTrue(wc_is_package(par_dir))
+        self.assertEqual(wc_read_package(par_dir), 'added')
+
+    def test26(self):
+        """test wc_parent (package - no parent)"""
+        path = self.fixture_file('package')
+        self.assertTrue(os.path.isdir(path))
+        par_dir = wc_parent(path)
+        self.assertIsNone(par_dir)
+
+    def test27(self):
+        """test wc_parent (package/non_existent - no parent)"""
+        path = self.fixture_file('package', 'non_existent')
+        self.assertFalse(os.path.exists(path))
+        par_dir = wc_parent(path)
+        self.assertIsNotNone(par_dir)
+        self.assertTrue(wc_is_package(par_dir))
+        self.assertEqual(wc_read_package(par_dir), 'package')
+
+    def test28(self):
+        """test wc_parent cwd (package/non_existent - no parent)"""
+        pkg_path = self.fixture_file('package')
+        path = 'non_existent'
+        cwd = os.getcwd()
+        try:
+            os.chdir(pkg_path)
+            self.assertFalse(os.path.exists(path))
+            par_dir = wc_parent(path)
+            self.assertIsNotNone(par_dir)
+            self.assertTrue(wc_is_package(par_dir))
+            self.assertEqual(wc_read_package(par_dir), 'package')
+        finally:
+            os.chdir(cwd)
+
+    def test29(self):
+        """test wc_parent (project - no parent)"""
+        path = self.fixture_file('project')
+        self.assertTrue(os.path.isdir(path))
+        par_dir = wc_parent(path)
+        self.assertIsNone(par_dir)
 
 if __name__ == '__main__':
     unittest.main()
