@@ -320,6 +320,7 @@ class Project(WorkingCopy):
                 os.symlink(path, old_storelink)
                 os.rename(tmp_dir, new_dir)
             ustate.processed(package, ' ')
+            self.notifier.processed(package, ' ')
 
     def _perform_deletes(self, ustate):
         uinfo = ustate.info
@@ -332,6 +333,7 @@ class Project(WorkingCopy):
             self._remove_wc_dir(package, notify=True)
             ustate.processed(package, None)
             self.notifier.finished('update', aborted=False)
+            self.notifier.processed(package, None)
 
     def _perform_candidates(self, ustate, **kwargs):
         uinfo = ustate.info
@@ -344,6 +346,7 @@ class Project(WorkingCopy):
                 raise ValueError(msg)
             pkg.update(**kwargs)
             ustate.processed(package, ' ')
+            self.notifier.processed(package, ' ')
 
     def _remove_wc_dir(self, package, notify=False):
         pkg = self.package(package)
