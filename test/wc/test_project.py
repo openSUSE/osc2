@@ -123,6 +123,7 @@ class TestProject(OscTest):
         self.assertEqual(uinfo.added, ['osc'])
         self.assertEqual(uinfo.deleted, ['del', 'foo_modified'])
         self.assertEqual(uinfo.conflicted, ['xxx'])
+        self.assertEqual(uinfo.name, 'prj2')
 
     @GET('http://localhost/source/prj2', file='prj2_list2.xml')
     def test8(self):
@@ -451,6 +452,7 @@ class TestProject(OscTest):
         self.assertEqual(cinfo.deleted, ['abc', 'del'])
         self.assertEqual(cinfo.modified, ['foo_modified'])
         self.assertEqual(cinfo.conflicted, ['xxx'])
+        self.assertEqual(cinfo.name, 'prj2')
 
     def test_commitinfo2(self):
         """test commitinfo (only specified packages)"""
