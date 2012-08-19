@@ -10,7 +10,7 @@ import argparse
 from osc.core import Osc
 from osc.oscargs import OscArgs
 from osc.cli.description import CommandDescription
-from osc.cli.render import Renderer
+from osc.cli import render
 
 
 class CustomOscArgs(OscArgs):
@@ -225,7 +225,10 @@ def call(func):
 def renderer():
     """Sets up and returns an Renderer object."""
     if not hasattr('renderer', 'renderer'):
-        renderer.renderer = Renderer('.')
+        # FIXME: this is a bit hacky and won't work in
+        # a normal "deployment"
+        path = os.path.dirname(render.__file__)
+        renderer.renderer = render.Renderer(path)
     return renderer.renderer
 
 
