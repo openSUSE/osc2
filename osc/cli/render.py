@@ -6,6 +6,9 @@ import datetime
 from jinja2 import Environment, FileSystemLoader
 
 
+TEXT_TEMPLATE = 'text.jinja2'
+
+
 def dateformat(timestamp):
     """Returns formatted timestamp (isoformat)"""
     date = datetime.datetime.fromtimestamp(int(timestamp))
@@ -85,6 +88,16 @@ class Renderer(object):
 
         """
         self._render(template, sys.stdout, *args, **kwargs)
+
+    def render_text(self, text, *args, **kwargs):
+        """Renders text.
+
+        *args and **kwargs are passed to jinja2 Template's render
+        method.
+
+        """
+        global TEXT_TEMPLATE
+        self.render(TEXT_TEMPLATE, text=text, *args, **kwargs)
 
     def render_error(self, template, *args, **kwargs):
         """Renders template template.
