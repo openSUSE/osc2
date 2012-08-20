@@ -97,32 +97,24 @@ class WCUpdateController(object):
     def update(self, renderer, path, info):
         """Updates a project or a list of packages"""
         self._renderer = renderer
-        if path is None:
-            path = os.curdir
-        if wc_is_project(path):
-            self._update_project(path, info)
-        elif wc_is_package(path):
-            par_dir = os.path.join(path, os.pardir)
-            if wc_is_project(par_dir):
-                self._update_project(par_dir, info, wc_read_package(path))
-            else:
-                self._update_package(path, info)
-        else:
-            par_dir = os.path.abspath(os.path.join(path, os.pardir))
-            if wc_is_project(par_dir):
-                self._update_project(par_dir, info, path)
-
-    def _update_project(self, path, info, *packages):
-        """Updates a project wc."""
         tl = RendererUpdateTransactionListener(self._renderer)
-        prj = Project(path, transaction_listener=[tl])
+        prj = path.project_obj(transaction_listener=[tl])
+        if prj is not None:
+            packages = []
+            if path.package is not None:
+                packages.append(path.package)
+            self._update_project(prj, info, *packages)
+        else:
+            pkg = path.package_obj(transaction_listener=[tl])
+            self._update_package(pkg, info)
+
+    def _update_project(self, prj, info, *packages):
+        """Updates a project wc."""
         query = self._build_query(info)
         prj.update(*packages, **query)
 
-    def _update_package(self, path, info):
+    def _update_package(self, pkg, info):
         """Updates a package wc."""
-        tl = RendererUpdateTransactionListener(self._renderer)
-        pkg = Package(path, transaction_listener=[tl])
         query = self._build_query(info)
         pkg.update(**query)
 
@@ -134,8 +126,7 @@ class WCUpdateController(object):
         else:
             prj = Project.init(path, project, info.apiurl,
                                transaction_listener=[tl])
-        query = self._build_query(info)
-        prj.update(package, **query)
+        self._update_project(prj, info, package)
 
     def _checkout_project(self, project, info):
         """Checks out the project project."""
@@ -143,8 +134,7 @@ class WCUpdateController(object):
         tl = RendererUpdateTransactionListener(self._renderer)
         prj = Project.init(path, project, info.apiurl,
                            transaction_listener=[tl])
-        query = self._build_query(info)
-        prj.update(**query)
+        self._update_project(prj, info)
 
     def _build_query(self, info):
         """Builds query dict."""
