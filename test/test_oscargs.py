@@ -462,5 +462,164 @@ class TestOscArgs(OscTest):
         self.assertEqual(info.baz, 'z')
         self.assertEqual(info.foobar, 'w')
 
+    def test22(self):
+        """test wc path entry (prj/pkg/file)"""
+        oargs = OscArgs('wc_path')
+        args = self.fixture_file('prj1', 'added', 'foo')
+        info = oargs.resolve(args)
+        project_path = self.fixture_file('prj1')
+        package_path = self.fixture_file('prj1', 'added')
+        self.assertEqual(info.path.project, 'prj1')
+        self.assertEqual(info.path.project_path, project_path)
+        self.assertEqual(info.path.package, 'added')
+        self.assertEqual(info.path.package_path, package_path)
+        self.assertEqual(info.path.filename, 'foo')
+        self.assertEqual(info.path.filename_path, args)
+        # get objects
+        prj = info.path.project_obj()
+        self.assertIsNotNone(prj)
+        self.assertEqual(prj.apiurl, 'http://apiurl')
+        pkg = info.path.package_obj()
+        self.assertIsNotNone(pkg)
+        self.assertEqual(pkg.name, 'added')
+
+    def test23(self):
+        """test wc path entry (prj/pkg/non_existent)"""
+        oargs = OscArgs('wc_path')
+        args = self.fixture_file('prj1', 'added', 'non_existent')
+        info = oargs.resolve(args)
+        project_path = self.fixture_file('prj1')
+        package_path = self.fixture_file('prj1', 'added')
+        self.assertEqual(info.path.project, 'prj1')
+        self.assertEqual(info.path.project_path, project_path)
+        self.assertEqual(info.path.package, 'added')
+        self.assertEqual(info.path.package_path, package_path)
+        self.assertEqual(info.path.filename, 'non_existent')
+        self.assertEqual(info.path.filename_path, args)
+        # get objects
+        # pass some useless/erroneous arguments
+        prj = info.path.project_obj(transaction_listener=[None])
+        self.assertIsNotNone(prj)
+        self.assertEqual(prj.apiurl, 'http://apiurl')
+        # pass some useless/erroneous arguments
+        self.assertEqual(prj.notifier.listener, [None])
+        pkg = info.path.package_obj(skip_handlers=['skip'])
+        self.assertIsNotNone(pkg)
+        self.assertEqual(pkg.name, 'added')
+        self.assertEqual(pkg.skip_handlers, ['skip'])
+
+    def test24(self):
+        """test wc path entry (prj/pkg)"""
+        oargs = OscArgs('wc_path')
+        args = self.fixture_file('prj1', 'added')
+        info = oargs.resolve(args)
+        project_path = self.fixture_file('prj1')
+        self.assertEqual(info.path.project, 'prj1')
+        self.assertEqual(info.path.project_path, project_path)
+        self.assertEqual(info.path.package, 'added')
+        self.assertEqual(info.path.package_path, args)
+        self.assertIsNone(info.path.filename)
+        self.assertIsNone(info.path.filename_path)
+        # get objects
+        prj = info.path.project_obj()
+        self.assertIsNotNone(prj)
+        self.assertEqual(prj.apiurl, 'http://apiurl')
+        pkg = info.path.package_obj()
+        self.assertIsNotNone(pkg)
+        self.assertEqual(pkg.name, 'added')
+
+    def test25(self):
+        """test wc path entry (cwd: package - no filename)"""
+        oargs = OscArgs('wc_path')
+        path = self.fixture_file('prj1', 'added')
+        cwd = os.getcwd()
+        args = ''
+        try:
+            os.chdir(path)
+            info = oargs.resolve(args)
+            project_path = self.fixture_file('prj1')
+            self.assertEqual(info.path.project, 'prj1')
+            self.assertEqual(info.path.project_path, project_path)
+            self.assertEqual(info.path.package, 'added')
+            self.assertEqual(info.path.package_path, path)
+            self.assertIsNone(info.path.filename)
+            self.assertIsNone(info.path.filename_path)
+            # get objects
+            prj = info.path.project_obj()
+            self.assertIsNotNone(prj)
+            self.assertEqual(prj.apiurl, 'http://apiurl')
+            pkg = info.path.package_obj()
+            self.assertIsNotNone(pkg)
+            self.assertEqual(pkg.name, 'added')
+        finally:
+            os.chdir(cwd)
+
+    def test26(self):
+        """test wc path entry (cwd: package - filename)"""
+        oargs = OscArgs('wc_path')
+        path = self.fixture_file('prj1', 'added')
+        cwd = os.getcwd()
+        args = 'foo'
+        try:
+            os.chdir(path)
+            info = oargs.resolve(args)
+            project_path = self.fixture_file('prj1')
+            self.assertEqual(info.path.project, 'prj1')
+            self.assertEqual(info.path.project_path, project_path)
+            self.assertEqual(info.path.package, 'added')
+            self.assertEqual(info.path.package_path, path)
+            self.assertEqual(info.path.filename, 'foo')
+            self.assertEqual(info.path.filename_path, args)
+            # get objects
+            prj = info.path.project_obj()
+            self.assertIsNotNone(prj)
+            self.assertEqual(prj.apiurl, 'http://apiurl')
+            pkg = info.path.package_obj()
+            self.assertIsNotNone(pkg)
+            self.assertEqual(pkg.name, 'added')
+        finally:
+            os.chdir(cwd)
+
+    def test27(self):
+        """test wc path entry (prj) (different name)"""
+        oargs = OscArgs('wc_foo')
+        args = self.fixture_file('prj1')
+        info = oargs.resolve(args)
+        self.assertEqual(info.foo.project, 'prj1')
+        self.assertEqual(info.foo.project_path, args)
+        self.assertIsNone(info.foo.package)
+        self.assertIsNone(info.foo.package_path)
+        self.assertIsNone(info.foo.filename)
+        self.assertIsNone(info.foo.filename_path)
+        # get objects
+        prj = info.foo.project_obj()
+        self.assertIsNotNone(prj)
+        self.assertEqual(prj.apiurl, 'http://apiurl')
+        self.assertIsNone(info.foo.package_obj())
+
+    def test28(self):
+        """test wc path entry (package - no parent)"""
+        oargs = OscArgs('wc_path')
+        args = self.fixture_file('package', 'non_existent')
+        info = oargs.resolve(args)
+        package_path = self.fixture_file('package')
+        self.assertIsNone(info.path.project)
+        self.assertIsNone(info.path.project_path)
+        self.assertEqual(info.path.package, 'package')
+        self.assertEqual(info.path.package_path, package_path)
+        self.assertEqual(info.path.filename, 'non_existent')
+        self.assertEqual(info.path.filename_path, args)
+        # get objects
+        self.assertIsNone(info.path.project_obj())
+        pkg = info.path.package_obj()
+        self.assertIsNotNone(pkg)
+        self.assertEqual(pkg.name, 'package')
+
+    def test29(self):
+        """test wc path (raise ValueError)"""
+        oargs = OscArgs('wc_path')
+        self.assertRaises(ValueError, oargs.resolve, os.curdir)
+        self.assertRaises(ValueError, oargs.resolve, '/')
+
 if __name__ == '__main__':
     unittest.main()
