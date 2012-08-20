@@ -368,7 +368,7 @@ class OscArgs(object):
                 yield left_sep, component
                 # set new left_sep
                 left_sep = format_entry[i]
-                format_entry = format_entry[i+1:]
+                format_entry = format_entry[i + 1:]
                 i = 0
             i += 1
         # no separator left
