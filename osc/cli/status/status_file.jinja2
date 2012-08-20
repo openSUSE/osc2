@@ -1,0 +1,12 @@
+{% block status_files %}
+{%- for filename, st in states.iteritems() -%}
+{%- if path_prefix -%}
+{%- set filename = "%s/%s" | format(path_prefix, filename) -%}
+{%- endif -%}
+{%- if st != ' ' or info.verbose -%}
+{{ st }}    {{ filename }}
+{% endif -%}
+{% endfor -%}
+{%- endblock status_files %}
+{%- block additional_info -%}
+{%- endblock additional_info %}

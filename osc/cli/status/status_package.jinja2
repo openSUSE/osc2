@@ -1,0 +1,6 @@
+{% extends "status/status_file.jinja2" %}
+{%- block additional_info -%}
+{%- if package_state and (package_state != ' ' or info.verbose) -%}
+{{ package_state }}    {{ package }}
+{% endif -%}
+{% endblock additional_info %}
