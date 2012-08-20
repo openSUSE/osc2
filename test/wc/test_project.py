@@ -804,6 +804,22 @@ class TestProject(OscTest):
         self.assertRaises(ValueError, prj.commit, 'bar',
                           package_filenames=todo)
 
+    def test_commit12(self):
+        """test commit (rollback update transaction)"""
+        path = self.fixture_file('prj3_commit_rollback_update')
+        self._exists(path, '.osc', '_transaction')
+        # similar to test_commit6 - except that we rollback an update
+        # transaction (behind the scenes)
+        prj = Project(path)
+        pkg = prj.package('conflict')
+        self.assertEqual(pkg.status('conflict'), 'C')
+        self.assertEqual(prj._status('conflict'), ' ')
+        self.assertRaises(FileConflictError, prj.commit, 'conflict')
+        self.assertEqual(prj._status('conflict'), ' ')
+        pkg = prj.package('conflict')
+        self.assertEqual(pkg.status('conflict'), 'C')
+        self._not_exists(path, '.osc', '_transaction')
+
     def test_repair1(self):
         """test repair (missing _project and storefile)"""
         path = self.fixture_file('inv1')
