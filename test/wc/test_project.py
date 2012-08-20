@@ -3,8 +3,9 @@ import unittest
 import tempfile
 import shutil
 
-from osc.wc.base import FileConflictError, TransactionListener
-from osc.wc.project import Project
+from osc.wc.base import (FileConflictError, TransactionListener,
+                         UpdateStateMixin)
+from osc.wc.project import Project, ProjectUpdateState
 from osc.wc.util import WCInconsistentError
 from test.osctest import OscTest
 from test.httptest import GET, PUT, POST, DELETE
@@ -539,6 +540,23 @@ class TestProject(OscTest):
         prj.update('foo', foo='bar')
         self.assertEqual(prj._status('foo'), ' ')
         self._not_exists(path, '.osc', '_transaction')
+
+    @GET('http://apiurl/source/prj1/foo?rev=latest', file='foo_list2.xml')
+    @GET(('http://apiurl/source/prj1/foo/file'
+          '?rev=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaf'), file='foo_file')
+    def test_update11(self):
+        """test update (go back to state STATE_PREPARE after add)"""
+        path = self.fixture_file('prj1_update_state_prepare')
+        ustate = ProjectUpdateState.read_state(path)
+        self.assertEqual(ustate.state, UpdateStateMixin.STATE_PREPARE)
+        # the update itself is similar to test_update5
+        prj = Project(path)
+        self.assertEqual(prj._status('foo'), '?')
+        prj._perform_adds(ustate)
+        self._exists(path, '.osc', '_transaction')
+        ustate = ProjectUpdateState.read_state(path)
+        self.assertEqual(ustate.state, UpdateStateMixin.STATE_PREPARE)
+        self.assertEqual(ustate.entrystates['foo'], ' ')
 
     def test_commitinfo1(self):
         """test commitinfo (complete project)"""

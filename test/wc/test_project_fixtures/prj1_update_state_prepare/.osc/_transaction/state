@@ -1,0 +1,12 @@
+<transaction name="update" state="1">
+  <states/>
+  <info>
+    <candidates/>
+    <added>
+      <file>foo</file>
+    </added>
+    <deleted/>
+    <conflicted/>
+  </info>
+</transaction>
+
