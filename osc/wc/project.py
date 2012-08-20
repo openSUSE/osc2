@@ -445,6 +445,7 @@ class Project(WorkingCopy):
         self._commit_deletes(cstate)
         self._commit_modified(cstate, package_filenames, comment)
         self._packages.merge(cstate.entrystates)
+        cstate.cleanup()
 
     def _commit_adds(self, cstate, package_filenames, comment):
         cinfo = cstate.info
