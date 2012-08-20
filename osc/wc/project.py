@@ -124,8 +124,8 @@ class ProjectCommitState(XMLTransactionState, CommitStateMixin):
         cstate = ProjectCommitState.read_state(path)
         if cstate.name != 'commit':
             raise ValueError("no commit transaction")
-        if ustate.state == CommitStateMixin.STATE_TRANSFER:
-            ustate.cleanup()
+        if cstate.state == CommitStateMixin.STATE_TRANSFER:
+            cstate.cleanup()
             return True
         return False
 
