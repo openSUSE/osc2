@@ -348,8 +348,7 @@ class TestProject(OscTest):
         self.assertEqual(prj._status('foo'), ' ')
         prj.update('foo', foo='bar')
         self.assertEqual(prj._status('foo'), ' ')
-        fname = os.path.join('prj2', '.osc', '_transaction')
-        self.assertFalse(os.path.exists(self.fixture_file(fname)))
+        self._not_exists(path, '.osc', '_transaction')
 
     @GET('http://localhost/source/prj2', file='prj2_list3.xml')
     def test_update2(self):
@@ -444,8 +443,7 @@ class TestProject(OscTest):
     def test_update6(self):
         """test update (finish pending add transaction)"""
         path = self.fixture_file('prj1_update_resume')
-        fname = os.path.join('prj1_update_resume', '.osc', '_transaction')
-        self.assertTrue(os.path.exists(self.fixture_file(fname)))
+        self._exists(path, '.osc', '_transaction')
         prj = Project(path, finish_pending_transaction=False)
         self._not_exists(path, 'foo')
         self.assertEqual(prj._status('foo'), '?')
@@ -454,7 +452,7 @@ class TestProject(OscTest):
         self._exists(path, 'foo')
         self._exists(path, 'foo', 'file')
         self._exists(path, '.osc', 'data', 'foo')
-        self.assertFalse(os.path.exists(self.fixture_file(fname)))
+        self._not_exists(path, '.osc', '_transaction')
 
     def test_update7(self):
         """test update (finish pending add transaction auto)"""
@@ -501,8 +499,7 @@ class TestProject(OscTest):
         self.assertEqual(prj._status('add'), ' ')
         self.assertEqual(prj._status('foo'), ' ')
         self.assertEqual(prj._status('abc'), '?')
-        fname = os.path.join('prj2', '.osc', '_transaction')
-        self.assertFalse(os.path.exists(self.fixture_file(fname)))
+        self._not_exists(path, '.osc', '_transaction')
         # check transaction listener
         keys = tl._processed.keys()
         keys.sort()
