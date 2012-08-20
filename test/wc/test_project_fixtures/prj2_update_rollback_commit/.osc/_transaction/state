@@ -1,0 +1,21 @@
+<transaction name="commit" state="10">
+  <states>
+    <state entry="abc" name="D"/>
+    <state entry="bar" name="A"/>
+    <state entry="xxx" name="!"/>
+    <state entry="del" name="D"/>
+    <state entry="foo_modified" name=" "/>
+    <state entry="foo" name=" "/>
+  </states>
+  <info>
+    <unchanged/>
+    <added/>
+    <deleted>
+      <file>abc</file>
+      <file>del</file>
+    </deleted>
+    <modified/>
+    <conflicted/>
+  </info>
+</transaction>
+

@@ -524,6 +524,22 @@ class TestProject(OscTest):
         self.assertEqual(tl._processed['update:modified'], (None, 'D'))
         self.assertEqual(tl._processed['prj_update:abc'], (None, 'D'))
 
+    @GET('http://localhost/source/prj2', file='prj2_list2.xml')
+    @GET('http://localhost/source/prj2/foo?foo=bar&rev=latest',
+         file='foo_list1.xml')
+    @GET(('http://localhost/source/prj2/foo/added'
+          '?rev=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), file='foo_added_file')
+    def test_update10(self):
+        """test update (rollback commit transaction)"""
+        path = self.fixture_file('prj2_update_rollback_commit')
+        self._exists(path, '.osc', '_transaction')
+        # the rest is identical to test_update1
+        prj = Project(path)
+        self.assertEqual(prj._status('foo'), ' ')
+        prj.update('foo', foo='bar')
+        self.assertEqual(prj._status('foo'), ' ')
+        self._not_exists(path, '.osc', '_transaction')
+
     def test_commitinfo1(self):
         """test commitinfo (complete project)"""
         path = self.fixture_file('prj2')
