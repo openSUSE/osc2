@@ -2,22 +2,30 @@
 arguments.
 
 Some notes about terminology:
- 'foo/bar' is called an entry. The entry 'foo/bar' consists of
- two components; the first component is 'foo' and the second
- component is 'bar'.
- 'api://project/package?' is also an entry which consists of 3
+ 'foo/bar' is called an component entry. The component entry 'foo/bar'
+ consists of two components; the first component is 'foo' and the
+ second component is 'bar'.
+ 'api://project/package?' is also a component entry which consists of 3
  components; the first component is 'api://', the second is 'project'
  and the third component is 'package'. The '?' indicates that
- 'package' is an optional component
+ 'package' is an optional component.
+ 'wc_path' is called a wc path entry.
+ A wc path is a path to a
+  * project wc or
+  * package wc or
+  * file in a package wc
 
 """
 
+import os
 import re
 import urlparse
 import logging
 
+from osc.wc.project import Project
+from osc.wc.package import Package
 from osc.wc.util import (wc_is_project, wc_is_package, wc_read_project,
-                         wc_read_package, wc_read_apiurl)
+                         wc_read_package, wc_read_apiurl, wc_parent)
 
 
 class ResolvedInfo(object):
@@ -53,7 +61,34 @@ class ResolvedInfo(object):
         return str(self._data)
 
 
-class Entry(object):
+class AbstractEntry(object):
+    """Base class for all entry kinds."""
+
+    def match(self, arg):
+        """Match entry against arg.
+
+        If it does not match None is returned. Otherwise
+        a dict is returned which contains the matches
+        (some optional matches might be None).
+
+        """
+        raise NotImplementedError()
+
+    def wc_resolve(self, path=''):
+        """Try to read components from path.
+
+        If path is specified it overrides the path which was passed
+        to __init__.
+        If all conditions are met (see class description for details)
+        a dict is returned which contains the matches
+        (some optional and _non_optional matches might be None).
+        Otherwise None is returned.
+
+        """
+        return None
+
+
+class ComponentEntry(AbstractEntry):
     """Manages Component objects."""
 
     def __init__(self, path=''):
@@ -69,7 +104,7 @@ class Entry(object):
           project _or_ package working copy)
 
         """
-        super(Entry, self).__init__()
+        super(ComponentEntry, self).__init__()
         self._components = []
         self._path = path
 
@@ -149,6 +184,62 @@ class Entry(object):
         return self._build_regex()
 
 
+class WCPathEntry(AbstractEntry):
+    """Represents a wc path entry.
+
+    This class takes care that the definition of a wc path
+    is satisfied for a passed wc path argument (specified by
+    the user).
+
+    """
+
+    def __init__(self, name):
+        """Constructs a new WCPathEntry object.
+
+        name is the name of the attribute in the ResolvedInfo
+        object.
+
+        """
+        super(WCPathEntry, self).__init__()
+        self._name = name
+
+    def match(self, path):
+        """Checks if path is a wc path.
+
+        If path is a wc path a WCPath object is returned
+        otherwise None.
+
+        """
+        project = package = filename = None
+        project_path = package_path = filename_path = None
+        par_dir = wc_parent(path)
+        if not path:
+            path = os.getcwd()
+        if wc_is_package(path):
+            package_path = path
+            project_path = par_dir
+        elif wc_is_project(path):
+            project_path = path
+        elif par_dir is not None:
+            if wc_is_package(par_dir):
+                filename_path = path
+                package_path = par_dir
+                # check if package has a parent
+                par_dir = wc_parent(package_path)
+                if par_dir is not None and wc_is_project(par_dir):
+                    project_path = par_dir
+            elif wc_is_project(par_dir):
+                project_path = par_dir
+            else:
+                return None
+        else:
+            return None
+        return {self._name: WCPath(project_path, package_path, filename_path)}
+
+    def __str__(self):
+        return 'wc_' + self._name
+
+
 class Component(object):
     """Represents a regex for a component"""
     APIURL_RE = "(?P<%s>.+)://"
@@ -178,6 +269,54 @@ class Component(object):
             self.regex = Component.APIURL_RE % self.name
         if self.opt:
             self.regex += '?'
+
+
+class WCPath(object):
+    """Represents a wc path."""
+
+    def __init__(self, project_path, package_path, filename_path):
+        """Constructs a new WCPath object.
+
+        project_path is the path to the project wc. package_path is
+        the path to the package wc. filename_path is the path to
+        the wc filename. Either project_path or package_path or
+        both aren't None.
+
+        """
+        self.project_path = project_path
+        self.package_path = package_path
+        self.filename_path = filename_path
+        self.project = self.package = self.filename = None
+        if self.project_path is not None:
+            self.project = wc_read_project(self.project_path)
+        if self.package_path is not None:
+            self.package = wc_read_package(self.package_path)
+        if self.filename_path is not None:
+            self.filename = os.path.basename(self.filename_path)
+
+    def project_obj(self, *args, **kwargs):
+        """Returns a Project object if possible.
+
+        *args and **kwargs are optional arguments for Project's
+        __init__ method. If no Project can be returned None is
+        returned.
+
+        """
+        if self.project_path is None:
+            return None
+        return Project(self.project_path, *args, **kwargs)
+
+    def package_obj(self, *args, **kwargs):
+        """Returns a Package object if possible.
+
+        *args and **kwargs are optional arguments for Package's
+        __init__ method. If no Package can be returned None is
+        returned.
+
+        """
+        if self.package_path is None:
+            return None
+        return Package(self.package_path, *args, **kwargs)
 
 
 class OscArgs(object):
@@ -236,12 +375,16 @@ class OscArgs(object):
         yield left_sep, format_entry
 
     def _parse_entries(self, format_entries, path, separators):
-        """Parse each entry and each component into a Entry or
-        Component object.
+        """Parse each entry and each component into a ComponentEntry
+        or WCPathEntry or Component object.
 
         """
         for entry in format_entries:
-            e = Entry(path)
+            if entry.startswith('wc_'):
+                name = entry.split('_', 1)[1]
+                self._entries.append(WCPathEntry(name))
+                continue
+            e = ComponentEntry(path)
             m = re.match(OscArgs.APIURL_RE, entry)
             if m is not None:
                 api = m.group(1) or ''
