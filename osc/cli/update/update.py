@@ -1,4 +1,4 @@
-"""Provides classes and functions to work with a wc."""
+"""Provides classes and functions to update a wc."""
 
 import os
 
