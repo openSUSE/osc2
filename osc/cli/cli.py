@@ -190,6 +190,7 @@ def import_ui():
     import osc.cli.checkout.ui
     import osc.cli.update.ui
     import osc.cli.commit.ui
+    import osc.cli.status.ui
 
 
 def call(func):
