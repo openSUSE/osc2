@@ -189,6 +189,7 @@ def import_ui():
     import osc.cli.list.ui
     import osc.cli.checkout.ui
     import osc.cli.update.ui
+    import osc.cli.commit.ui
 
 
 def call(func):
