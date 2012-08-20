@@ -580,6 +580,7 @@ class TestProject(OscTest):
         pkg = prj.package('foo_modified')
         self.assertEqual(pkg.status('file'), ' ')
         self.assertEqual(pkg.status('add'), ' ')
+        self._not_exists(path, '.osc', '_transaction')
 
     @GET('http://localhost/source/prj2/bar/_meta', text='<OK/>', code=404)
     @PUT('http://localhost/source/prj2/bar/_meta', text='<OK/>',
