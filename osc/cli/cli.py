@@ -259,11 +259,11 @@ if __name__ == '__main__':
     logger = logging.StreamHandler()
     logger.setLevel(logging.DEBUG)
     logging.getLogger('osc.httprequest').addHandler(logger)
-#    logging.getLogger('osc.httprequest').setLevel(logging.DEBUG)
+    logging.getLogger('osc.httprequest').setLevel(logging.DEBUG)
     logging.getLogger('osc.cli.request.request').addHandler(logger)
-#    logging.getLogger('osc.cli.request.request').setLevel(logging.DEBUG)
+    logging.getLogger('osc.cli.request.request').setLevel(logging.DEBUG)
     logging.getLogger('osc.cli.review.review').addHandler(logger)
-#    logging.getLogger('osc.cli.review.review').setLevel(logging.DEBUG)
+    logging.getLogger('osc.cli.review.review').setLevel(logging.DEBUG)
     info = _parse()
     apiurl = 'api'
     if 'apiurl' in info:
