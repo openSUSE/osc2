@@ -4,7 +4,7 @@ import os
 
 from osc.wc.base import TransactionListener
 from osc.wc.project import Project
-from osc.wc.util import wc_is_project, wc_is_package, wc_read_package
+from osc.wc.util import wc_is_project
 
 
 UPDATE_FILE_TEMPLATE = 'update/update_file.jinja2'
