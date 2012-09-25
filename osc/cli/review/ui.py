@@ -8,14 +8,22 @@ from osc.cli.review.review import ReviewController
 class Review(CommandDescription, OscCommand):
     """Show and modify reviews."""
     cmd = 'review'
-    opt_user = Option('U', 'user', 'use by_user', sub=True)
-    opt_group = Option('G', 'group', 'use by_group', sub=True)
-    opt_project = Option('P', 'project', 'use by_project', sub=True)
-    opt_package = Option('p', 'package', 'use by_package', sub=True,
+
+
+class ReviewGlobalOptions(object):
+    """Defines a set of global options.
+
+    All review subcommands should inherit from this class.
+
+    """
+    opt_user = Option('U', 'user', 'use by_user')
+    opt_group = Option('G', 'group', 'use by_group')
+    opt_project = Option('P', 'project', 'use by_project')
+    opt_package = Option('p', 'package', 'use by_package',
                          oargs='project/package', nargs=1, default=[])
 
 
-class ReviewList(CommandDescription, Review):
+class ReviewList(CommandDescription, Review, ReviewGlobalOptions):
     """List reviews.
 
     By default only requests with state review will be listed.
@@ -36,7 +44,16 @@ class ReviewList(CommandDescription, Review):
     func = call(ReviewController.list)
 
 
-class ReviewAccept(CommandDescription, Review):
+class ReviewChangeStateOptions(ReviewGlobalOptions):
+    """Defines options for change state commands (like accept etc.)"""
+    opt_message = Option('m', 'message', 'specify a message')
+    mutex_req_group = [ReviewGlobalOptions.opt_user,
+                       ReviewGlobalOptions.opt_group,
+                       ReviewGlobalOptions.opt_project,
+                       ReviewGlobalOptions.opt_package]
+
+
+class ReviewAccept(CommandDescription, Review, ReviewChangeStateOptions):
     """Accept a specific review.
 
     If no message is specified $EDITOR is opened.
@@ -47,14 +64,11 @@ class ReviewAccept(CommandDescription, Review):
     """
     cmd = 'accept'
     args = 'api://reqid'
-    opt_message = Option('m', 'message', 'specify a message')
-    mutex_req_group = [Review.opt_user, Review.opt_group, Review.opt_project,
-                       Review.opt_package]
     func = call(ReviewController.change_review_state)
     func_defaults = {'method': 'accept'}
 
 
-class ReviewDecline(CommandDescription, Review):
+class ReviewDecline(CommandDescription, Review, ReviewChangeStateOptions):
     """Decline a specific review.
 
     If no message is specified $EDITOR is opened.
@@ -65,14 +79,11 @@ class ReviewDecline(CommandDescription, Review):
     """
     cmd = 'decline'
     args = 'api://reqid'
-    opt_message = Option('m', 'message', 'specify a message')
-    mutex_req_group = [Review.opt_user, Review.opt_group, Review.opt_project,
-                       Review.opt_package]
     func = call(ReviewController.change_review_state)
     func_defaults = {'method': 'decline'}
 
 
-class ReviewRevoke(CommandDescription, Review):
+class ReviewRevoke(CommandDescription, Review, ReviewChangeStateOptions):
     """Revoke a specific review.
 
     If no message is specified $EDITOR is opened.
@@ -83,14 +94,11 @@ class ReviewRevoke(CommandDescription, Review):
     """
     cmd = 'revoke'
     args = 'api://reqid'
-    opt_message = Option('m', 'message', 'specify a message')
-    mutex_req_group = [Review.opt_user, Review.opt_group, Review.opt_project,
-                       Review.opt_package]
     func = call(ReviewController.change_review_state)
     func_defaults = {'method': 'revoke'}
 
 
-class ReviewSupersede(CommandDescription, Review):
+class ReviewSupersede(CommandDescription, Review, ReviewChangeStateOptions):
     """Supersede a specific review.
 
     If no message is specified $EDITOR is opened.
@@ -102,14 +110,11 @@ class ReviewSupersede(CommandDescription, Review):
     """
     cmd = 'supersede'
     args = 'api://reqid api://supersede_id'
-    opt_message = Option('m', 'message', 'specify a message')
-    mutex_req_group = [Review.opt_user, Review.opt_group, Review.opt_project,
-                       Review.opt_package]
     func = call(ReviewController.change_review_state)
     func_defaults = {'method': 'supersede'}
 
 
-class ReviewAdd(CommandDescription, Review):
+class ReviewAdd(CommandDescription, Review, ReviewChangeStateOptions):
     """Add a new review to the request.
 
     If no message is specified $EDITOR is opened.
@@ -120,7 +125,4 @@ class ReviewAdd(CommandDescription, Review):
     """
     cmd = 'add'
     args = 'api://reqid'
-    opt_message = Option('m', 'message', 'specify a message')
-    mutex_req_group = [Review.opt_user, Review.opt_group, Review.opt_project,
-                       Review.opt_package]
     func = call(ReviewController.add)
