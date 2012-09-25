@@ -247,7 +247,7 @@ def _parse():
     """Parses arguments from sys.stdin.
 
     An osc.oscargs.ResolvedInfo object is returned. If the
-    pass arguments cannot be resolved a ValueError is raised.
+    passed arguments cannot be resolved a ValueError is raised.
 
     """
     parser = _parser()
