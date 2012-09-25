@@ -40,13 +40,20 @@ class SubcommandFilterMeta(type):
                                                             attrs)
         if cls.filter_cls is None:
             raise ValueError('filter_cls must not be None')
-        real_bases, parent_cmds, extends_cmd = cls._calculate_bases(bases)
+        real_bases, parent_cmds, ext_alias_cmd = cls._calculate_bases(bases)
+        # check if we extend or alias an existing command
+        extends_cmd = False
+        if ext_alias_cmd and not 'cmd' in attrs:
+            extends_cmd = True
         descr = super(SubcommandFilterMeta, cls).__new__(cls, name,
                                                          tuple(real_bases),
                                                          attrs)
         if extends_cmd:
             # replace with specialized description
             cls._replace_with_specialized(real_bases[0], descr)
+        elif ext_alias_cmd:
+            # append alias
+            cls._append_alias(real_bases[0], descr)
         else:
             cls._append_subcommand(parent_cmds, descr)
         return descr
@@ -59,9 +66,10 @@ class SubcommandFilterMeta(type):
         class which is used for inheritance and not for building a
         command <-> subcommand hierarchy (such a class is called
         parent command class).
-        It returns the a triple: real_bases, parent_cmds, extends_cmd.
-        extends_cmd is either True or False. True indicates that this
-        command extends/specializes an (existing) command.
+        It returns the triple: real_bases, parent_cmds, ext_alias_cmd.
+        ext_alias_cmd is either True or False. True indicates that this
+        command either extends/specializes or aliases an (existing)
+        command.
 
         A ValueError is raised if the class to be defined does not
         extends/specializes a command and cls.filter_cls is not part
@@ -73,20 +81,20 @@ class SubcommandFilterMeta(type):
         parent_cmds = []
         filter_subs = [base for base in bases
                        if issubclass(base, cls.filter_cls)]
-        extends_cmd = (len(filter_subs) == 1
-                       and not cls.filter_cls in filter_subs)
         # just a small sanity check: it makes no sense to extend multiple
         # commands
         if len(filter_subs) != 1 and not cls.filter_cls in filter_subs:
             raise ValueError('exactly one cmd can be extended')
+        ext_alias_cmd = (len(filter_subs) == 1
+                         and not cls.filter_cls in filter_subs)
         for base in bases:
             if (base.__name__ == cls.filter_cls.__name__
-                or extends_cmd
+                or ext_alias_cmd
                 or not issubclass(base, cls.filter_cls)):
                 real_bases.append(base)
             else:
                 parent_cmds.append(base)
-        return real_bases, parent_cmds, extends_cmd
+        return real_bases, parent_cmds, ext_alias_cmd
 
     @classmethod
     def _replace_with_specialized(cls, base_cls, specialized_cls):
@@ -103,6 +111,15 @@ class SubcommandFilterMeta(type):
                 i = names.index(name)
                 v.pop(i)
                 v.insert(i, specialized_cls)
+
+    @classmethod
+    def _append_alias(cls, base_cls, alias_cls):
+        """Appends alias_cls to all lists where base_cls is present."""
+        name = base_cls.__name__
+        for v in commands().itervalues():
+            names = [base.__name__ for base in v]
+            if name in names:
+                v.append(alias_cls)
 
     @classmethod
     def _append_subcommand(cls, parent_cmds, descr):
