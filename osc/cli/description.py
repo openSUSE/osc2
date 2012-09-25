@@ -228,6 +228,9 @@ class CommandDescription(object):
     def _add_options(cls, parser):
         """Adds options to the parser parser."""
         for opt in cls._options():
+            if opt is None:
+                # ignore (probably inherited) option
+                continue
             p = cls._mutexgroup_or_parser(opt, parser)
             p.set_defaults(**opt.parse_info())
             p.add_argument(*opt.options(), **opt.kwargs)
