@@ -50,10 +50,10 @@ class SubcommandFilterMeta(type):
                                                          attrs)
         if extends_cmd:
             # replace with specialized description
-            cls._replace_with_specialized(real_bases[0], descr)
+            cls._replace_with_specialized(parent_cmds[0], descr)
         elif ext_alias_cmd:
             # append alias
-            cls._append_alias(real_bases[0], descr)
+            cls._append_alias(parent_cmds[0], descr)
         else:
             cls._append_subcommand(parent_cmds, descr)
         return descr
@@ -84,7 +84,7 @@ class SubcommandFilterMeta(type):
         # just a small sanity check: it makes no sense to extend multiple
         # commands
         if len(filter_subs) != 1 and not cls.filter_cls in filter_subs:
-            raise ValueError('exactly one cmd can be extended')
+            raise ValueError('exactly one cmd can be extended or aliased')
         ext_alias_cmd = (len(filter_subs) == 1
                          and not cls.filter_cls in filter_subs)
         for base in bases:
@@ -94,6 +94,8 @@ class SubcommandFilterMeta(type):
                 real_bases.append(base)
             else:
                 parent_cmds.append(base)
+        if ext_alias_cmd:
+            parent_cmds = filter_subs
         return real_bases, parent_cmds, ext_alias_cmd
 
     @classmethod
