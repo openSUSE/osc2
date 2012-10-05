@@ -66,7 +66,17 @@ class ResolvedInfo(object):
             else:
                 self._data[name] = [l, value]
         else:
-            self._data[name] = value
+            self.set(name, value)
+
+    def set(self, name, value):
+        """Sets component name.
+
+        name is the name of the (new) attribute and
+        value its new value (existing values are
+        overwritten).
+
+        """
+        self._data[name] = value
 
     def __getattr__(self, name):
         if name in self._data.keys():
