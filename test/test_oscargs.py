@@ -344,7 +344,7 @@ class TestOscArgs(OscTest):
         self.assertRaises(ValueError, oargs.resolve, '', '')
 
     def test14(self):
-        """test name clashes/wrong usage"""
+        """test name clashes/wrong usage (ignore name clashes)"""
         path = self.fixture_file('project')
         oargs = OscArgs('api://project?', 'api://project/tgt_package',
                         path=path)
@@ -656,6 +656,47 @@ class TestOscArgs(OscTest):
     def test34(self):
         """test illegal name for a plain entry"""
         self.assertRaises(ValueError, OscArgs, 'plain_')
+
+    def test35(self):
+        """specify the same oargs multiple times (solve name clashes)"""
+        oargs = OscArgs('foo', 'foo', 'bar', 'foo', ignore_clashes=False)
+        args = ('foo1', 'foo2', 'bar1', 'foo3')
+        info = oargs.resolve(*args)
+        # foo is expected multiple times => use list
+        self.assertEqual(info.foo, ['foo1', 'foo2', 'foo3'])
+        # bar is expected only once => no list
+        self.assertEqual(info.bar, 'bar1')
+
+    def test36(self):
+        """specify the same oargs multiple times (mix entry types)"""
+        oargs = OscArgs('plain_foo', 'foo', 'api://project', 'api://project',
+                        ignore_clashes=False)
+        args = ('foo/bar', 'xyz', 'api://abc', 'obs://prj')
+        info = oargs.resolve(*args)
+        self.assertEqual(info.foo, ['foo/bar', 'xyz'])
+        self.assertEqual(info.apiurl, ['api', 'obs'])
+        self.assertEqual(info.project, ['abc', 'prj'])
+
+    def test37(self):
+        """specify the same oargs multiple times (optional args)"""
+        oargs = OscArgs('repo/arch?', 'repo/arch', ignore_clashes=False)
+        args = ('repo_only', 'some_repo/x86_64')
+        info = oargs.resolve(*args)
+        # hopefully nobody is using it this way (examining the results
+        # is difficult/ambiguous - see test38 how it should be used)
+        self.assertEqual(info.repo, ['repo_only', 'some_repo'])
+        # arch was only specified once (by the user!) => no list
+        self.assertEqual(info.arch, 'x86_64')
+
+    def test38(self):
+        """specify the same oargs multiple times (optional args - Sub class)"""
+        # similar to test37
+        oargs = Sub('repo/arch?', 'repo/arch', ignore_clashes=False)
+        args = ('repo_only', 'some_repo/x86_64')
+        info = oargs.resolve(*args)
+        self.assertEqual(info.repo, ['repo_only', 'some_repo'])
+        # arch is a list
+        self.assertEqual(info.arch, [None, 'x86_64'])
 
 if __name__ == '__main__':
     unittest.main()
