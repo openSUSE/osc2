@@ -33,9 +33,21 @@ from osc.wc.util import (wc_is_project, wc_is_package, wc_read_project,
 class ResolvedInfo(object):
     """Encapsulate resolved arguments"""
 
-    def __init__(self):
+    def __init__(self, ignore_clashes=True):
+        """Constructs a new ResolvedInfo object.
+
+        Keyword arguments:
+        ignore_clashes -- if True name clashes are ignored. A name clash occurs
+                          if multiple oargs with the same "name" are specified.
+                          By default the argument which is assigned to the
+                          right most oarg is saved. If ignore_clashes is set
+                          to False all arguments will be stored in a list
+                          (default: True)
+
+        """
         super(ResolvedInfo, self).__init__()
         self._data = {}
+        self._ignore_clashes = ignore_clashes
 
     def add(self, name, value):
         """Add additional components.
@@ -46,7 +58,15 @@ class ResolvedInfo(object):
         be overriden with the new value.
 
         """
-        self._data[name] = value
+        if name in self._data and not self._ignore_clashes:
+            l = self._data[name]
+            if hasattr(l, 'extend'):
+                # it is already a list
+                l.append(value)
+            else:
+                self._data[name] = [l, value]
+        else:
+            self._data[name] = value
 
     def __getattr__(self, name):
         if name in self._data.keys():
@@ -361,11 +381,14 @@ class OscArgs(object):
                 (default: ''). path might be used for component
                 resolving.
         separators -- list of component separators (default: ['/', '@'])
+        ignore_clashes -- ignore name clashes in the format_entries
+                          (default: True)
 
         """
         super(OscArgs, self).__init__()
         self._logger = logging.getLogger(__name__)
         self._entries = []
+        self._ignore_clashes = kwargs.pop('ignore_clashes', True)
         self._parse_entries(format_entries, kwargs.pop('path', ''),
                             kwargs.pop('separators', ['/', '@']))
 
@@ -457,7 +480,7 @@ class OscArgs(object):
     def _resolve(self, args, use_wc=False, path=''):
         entries = self._entries[:]
         args = list(args)
-        info = ResolvedInfo()
+        info = ResolvedInfo(self._ignore_clashes)
         while args:
             arg = args.pop(0)
             self._logger.debug("argument: " + arg)
