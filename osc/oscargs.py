@@ -404,6 +404,8 @@ class OscArgs(object):
         for entry in format_entries:
             if entry.startswith('wc_'):
                 name = entry.split('_', 1)[1]
+                if not name:
+                    raise ValueError('illegal identifier for a wc entry')
                 self._entries.append(WCPathEntry(name))
                 continue
             elif entry.startswith('plain_'):
