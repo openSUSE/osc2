@@ -5,97 +5,10 @@ import inspect
 import logging
 from ConfigParser import SafeConfigParser
 
-import argparse
-
 from osc.core import Osc
-from osc.oscargs import OscArgs
 from osc.cli.description import CommandDescription
 from osc.cli import render
-
-
-class CustomOscArgs(OscArgs):
-    """A custom OscArgs class.
-
-    Adds "unresolved" arguments to the info object.
-
-    """
-    def unresolved(self, info, name):
-        info.add(name, None)
-
-
-class _OscNamespace(argparse.Namespace):
-    """Resolves osc url-like arguments."""
-
-    def _path(self):
-        """Returns a path.
-
-        If the command is not context sensitive None
-        is returned.
-
-        """
-        path = None
-        if self.oargs_use_wc:
-            path = os.getcwd()
-        return path
-
-    def _add_items(self, info):
-        """Add parsed items to the info object."""
-        if self.func_defaults is not None:
-            for k, v in self.func_defaults.iteritems():
-                info.add(k, v)
-        # add options etc. to info object
-        for i in self.__dict__.keys():
-            if (i.startswith('oargs') or i in info or i in self.oargs
-                or i == 'func_defaults'):
-                continue
-            elif i.startswith('opt_oargs_'):
-                self._resolve_option(info, i)
-            else:
-                info.add(i, getattr(self, i))
-
-    def _resolve_option(self, info, opt):
-        """Resolve parsable option
-
-        info is the info object and opt an
-        attribute of the info object.
-
-        """
-        name = opt.split('_', 2)[2]
-        args = getattr(self, name)  # specified options (by the user)
-        format_entries = getattr(self, opt)
-        if not hasattr(args, 'extend'):
-            msg = ('list expected: please set "nargs" in the option '
-                   'definition and/or default=[]')
-            raise ValueError(msg)
-        if not args:
-            # no args specified - nothing to parse
-            return
-        # check if the option was defined with action='append'
-        if not hasattr(args[0], 'extend'):
-            # that is option was only specified once (no action='append')
-            # it should also hold len(args) == len(format_entries)
-            args = [args]
-        for arg in args:
-            if len(arg) % len(format_entries) != 0:
-                msg = ('unexpected args len: the option args should be an '
-                       'integer multiple of the number of specified '
-                       'format_entries')
-                raise ValueError(msg)
-        # everything looks good - start parsing
-        res = []
-        oargs = CustomOscArgs(*format_entries)
-        while args:
-            cur = args.pop(0)
-            res.append(oargs.resolve(*cur, path=self._path()))
-        info.add(name, res)
-
-    def resolve(self):
-        """Resolve osc url-like arguments."""
-        args = [getattr(self, k, '') for k in self.oargs]
-        oargs = CustomOscArgs(*self.oargs)
-        info = oargs.resolve(*args, path=self._path())
-        self._add_items(info)
-        return info
+from osc.cli import parse
 
 
 # TODO: move this into a different module
@@ -236,24 +149,59 @@ def renderer():
     return renderer.renderer
 
 
-def _parser():
-    """Sets up and returns a new ArgumentParser object."""
-    parser = argparse.ArgumentParser(description=OscCommand.__doc__)
-    OscCommand.add_arguments(parser)
-    return parser
+def execute_alias(cmd, args):
+    """Executes the "cmd args".
 
-
-def _parse():
-    """Parses arguments from sys.stdin.
-
-    An osc.oscargs.ResolvedInfo object is returned. If the
-    passed arguments cannot be resolved a ValueError is raised.
+    cmd is the command and args are optional (user specified)
+    arguments.
 
     """
-    parser = _parser()
-    ns = _OscNamespace()
-    parser.parse_args(namespace=ns)
-    return ns.resolve()
+    if hasattr(args, 'extend'):
+        args = ' '.join(args)
+    cmd = "%s %s" % (cmd, args)
+    execute(tuple(cmd.split()))
+
+
+class TextualAlias(object):
+    """This class can be used to define a textual alias.
+
+    A textual alias is an alias for an existing command + options.
+    In order to define a textual alias a new class has to be created
+    and has to inherit from this class and from OscCommand or a subclass.
+
+    It is important that this class precedes the OscCommand (or subclass)
+    class in the linearization of the new class. Otherwise this class'
+    add_arguments method is not called.
+    Example:
+        class Correct(TextualAlias, SomeOscCommand): pass
+        class Wrong(SomeOscCommand, TextualAlias): pass
+
+    """
+
+    args = '(plain_args)R'
+    alias = ''
+    func = call(execute_alias)
+
+    @classmethod
+    def add_arguments(cls, parser):
+        cls.func_defaults = {'cmd': cls.alias}
+        super(TextualAlias, cls).add_arguments(parser)
+
+
+def execute(args=None):
+    """Executes a command specified by args.
+
+    Keyword arguments:
+    args -- represents the command to be executed (default: None
+            that is the command is read from stdin)
+
+    """
+    info = parse.parse(OscCommand, args)
+    apiurl = 'api'
+    if 'apiurl' in info:
+        apiurl = info.apiurl
+    info.set('apiurl', _init(apiurl))
+    info.func(info)
 
 
 if __name__ == '__main__':
@@ -266,9 +214,4 @@ if __name__ == '__main__':
     logging.getLogger('osc.cli.request.request').setLevel(logging.DEBUG)
     logging.getLogger('osc.cli.review.review').addHandler(logger)
     logging.getLogger('osc.cli.review.review').setLevel(logging.DEBUG)
-    info = _parse()
-    apiurl = 'api'
-    if 'apiurl' in info:
-        apiurl = info.apiurl
-    info.add('apiurl', _init(apiurl))
-    info.func(info)
+    execute()
