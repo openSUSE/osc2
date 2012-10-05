@@ -2,18 +2,20 @@
 arguments.
 
 Some notes about terminology:
- 'foo/bar' is called an component entry. The component entry 'foo/bar'
- consists of two components; the first component is 'foo' and the
- second component is 'bar'.
- 'api://project/package?' is also a component entry which consists of 3
- components; the first component is 'api://', the second is 'project'
- and the third component is 'package'. The '?' indicates that
- 'package' is an optional component.
- 'wc_path' is called a wc path entry.
- A wc path is a path to a
-  * project wc or
-  * package wc or
-  * file in a package wc
+- 'foo/bar' is called an component entry. The component entry 'foo/bar'
+   consists of two components; the first component is 'foo' and the
+   second component is 'bar'.
+- 'api://project/package?' is also a component entry which consists of 3
+   components; the first component is 'api://', the second is 'project'
+   and the third component is 'package'. The '?' indicates that
+   'package' is an optional component.
+- 'wc_path' is called a wc path entry.
+   A wc path is a path to a
+     * project wc or
+     * package wc or
+     * file in a package wc
+- 'plain_arg' is a plain argument entry. Any value can be passed to
+   a plain argument entry ('foo', 'foo/bar', 'api://x/y' etc. are valid).
 
 """
 
@@ -240,6 +242,24 @@ class WCPathEntry(AbstractEntry):
         return 'wc_' + self._name
 
 
+class PlainEntry(AbstractEntry):
+    """Represents a plain entry."""
+
+    def __init__(self, name):
+        self._name = name
+
+    def match(self, arg):
+        """A match for a plain entry is always successful.
+
+        None is never returned.
+
+        """
+        return {self._name: arg}
+
+    def __str__(self):
+        return 'plain_' + self._name
+
+
 class Component(object):
     """Represents a regex for a component"""
     APIURL_RE = "(?P<%s>.+)://"
@@ -375,14 +395,22 @@ class OscArgs(object):
         yield left_sep, format_entry
 
     def _parse_entries(self, format_entries, path, separators):
-        """Parse each entry and each component into a ComponentEntry
-        or WCPathEntry or Component object.
+        """Create for each entry in format_entries the corresponding object.
+
+        path is a path or the emptry str and separators is a list
+        of separators.
 
         """
         for entry in format_entries:
             if entry.startswith('wc_'):
                 name = entry.split('_', 1)[1]
                 self._entries.append(WCPathEntry(name))
+                continue
+            elif entry.startswith('plain_'):
+                name = entry.split('_', 1)[1]
+                if not name:
+                    raise ValueError('illegal identifier for a plain entry')
+                self._entries.append(PlainEntry(name))
                 continue
             e = ComponentEntry(path)
             m = re.match(OscArgs.APIURL_RE, entry)
