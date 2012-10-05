@@ -621,5 +621,39 @@ class TestOscArgs(OscTest):
         self.assertRaises(ValueError, oargs.resolve, os.curdir)
         self.assertRaises(ValueError, oargs.resolve, '/')
 
+    def test30(self):
+        """test plain entry"""
+        oargs = OscArgs('plain_arg')
+        args = 'some_argument'
+        info = oargs.resolve(args)
+        self.assertEqual(info.arg, 'some_argument')
+
+    def test31(self):
+        """test plain entry (api syntax has to be ignored)"""
+        oargs = OscArgs('plain_argument')
+        args = 'api://project/package'
+        info = oargs.resolve(args)
+        self.assertEqual(info.argument, 'api://project/package')
+
+    def test32(self):
+        """test plain entry (separators have to be ignored)"""
+        oargs = OscArgs('plain_xyz')
+        args = 'repo/arch'
+        info = oargs.resolve(args)
+        self.assertEqual(info.xyz, 'repo/arch')
+
+    def test33(self):
+        """test combination with a component entry"""
+        oargs = OscArgs('api://project', 'plain_foo')
+        args = ('api://foo', 'api://bar/x')
+        info = oargs.resolve(*args)
+        self.assertEqual(info.apiurl, 'api')
+        self.assertEqual(info.project, 'foo')
+        self.assertEqual(info.foo, 'api://bar/x')
+
+    def test34(self):
+        """test illegal name for a plain entry"""
+        self.assertRaises(ValueError, OscArgs, 'plain_')
+
 if __name__ == '__main__':
     unittest.main()
