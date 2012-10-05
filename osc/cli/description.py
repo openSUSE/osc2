@@ -13,6 +13,7 @@ if 2 classes from different modules have the same name.
 
 import textwrap
 import inspect
+import re
 
 import argparse
 
@@ -170,23 +171,41 @@ class CommandDescription(object):
         defaults = {'oargs': [], 'oargs_use_wc': cls.use_wc,
                     'func': cls.func, 'func_defaults': cls.func_defaults}
         if cls.args is not None:
-            oargs = cls.args.split()
-            oargs_opt = cls._optional_arguments(oargs)
-            defaults['oargs'] = oargs
-            parser.set_defaults(**defaults)
-            for arg in oargs:
+            eoargs = cls.args.split()
+            for oarg, nargs in cls._parse_extended_oargs(eoargs):
+                defaults['oargs'].append(oarg)
                 kwargs = {}
-                if arg in oargs_opt:
-                    # default value is the empty str (so it's still parsable
-                    # by the oscargs module)
-                    kwargs = {'nargs': '?', 'default': ''}
-                parser.add_argument(arg, **kwargs)
+                if nargs is not None:
+                    kwargs = {'nargs': nargs, 'default': ''}
+                parser.add_argument(oarg, **kwargs)
+            parser.set_defaults(**defaults)
         elif cls.func is not None:
             # TODO: investigate why it does not work with a simple
             #       else
             parser.set_defaults(**defaults)
         cls._add_options(parser)
         cls._add_subcommands(parser)
+
+    @classmethod
+    def _parse_extended_oargs(cls, eoargs):
+        """Parses list of extended oargs eoargs.
+
+        Yields a 2 tuple (oarg, nargs) where oargs is a str
+        in oscargs syntax and nargs is a nargs modifier
+        for the argparse.ArgumentParser.add_argument method.
+
+        """
+        trans = {'R': argparse.REMAINDER}
+        regex = '^\(([^\)]+)\)([?+*R]|\d+)'
+        for eoarg in eoargs:
+            m = re.match(regex, eoarg)
+            if m is None:
+                yield eoarg, None
+            else:
+                nargs = m.group(2)
+                if nargs.isdigit():
+                    nargs = int(nargs)
+                yield m.group(1), trans.get(nargs, nargs)
 
     @classmethod
     def _optional_arguments(cls, oargs):
