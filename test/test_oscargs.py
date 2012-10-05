@@ -620,6 +620,8 @@ class TestOscArgs(OscTest):
         oargs = OscArgs('wc_path')
         self.assertRaises(ValueError, oargs.resolve, os.curdir)
         self.assertRaises(ValueError, oargs.resolve, '/')
+        # illegal name
+        self.assertRaises(ValueError, OscArgs, 'wc_')
 
     def test30(self):
         """test plain entry"""
