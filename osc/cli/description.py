@@ -227,6 +227,10 @@ class CommandDescription(object):
                     required = data[1] == 'req'
                     mutex_group = MutexGroup(mutex_group, parser, required)
                     setattr(cls, key, mutex_group)
+                # the parser object might have changed
+                # (for instance if add_arguments is called multiple times with
+                # different parser instances)
+                mutex_group.set_parser(parser)
                 yield mutex_group
 
     @classmethod
@@ -371,6 +375,12 @@ class MutexGroup(object):
             kwargs = {'required': self._required}
             self._group = self._parser.add_mutually_exclusive_group(**kwargs)
         return self._group
+
+    def set_parser(self, parser):
+        """Sets the parser object."""
+        if self._parser != parser:
+            self._group = None
+            self._parser = parser
 
     def __contains__(self, item):
         return item in self._options
