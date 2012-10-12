@@ -13,6 +13,7 @@ if 2 classes from different modules have the same name.
 
 import textwrap
 import inspect
+import logging
 import re
 
 import argparse
@@ -28,6 +29,11 @@ def commands():
     if not hasattr(commands, 'subcmds'):
         commands.subcmds = {}
     return commands.subcmds
+
+
+def logger():
+    """Returns a logging.Logger object."""
+    return logging.getLogger(__name__)
 
 
 class SubcommandFilterMeta(type):
@@ -284,7 +290,17 @@ class CommandDescription(object):
         subcmds = commands().get(cls.__name__, [])
         if subcmds:
             subparsers = parser.add_subparsers()
+            seen = {}
             for sub_cls in subcmds:
+                if sub_cls.cmd in seen:
+                    new_loc = inspect.getfile(sub_cls)
+                    old_loc = inspect.getfile(seen[sub_cls.cmd][-1])
+                    msg = ("\"%s\" already defined in %s (ignoring "
+                           "definition in %s") % (sub_cls.cmd, old_loc,
+                                                  new_loc)
+                    logger().warn(msg)
+                    continue
+                seen.setdefault(sub_cls.cmd, []).append(sub_cls)
                 descr = sub_cls.description()
                 kw = {'description': sub_cls.description(),
                       # keep indention and newlines in docstr
