@@ -187,6 +187,26 @@ class TextualAlias(object):
         cls.func_defaults = {'cmd': cls.alias}
         super(TextualAlias, cls).add_arguments(parser)
 
+    @staticmethod
+    def fromstring(cmd, alias, help_str=''):
+        """Builds a textual alias from a str.
+
+        cmd is the name of new command and alias is the command
+        which should be executed.
+
+        Keyword arguments:
+        help_str -- an optional help str which is displayed to the user
+                    (default: "<cmd>: alias for <alias>")
+
+        """
+        name = cmd.title() + 'Alias'
+        bases = (TextualAlias, CommandDescription, OscCommand)
+        if not help_str:
+            help_str = "%s: alias for %s" % (cmd, alias)
+        attrs = {'cmd': cmd, 'alias': alias, 'help_str': help_str,
+                 '__module__': __name__}
+        cls = type(name, bases, attrs)
+
 
 def execute(args=None):
     """Executes a command specified by args.
