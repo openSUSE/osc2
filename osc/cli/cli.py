@@ -236,4 +236,6 @@ if __name__ == '__main__':
     logging.getLogger('osc.cli.request.request').setLevel(logging.DEBUG)
     logging.getLogger('osc.cli.review.review').addHandler(logger)
     logging.getLogger('osc.cli.review.review').setLevel(logging.DEBUG)
+    logging.getLogger('osc.cli.description').addHandler(logger)
+    logging.getLogger('osc.cli.description').setLevel(logging.WARN)
     execute()
