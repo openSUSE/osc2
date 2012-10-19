@@ -6,6 +6,7 @@ import logging
 from ConfigParser import SafeConfigParser
 
 from osc.core import Osc
+from osc.cli import plugin
 from osc.cli.description import CommandDescription
 from osc.cli import render
 from osc.cli import parse
@@ -226,6 +227,7 @@ def execute(args=None):
 
 if __name__ == '__main__':
     import_ui()
+    plugin.load_plugins()
     logger = logging.StreamHandler()
     logger.setLevel(logging.DEBUG)
     logging.getLogger('osc.httprequest').addHandler(logger)
