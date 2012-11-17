@@ -19,32 +19,23 @@ import re
 import argparse
 
 
-def commands():
-    """Returns a function attribute dict.
-
-    The dict maps a class name to a list of CommandDescription
-    classes (that is it maps a command to a list of subcommands).
-
-    """
-    if not hasattr(commands, 'subcmds'):
-        commands.subcmds = {}
-    return commands.subcmds
-
-
 def logger():
     """Returns a logging.Logger object."""
     return logging.getLogger(__name__)
 
 
-class SubcommandFilterMeta(type):
+class AbstractSubcommandFilterMeta(type):
     """Determine the "parent" command for a CommandDescription subclass."""
 
+    # specify in a concrete subclass
     filter_cls = None
+    filter_cls_name = None
 
     def __new__(cls, name, bases, attrs):
-        if name == 'CommandDescription':
-            return super(SubcommandFilterMeta, cls).__new__(cls, name, bases,
-                                                            attrs)
+        if name == cls.filter_cls_name:
+            return super(AbstractSubcommandFilterMeta, cls).__new__(cls, name,
+                                                                    bases,
+                                                                    attrs)
         if cls.filter_cls is None:
             raise ValueError('filter_cls must not be None')
         real_bases, parent_cmds, ext_alias_cmd = cls._calculate_bases(bases)
@@ -52,9 +43,10 @@ class SubcommandFilterMeta(type):
         extends_cmd = False
         if ext_alias_cmd and not 'cmd' in attrs:
             extends_cmd = True
-        descr = super(SubcommandFilterMeta, cls).__new__(cls, name,
-                                                         tuple(real_bases),
-                                                         attrs)
+        real_bases = tuple(real_bases)
+        descr = super(AbstractSubcommandFilterMeta, cls).__new__(cls, name,
+                                                                 real_bases,
+                                                                 attrs)
         if extends_cmd:
             # replace with specialized description
             cls._replace_with_specialized(parent_cmds[0], descr)
@@ -114,7 +106,7 @@ class SubcommandFilterMeta(type):
 
         """
         name = base_cls.__name__
-        for v in commands().itervalues():
+        for v in specialized_cls.cls_map().itervalues():
             names = [base.__name__ for base in v]
             if name in names:
                 i = names.index(name)
@@ -125,7 +117,7 @@ class SubcommandFilterMeta(type):
     def _append_alias(cls, base_cls, alias_cls):
         """Appends alias_cls to all lists where base_cls is present."""
         name = base_cls.__name__
-        for v in commands().itervalues():
+        for v in alias_cls.cls_map().itervalues():
             names = [base.__name__ for base in v]
             if name in names:
                 v.append(alias_cls)
@@ -142,16 +134,14 @@ class SubcommandFilterMeta(type):
         """
         for parent_cmd in parent_cmds:
             name = parent_cmd.__name__
-            names = [s.__name__ for s in commands().setdefault(name, [])]
+            names = [s.__name__ for s in descr.cls_map().setdefault(name, [])]
             if not descr.__name__ in names:
-                commands()[name].append(descr)
+                descr.cls_map()[name].append(descr)
 
 
-class CommandDescription(object):
+class AbstractCommandDescription(object):
     # cannot use docstr here
     # Describe a command in a descriptive manner
-
-    __metaclass__ = SubcommandFilterMeta
 
     cmd = None
     args = None
@@ -163,6 +153,8 @@ class CommandDescription(object):
     help_str = None
     func = None  # function/callable which should be executed
     func_defaults = None  # kwargs mapping for default params
+
+    _cls_map = None  # dict-like object which is returned by cls_map()
 
     @classmethod
     def add_arguments(cls, parser):
@@ -287,7 +279,7 @@ class CommandDescription(object):
     def _add_subcommands(cls, parser):
         """Adds subcommands to the parser parser."""
         # add subcommands
-        subcmds = commands().get(cls.__name__, [])
+        subcmds = cls.cls_map().get(cls.__name__, [])
         if subcmds:
             subparsers = parser.add_subparsers()
             seen = {}
@@ -309,6 +301,23 @@ class CommandDescription(object):
                     kw['help'] = sub_cls.help()
                 subparser = subparsers.add_parser(sub_cls.cmd, **kw)
                 sub_cls.add_arguments(subparser)
+
+    @classmethod
+    def cls_map(cls):
+        """Returns a dict-like object.
+
+        The dict-like object maps a class name to a list of
+        CommandDescription classes (that is it maps a command to a
+        list of subcommands).
+
+        A concrete subclass of this class should set the _cls_map
+        class attribute. An appropriate subclass can be created
+        with the build_description method.
+
+        """
+        if cls._cls_map is None:
+            raise NotImplementedError()
+        return cls._cls_map
 
     @classmethod
     def description(cls):
@@ -334,9 +343,6 @@ class CommandDescription(object):
         if l:
             return l[0]
         return None
-
-
-SubcommandFilterMeta.filter_cls = CommandDescription
 
 
 class Option(object):
@@ -421,3 +427,25 @@ class MutexGroup(object):
 
     def __contains__(self, item):
         return item in self._options
+
+
+def build_description(name, cls_map):
+    """Returns a class which can be used to describe a command.
+
+    name is the name of the new class and cls_map is a dict-like
+    object which maps a command class name to a list of subcommand
+    classes.
+
+    """
+    bases = (AbstractSubcommandFilterMeta, )
+    attrs = {'__module__': __name__, 'filter_cls_name': name}
+    meta_cls = type(name + 'Meta', bases, attrs)
+    bases = (AbstractCommandDescription, )
+    attrs = {'__module__': __name__, '_cls_map': cls_map,
+             '__metaclass__': meta_cls}
+    cls = meta_cls(name, bases, attrs)
+    meta_cls.filter_cls = cls
+    return cls
+
+
+CommandDescription = build_description('CommandDescription', {})
