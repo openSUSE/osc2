@@ -601,5 +601,26 @@ class TestXPath(OscTest):
         exp = '/bar'
         self.assertEqual(xp.tostring(), exp)
 
+    def test_relative1(self):
+        """test a relative path expression 1"""
+        xpb = XPathBuilder(is_relative=True)
+        xp = xpb.foo
+        exp = 'foo'
+        self.assertEqual(xp.tostring(), exp)
+
+    def test_relative2(self):
+        """test a relative path expression 2"""
+        xpb = XPathBuilder(is_relative=True)
+        xp = xpb.foo.bar.x
+        exp = 'foo/bar/x'
+        self.assertEqual(xp.tostring(), exp)
+
+    def test_relative3(self):
+        """test a relative path expression (relative method)"""
+        xpb = XPathBuilder()
+        xp = xpb.foo.bar[xpb.relative(True).x.y.log_or(xpb.relative(True).z)]
+        exp = '/foo/bar[x/y or z]'
+        self.assertEqual(xp.tostring(), exp)
+
 if __name__ == '__main__':
     unittest.main()
