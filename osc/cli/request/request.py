@@ -154,7 +154,7 @@ class RequestController(AbstractRequestController):
     @classmethod
     def _find_requests(cls, project, package, info):
         """Returns a collection of requests."""
-        xpb = XPathBuilder()
+        xpb = XPathBuilder(is_relative=True)
         pred = xpb.dummy()
         xp = xpb.dummy()
         # state has at least one element

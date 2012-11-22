@@ -116,7 +116,7 @@ class ReviewController(AbstractRequestController):
     @classmethod
     def _find_requests(cls, tgt_project, tgt_package, info):
         """Returns a collection of requests."""
-        xpb = XPathBuilder()
+        xpb = XPathBuilder(is_relative=True)
         xp = xpb.dummy()
         by_kind, xp = cls._build_by_predicate(xpb, info, info.state)
         if not by_kind:
