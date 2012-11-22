@@ -60,29 +60,42 @@ class XPathBuilder(object):
 
     """
 
-    def __init__(self, factory=None, context_item=False):
+    def __init__(self, factory=None, context_item=False, is_relative=False):
         """Constructs a new XPathBuilder object.
 
         Keyword arguments:
         factory -- the factory which is used for creating the xpath
                    expressions (default: XPathFactory)
-        context_item -- if True the default expression is a context item
-                        expression - otherwise it's a simple path expression
-                        (default: False)
+        context_item -- if True a newly build path expression is preceded
+                        by a context item expression (default: False)
+        is_relative -- if True a newly build path expression is a relative
+                       path expression (default: False)
 
         """
         super(XPathBuilder, self).__init__()
         self._factory = factory or XPathFactory()
         self.context_item = context_item
+        self.is_relative = is_relative
 
     def context(self, context_item):
         """Returns a new XPathBuilder object.
 
-        The context_item parameter specifies if the default expression of the
-        new XPathBuilder object is a context item expression or not.
+        If context_item is True a path expression (which is
+        constructed with the new XPathBuilder object) is preceded
+        by a context item expression.
 
         """
-        return XPathBuilder(self._factory, context_item)
+        return XPathBuilder(self._factory, context_item=context_item)
+
+    def relative(self, is_relative):
+        """Returns a new XPathBuilder object.
+
+        If is_relative is True a path expression (which is constructed
+        with the new XPathBuilder object) is a relative path
+        expression.
+
+        """
+        return XPathBuilder(self._factory, is_relative=is_relative)
 
     def attr(self, *args, **kwargs):
         """Returns a new AttributeExpression object.
@@ -110,8 +123,10 @@ class XPathBuilder(object):
 
         """
         ci = self.context_item
+        rel = self.is_relative
         dummy = self._factory.create_PathExpression('', init=True,
-                                                    context_item=ci)
+                                                    context_item=ci,
+                                                    is_relative=rel)
         expr = getattr(dummy, name)
         return expr
 
@@ -509,7 +524,7 @@ class PathExpression(Expression):
     """Represents a xpath path expression"""
 
     def __init__(self, name, axis='', init=False,
-                 context_item=False, **kwargs):
+                 context_item=False, is_relative=False, **kwargs):
         """Constructs a new PathExpression object.
 
         name is the of the path component.
@@ -524,6 +539,8 @@ class PathExpression(Expression):
         context_item -- if True the PathExpression is treated like a context
                         item expression (it starts with an initial '.')
                         (default: False)
+        is_relative -- if True the PathExpression is a relative path
+                       expression (no leading '/') (default: False)
 
         """
         super(PathExpression, self).__init__(**kwargs)
@@ -531,6 +548,7 @@ class PathExpression(Expression):
         self._axis = axis
         self._init = init
         self._context_item = context_item
+        self._is_relative = is_relative
 
     def descendant(self, name):
         """Returns a PathExpression object for the descendant axis.
@@ -603,6 +621,7 @@ class PathExpression(Expression):
         if self._init:
             self._init = False
             kwargs.setdefault('context_item', self._context_item)
+            kwargs.setdefault('is_relative', self._is_relative)
         else:
             kwargs.setdefault('children', [self])
         meth = getattr(self._factory, 'create_' + kind + 'Expression')
@@ -625,9 +644,11 @@ class PathExpression(Expression):
             res = self._children[0].tostring()
         if self._context_item:
             res += '.'
+        if not self._is_relative:
+            res += '/'
         if self._axis:
-            return res + "/%s::%s" % (self._axis, self._name)
-        return res + "/%s" % self._name
+            return res + "%s::%s" % (self._axis, self._name)
+        return res + "%s" % self._name
 
 
 class AttributeExpression(Expression):
