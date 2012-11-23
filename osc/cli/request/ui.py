@@ -102,7 +102,7 @@ class RequestSupersede(CommandDescription, Request):
     """Supersede a request with another (existing) request.
 
     Example:
-    osc request supsersede api://reqid api://supersede_id [--message MESSAGE]
+    osc request supersede api://reqid api://supersede_id [--message MESSAGE]
 
     """
     cmd = 'supersede'
