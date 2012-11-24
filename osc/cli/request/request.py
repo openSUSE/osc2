@@ -137,17 +137,20 @@ class RequestController(AbstractRequestController):
         """Creates a new submit actions for the request request."""
         for info in submit:
             action = request.add_action(type='submit')
-            action.add_source(project=info.src_project, package=info.src_package,
-                              rev=info.rev)
-            action.add_target(project=info.tgt_project, package=info.tgt_package)
+            action.add_source(project=info.src_project,
+                              package=info.src_package, rev=info.rev)
+            action.add_target(project=info.tgt_project,
+                              package=info.tgt_package)
 
     @classmethod
     def _create_changedevel_actions(cls, request, changedevel):
         """Creates a new change_devel actions for the request request."""
         for info in changedevel:
             action = request.add_action(type='change_devel')
-            action.add_source(project=info.src_project, package=info.src_package)
-            action.add_target(project=info.tgt_project, package=info.tgt_package)
+            action.add_source(project=info.src_project,
+                              package=info.src_package)
+            action.add_target(project=info.tgt_project,
+                              package=info.tgt_package)
 
     @classmethod
     def _create_role_actions(cls, request, role):
