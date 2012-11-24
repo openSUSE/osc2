@@ -50,7 +50,18 @@ class RequestShow(CommandDescription, Request):
                       action='store_true')
 
 
-class RequestAccept(CommandDescription, Request):
+class ChangeStateOptions(object):
+    """Defines a set of options which are needed for a state change.
+
+    All state changing commands should inherit from this class.
+
+    """
+    opt_message = Option('m', 'message', 'specify a message')
+    opt_force = Option('f', 'force', 'try to force the state change',
+                       action='store_true')
+
+
+class RequestAccept(CommandDescription, Request, ChangeStateOptions):
     """Accept a specific request.
 
     If no message is specified $EDITOR is opened.
@@ -61,12 +72,11 @@ class RequestAccept(CommandDescription, Request):
     """
     cmd = 'accept'
     args = 'api://reqid'
-    opt_message = Option('m', 'message', 'specify a message')
     func = call(RequestController.change_request_state)
     func_defaults = {'method': 'accept'}
 
 
-class RequestDecline(CommandDescription, Request):
+class RequestDecline(CommandDescription, Request, ChangeStateOptions):
     """Decline a specific request.
 
     If no message is specified $EDITOR is opened.
@@ -77,12 +87,11 @@ class RequestDecline(CommandDescription, Request):
     """
     cmd = 'decline'
     args = 'api://reqid'
-    opt_message = Option('m', 'message', 'specify a message')
     func = call(RequestController.change_request_state)
     func_defaults = {'method': 'decline'}
 
 
-class RequestRevoke(CommandDescription, Request):
+class RequestRevoke(CommandDescription, Request, ChangeStateOptions):
     """Revoke a specific request.
 
     If no message is specified $EDITOR is opened.
@@ -93,12 +102,11 @@ class RequestRevoke(CommandDescription, Request):
     """
     cmd = 'revoke'
     args = 'api://reqid'
-    opt_message = Option('m', 'message', 'specify a message')
     func = call(RequestController.change_request_state)
     func_defaults = {'method': 'revoke'}
 
 
-class RequestSupersede(CommandDescription, Request):
+class RequestSupersede(CommandDescription, Request, ChangeStateOptions):
     """Supersede a request with another (existing) request.
 
     Example:
@@ -107,7 +115,6 @@ class RequestSupersede(CommandDescription, Request):
     """
     cmd = 'supersede'
     args = 'api://reqid api://supersede_id'
-    opt_message = Option('m', 'message', 'specify a message')
     func = call(RequestController.change_request_state)
     func_defaults = {'method': 'supersede'}
 
