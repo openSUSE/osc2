@@ -2,10 +2,12 @@
 
 import logging
 
+from osc.httprequest import HTTPError
 from osc.util.xpath import XPathBuilder
 from osc.remote import Request
 from osc.search import find_request
 from osc.cli.util.env import run_pager, edit_message
+from osc.cli.util.shell import AbstractShell, ShellSyntaxError
 
 
 LIST_TEMPLATE = 'request/request_list.jinja2'
@@ -36,6 +38,9 @@ class AbstractRequestController(object):
         global LIST_TEMPLATE
         collection = cls._find_requests(project, package, info)
         collection.sort(reverse=True)
+        if info.interactive:
+            cls.shell(renderer, info.shell_cls, collection)
+            return
         for request in collection:
             renderer.render(LIST_TEMPLATE, request=request)
 
@@ -44,9 +49,23 @@ class AbstractRequestController(object):
         """Shows the request specified by reqid."""
         global SHOW_TEMPLATE
         request = Request.find(reqid)
+        if info.interactive:
+            cls.shell(renderer, info.shell_cls, [request])
+            return
         renderer.render(SHOW_TEMPLATE, request=request)
         if info.diff:
-            run_pager(request.diff())
+            cls.diff(request)
+
+    @classmethod
+    def shell(cls, renderer, shell_cls, requests):
+        """Starts an interactive request shell."""
+        sh = shell_cls(renderer)
+        sh.run(requests)
+
+    @classmethod
+    def diff(cls, request):
+        """Displays the diff for the request request."""
+        run_pager(request.diff())
 
     @classmethod
     def _change_request_state(cls, renderer, request, method, message, info,
@@ -67,6 +86,8 @@ class AbstractRequestController(object):
             kwargs['reqid'] = supersede_id
         if review is not None:
             kwargs['review'] = review
+        if info.force:
+            kwargs['force'] = '1'
         meth(comment=message, **kwargs)
         renderer.render(SHOW_TEMPLATE, request=request)
 
@@ -176,3 +197,76 @@ class RequestController(AbstractRequestController):
         res = find_request(xp=xp, apiurl=info.apiurl)
         collection = [r for r in res]
         return collection
+
+
+class AbstractRequestShell(AbstractShell):
+    """Represents an abstract request shell."""
+
+    def __init__(self, *args, **kwargs):
+        """Constructs a new AbstractRequestShell object.
+
+        *args and **kwargs are passed to the base class'
+        __init__ method.
+
+        """
+        super(AbstractRequestShell, self).__init__(*args, **kwargs)
+        self._request = None
+
+    def _augment_info(self, info):
+        """Adds the current request to the info object."""
+        super(AbstractRequestShell, self)._augment_info(info)
+        info.set('request', self._request)
+
+    def run(self, requests):
+        """Run the shell.
+
+        requests is a list of Request objects.
+
+        """
+        while requests:
+            self._request = requests.pop(0)
+            self.render(SHOW_TEMPLATE, request=self._request)
+            next_req = False
+            while not next_req:
+                try:
+                    inp = self.prompt()
+                    next_req = self._execute(self._request, inp)
+                except SystemExit:
+                    # argparse automatically exits when the
+                    # help is requested
+                    pass
+                except ShellSyntaxError as e:
+                    self._renderer.render_text(str(e))
+                except KeyboardInterrupt as e:
+                    msg = "Press to ctrl-D to exit"
+                    self._renderer.render_text(msg)
+                except HTTPError as e:
+                    msg = "Error %s: %s" % (e.code, e.url)
+                    self._renderer.render_text(msg)
+            self.clear()
+
+
+class RequestShellController(AbstractRequestController):
+    """Concrete request controller for the request shell."""
+
+    def __init__(self):
+        """Constructs a new ShellRequestController object."""
+        self.stats = {}
+
+    def change_request_state(self, shell, request, method, message, info,
+                             supersede_id=None):
+        """Changes the state of the request req.
+
+        method is the method which is called on the
+        retrieved request object.
+        If message is None $EDITOR is opened.
+
+        """
+        self._change_request_state(shell, request, method, message, info,
+                                   supersede_id)
+        self.stats.setdefault(method, []).append(req)
+        return True
+
+    def skip(self):
+        """Skips the current request."""
+        return True

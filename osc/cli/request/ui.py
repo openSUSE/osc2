@@ -3,6 +3,7 @@
 from osc.cli.cli import OscCommand, call
 from osc.cli.description import CommandDescription, Option
 from osc.cli.request.request import RequestController
+from osc.cli.request.shell import RequestShell
 
 
 class Request(CommandDescription, OscCommand):
@@ -30,7 +31,11 @@ class RequestList(CommandDescription, Request):
                        choices=['new', 'review', 'accepted', 'revoked',
                                 'declined', 'superseded'], action='append',
                        default=['new', 'review'])
+    opt_interactive = Option('i', '--interactive',
+                             'start an interactive request shell',
+                             action='store_true')
     func = call(RequestController.list)
+    func_defaults = {'shell_cls': RequestShell}
 
 
 class RequestShow(CommandDescription, Request):
@@ -48,6 +53,11 @@ class RequestShow(CommandDescription, Request):
     func = call(RequestController.show)
     opt_diff = Option('d', 'diff', 'generate a diff for the request',
                       action='store_true')
+    opt_interactive = Option('i', 'interactive',
+                             'start an interactive request shell',
+                             action='store_true')
+    mutex_group = [opt_diff, opt_interactive]
+    func_defaults = {'shell_cls': RequestShell}
 
 
 class ChangeStateOptions(object):
