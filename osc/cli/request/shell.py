@@ -75,6 +75,7 @@ class RequestSupersede(ShellCommand, RequestShellUI, ChangeStateOptions):
 
     """
     cmd = 'supersede'
+    args = 'supersede_id'
     opt_message = Option('m', 'message', 'specify a message')
     func = call(RequestShellUI.controller.change_request_state)
     func_defaults = {'method': 'supersede'}
