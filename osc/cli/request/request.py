@@ -254,6 +254,7 @@ class RequestShellController(AbstractRequestController):
 
     def __init__(self):
         """Constructs a new ShellRequestController object."""
+        # TODO: statistic support
         self.stats = {}
 
     def change_request_state(self, shell, request, method, message, info,
@@ -267,7 +268,7 @@ class RequestShellController(AbstractRequestController):
         """
         self._change_request_state(shell, request, method, message, info,
                                    supersede_id)
-        self.stats.setdefault(method, []).append(req)
+        self.stats.setdefault(method, []).append(request)
         return True
 
     def skip(self):
