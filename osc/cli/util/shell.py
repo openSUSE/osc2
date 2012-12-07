@@ -117,13 +117,12 @@ class AbstractShell(object):
         """Clears the terminal screen."""
         subprocess.call([self._clear], shell=False)
 
-    def _execute(self, req, inp):
+    def _execute(self, inp):
         """Executes user specified command.
 
-        req is the request which should be manipulated. inp
-        is the user input.
-        Returns True if the next request should be considered
-        otherwise False.
+        inp is the user input.
+        The return value of the executed function/method is
+        returned.
 
         """
         args = self._split_input(inp)

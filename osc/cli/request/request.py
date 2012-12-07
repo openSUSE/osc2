@@ -233,7 +233,7 @@ class AbstractRequestShell(AbstractShell):
             while not next_req:
                 try:
                     inp = self.prompt()
-                    next_req = self._execute(self._request, inp)
+                    next_req = self._execute(inp)
                 except SystemExit:
                     # argparse automatically exits when the
                     # help is requested
