@@ -167,37 +167,68 @@ class AbstractItemStorage(object):
         """Yields (key, item) tuples."""
         raise NotImplementedError()
 
+    def __iter__(self):
+        raise NotImplementedError()
+
     def __str__(self):
         """Returns the str representation of the item storage."""
         return super(AbstractItemStorage, self).__str__()
 
 
-class DictItemStorage(AbstractItemStorage):
-    """Stores items in a dict."""
+class HomogenousRenderableItemStorage(AbstractItemStorage):
+    """Uses a renderer in order to retrieve the str repr of the items.
 
-    def __init__(self):
-        """Constructs a new DictItemStorage object."""
-        super(DictItemStorage, self).__init__()
-        self._dict = {}
+    It is required that the items are "homogenous" that is it should
+    be possible to retrieve their str repr with the help of a single
+    template.
 
-    def add(self, key, item):
-        """Adds a new key, item pair to the storage.
+    """
 
-        If an item is already associated with the key key
-        it is replaced.
+    def __init__(self, renderer, storage_template, item_template, **items):
+        """Constructs a new HomogenousRenderableItemStorage object.
+
+        renderer is a renderer object. storage_template is the template
+        which is used to retrieve the str repr of the whole item storage.
+        item_template is the template which is used to retrieve the
+        str repr of a single item.
+        **items maps a key to an item.
 
         """
-        self._dict[key] = item
+        super(HomogenousRenderableItemStorage, self).__init__()
+        self._renderer = renderer
+        self._storage_template = storage_template
+        self._items = dict(((k, RenderableItem(renderer, item_template, v))
+                            for k, v in items.iteritems()))
 
     def iteritems(self):
-        return self._dict.iteritems()
+        return self._items.iteritems()
 
     def __iter__(self):
-        # just for convenience
-        return self._dict.__iter__()
+        return self._items.__iter__()
 
     def __str__(self):
-        return str(self._dict)
+        return self._renderer.render_only(self._storage_template,
+                                          items=self._items)
+
+
+class RenderableItem(object):
+    """Uses a renderer in order to retrieve the str repr of the item."""
+
+    def __init__(self, renderer, item_template, item):
+        """Constructs a new RenderableItem object.
+
+        renderer is a renderer object. item_template is the template
+        which is used to retrieve the str repr of the item. item is
+        the item which should be rendered.
+
+        """
+        super(RenderableItem, self).__init__()
+        self._renderer = renderer
+        self._item_template = item_template
+        self.item = item
+
+    def __str__(self):
+        return self._renderer.render_only(self._item_template, item=self.item)
 
 
 class ItemSelector(AbstractShell):
@@ -256,3 +287,38 @@ class ItemSelector(AbstractShell):
             except KeyboardInterrupt as e:
                 msg = "Press to ctrl-D to exit"
                 self._renderer.render_text(msg)
+
+
+class AbstractItemSelectorFactory(object):
+    """Factory which can be to create an ItemSelector instance.
+
+    Its main purpose is to abstract from the creation of the
+    item storage etc.
+
+    """
+
+    def create(self, items, **kwargs):
+        """Returns a new ItemSelector (or subclass) instance.
+
+        items is a dict of items.
+        **kwargs are additional arguments for the item storage
+        or item selector.
+
+        """
+        raise NotImplementedError()
+
+
+class TransparentRenderableItemSelectorFactory(AbstractItemSelectorFactory):
+    """Can be used to create a transparent ItemSelector."""
+
+    def create(self, items, renderer, storage_template, item_template):
+        """Returns an ItemSelector subclass instance."""
+        class TransparentItemSelector(ItemSelector):
+            def run(self):
+                return super(TransparentItemSelector, self).run().item
+
+        item_storage = HomogenousRenderableItemStorage(renderer,
+                                                       storage_template,
+                                                       item_template,
+                                                       **items)
+        return TransparentItemSelector(item_storage, renderer=renderer)
