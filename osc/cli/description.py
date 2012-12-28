@@ -448,4 +448,17 @@ def build_description(name, cls_map):
     return cls
 
 
+def build_command(*bases, **attrs):
+    """Builds (programmatically) a new command class.
+
+    *bases is a tuple of base classes/parent commands for the
+    new command class. **attrs is a dict which provides
+    additional attributes for the newly generated command
+    class (for possible attributes see class AbstractCommandDescription).
+
+    """
+    name = attrs.get('cmd', 'Root')
+    return type(name + 'Command', bases, attrs)
+
+
 CommandDescription = build_description('CommandDescription', {})
