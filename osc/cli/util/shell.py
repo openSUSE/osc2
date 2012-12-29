@@ -27,7 +27,12 @@ class AbstractShell(object):
         """
         self._renderer = renderer
         self._clear = clear
-        if complete:
+        self._complete = complete
+        self._setup_completion()
+
+    def _setup_completion(self):
+        """Setup tab completion."""
+        if self._complete:
             readline.set_completer(self.complete)
             readline.parse_and_bind('tab: complete')
 
@@ -129,7 +134,12 @@ class AbstractShell(object):
         args = self._split_input(inp)
         info = parse.parse(self._root_cmd_cls(), args)
         self._augment_info(info)
-        return info.func(info)
+        try:
+            return info.func(info)
+        finally:
+            # setup completion again because another shell
+            # might have been executed
+            self._setup_completion()
 
     def _augment_info(self, info):
         """Adds or modifies the info object.
