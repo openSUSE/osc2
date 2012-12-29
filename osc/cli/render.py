@@ -60,11 +60,11 @@ class Renderer(object):
             ret.append(splitted[0] + '/' + name)
         return ret
 
-    def _render(self, template, out, *args, **kwargs):
+    def render_only(self, template, *args, **kwargs):
         """Renders template template.
 
-        out is a file or file-like object to which the rendered
-        template should be written to.
+        The rendered template is returned (no data will be written
+        or printed).
         *args and **kwargs are passed to jinja2 Template's render
         method.
 
@@ -72,7 +72,17 @@ class Renderer(object):
         names = self._custom_template_names(template)
         names.append(template)
         tmpl = self._env.select_template(names)
-        text = tmpl.render(*args, **kwargs)
+        return tmpl.render(*args, **kwargs)
+
+    def _render(self, template, out, *args, **kwargs):
+        """Renders template template.
+
+        out is a file or file-like object to which the rendered
+        template should be written to.
+        *args and **kwargs are passed to the render_only method.
+
+        """
+        text = self.render_only(template, *args, **kwargs)
         try:
             out.write(text)
         except UnicodeEncodeError:
