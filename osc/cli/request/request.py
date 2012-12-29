@@ -39,7 +39,7 @@ class AbstractRequestController(object):
         collection = cls._find_requests(project, package, info)
         collection.sort(reverse=True)
         if info.interactive:
-            cls.shell(renderer, info.shell_cls, collection)
+            cls.shell(renderer, info.shell_cls, collection, info)
             return
         for request in collection:
             renderer.render(LIST_TEMPLATE, request=request)
@@ -50,15 +50,16 @@ class AbstractRequestController(object):
         global SHOW_TEMPLATE
         request = Request.find(reqid)
         if info.interactive:
-            cls.shell(renderer, info.shell_cls, [request])
+            cls.shell(renderer, info.shell_cls, [request], info)
             return
         renderer.render(SHOW_TEMPLATE, request=request)
         if info.diff:
             cls.diff(request)
 
     @classmethod
-    def shell(cls, renderer, shell_cls, requests):
+    def shell(cls, renderer, shell_cls, requests, info):
         """Starts an interactive request shell."""
+        # info may be used in subclasses
         sh = shell_cls(renderer)
         sh.run(requests)
 
