@@ -82,7 +82,8 @@ class _OscNamespace(argparse.Namespace):
         while args:
             cur = args.pop(0)
             res.append(oargs.resolve(*cur, path=self._path()))
-        info.add(name, res)
+        # use set to overwrite the old list
+        info.set(name, res)
 
     def _resolve_positional_args(self):
         """Resolve positional arguments.
