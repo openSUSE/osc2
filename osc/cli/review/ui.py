@@ -3,6 +3,7 @@
 from osc.cli.cli import OscCommand, call
 from osc.cli.description import CommandDescription, Option
 from osc.cli.review.review import ReviewController
+from osc.cli.review.shell import ReviewShell
 
 
 class Review(CommandDescription, OscCommand):
@@ -45,6 +46,7 @@ class ReviewList(CommandDescription, Review, ReviewGlobalOptions):
                              'start an interactive request shell',
                              action='store_true')
     func = call(ReviewController.list)
+    func_defaults = {'shell_cls': ReviewShell}
 
 
 class ReviewChangeStateOptions(ReviewGlobalOptions):

@@ -1,0 +1,6 @@
+{% import 'request/macros.jinja2' as macros %}
+{%- block selection -%}
+{% for k, item in items | dictsort %}
+{{ "%-5s" | format(k)}}{{item}}
+{%- endfor %}
+{%- endblock selection -%}
