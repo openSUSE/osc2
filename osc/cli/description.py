@@ -145,10 +145,6 @@ class AbstractCommandDescription(object):
 
     cmd = None
     args = None
-    # list which contains indices of optional positional args
-    # (use case: the cmd is context sensitive so a positional argument
-    # can be omitted)
-    args_opt = None
     use_wc = False  # set to True if command is context sensitive
     help_str = None
     func = None  # function/callable which should be executed
@@ -204,24 +200,6 @@ class AbstractCommandDescription(object):
                 if nargs.isdigit():
                     nargs = int(nargs)
                 yield m.group(1), trans.get(nargs, nargs)
-
-    @classmethod
-    def _optional_arguments(cls, oargs):
-        """Returns a list which contains optional arguments.
-
-        oargs is a list of oargs str.
-        A ValueError is raised if cls.args_opt references an
-        index which does not fit into oargs' bounds.
-
-        """
-        args_opt = []
-        for i in cls.args_opt or []:
-            try:
-                args_opt.append(oargs[i])
-            except IndexError:
-                msg = "args_opt: illegal index '%s' (out of bounds)" % i
-                raise ValueError(msg)
-        return args_opt
 
     @classmethod
     def _options(cls):

@@ -16,7 +16,6 @@ class Commit(CommandDescription, OscCommand):
 
     """
     cmd = 'commit'
-    args = 'wc_path'
-    args_opt = [0]
+    args = '(wc_path)?'
     opt_message = Option('m', 'message', 'specify a message')
     func = call(WCCommitController().commit)

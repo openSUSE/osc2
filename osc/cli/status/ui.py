@@ -16,8 +16,7 @@ class Status(CommandDescription, OscCommand):
 
     """
     cmd = 'status'
-    args = 'wc_path'
-    args_opt = [0]
+    args = '(wc_path)?'
     opt_verbose = Option('v', 'verbose', 'also print unchanged states',
                          action='store_true')
     func = call(status)

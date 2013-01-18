@@ -15,8 +15,7 @@ class Update(CommandDescription, OscCommand):
 
     """
     cmd = 'update'
-    args = 'wc_path'
-    args_opt = [0]
+    args = '(wc_path)?'
     opt_expand = Option('u', 'unexpand', 'do not expand a source link',
                         action='store_true')
     opt_revision = Option('r', 'revision', 'list revision',
