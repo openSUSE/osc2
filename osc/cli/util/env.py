@@ -72,12 +72,14 @@ def edit_message(template=None, footer=None, suffix=''):
             run_editor(f.name)
             f.seek(0, os.SEEK_SET)
             message = f.read().split(delimeter, 1)[0].rstrip()
-            if not message:
-                msg = ("no message specified: (a)bort command, "
-                       "(i)gnore missing message, (e)dit> ")
+            if not message or message == template:
+                choices = "(a)bort command, (i)gnore, (e)dit> "
+                msg = "no message specified: " + choices
+                if template == message:
+                    msg = "template was not changed: " + choices
                 repl = raw_input(msg)
                 if repl.lower() == 'i':
-                    return ''
+                    return message
                 elif repl.lower() != 'e':
                     raise UserAbort()
         return message
