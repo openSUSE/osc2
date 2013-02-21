@@ -3,6 +3,7 @@ import unittest
 import tempfile
 import shutil
 import stat
+import sys
 
 from lxml import etree
 
@@ -1519,7 +1520,11 @@ class TestPackage(OscTest):
         pkg = Package(path)
         pkg.diff(ud, 'modified')
         ud.diff()
-        self.assertEqualFile(ud.diff_data, 'diff_3')
+        # the range format of the diff was changed in python >= 2.7.2
+        if sys.version_info <= (2, 7, 1):
+            self.assertEqualFile(ud.diff_data, 'diff_3-python271')
+        else:
+            self.assertEqualFile(ud.diff_data, 'diff_3')
 
     def test_diff4(self):
         """test diff (missing file)"""
@@ -1537,7 +1542,11 @@ class TestPackage(OscTest):
         pkg = Package(path)
         pkg.diff(ud, 'conflict')
         ud.diff()
-        self.assertEqualFile(ud.diff_data, 'diff_5')
+        # the range format of the diff was changed in python >= 2.7.2
+        if sys.version_info <= (2, 7, 1):
+            self.assertEqualFile(ud.diff_data, 'diff_5-python271')
+        else:
+            self.assertEqualFile(ud.diff_data, 'diff_5')
 
     @GET('http://localhost/source/foo/status1?rev=77',
          file='status1_list2.xml')
@@ -1548,19 +1557,25 @@ class TestPackage(OscTest):
     def test_diff6(self):
         """test diff (remote revision; local state: 'A')"""
         # treated as modified file
+        def assertEqualFile(diff_data):
+            # the range format of the diff was changed in python >= 2.7.2
+            if sys.version_info <= (2, 7, 1):
+                self.assertEqualFile(diff_data, 'diff_6-python271')
+            else:
+                self.assertEqualFile(diff_data, 'diff_6')
         path = self.fixture_file('status1')
         ud = UD()
         pkg = Package(path)
         pkg.diff(ud, 'added', revision='77')
         ud.diff()
-        self.assertEqualFile(ud.diff_data, 'diff_6')
+        assertEqualFile(ud.diff_data)
         self._exists(path, 'diff', 'bbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
                      store=True)
         # create a new diff object
         ud = UD()
         pkg.diff(ud, 'added', revision='77')
         ud.diff()
-        self.assertEqualFile(ud.diff_data, 'diff_6')
+        assertEqualFile(ud.diff_data)
         ud.cleanup()
         self._not_exists(path, 'diff', store=True)
 
