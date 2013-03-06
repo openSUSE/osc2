@@ -605,7 +605,7 @@ class TestCpio(OscTest):
         self.assertEqual(hdr.uid, st.st_uid)
         self.assertEqual(hdr.gid, st.st_gid)
         self.assertEqual(hdr.nlink, 1)
-        self.assertEqual(float(hdr.mtime), st.st_mtime)
+        self.assertEqual(hdr.mtime, int(st.st_mtime))
         self.assertEqual(hdr.filesize, 9)
 #        self.assertEqual(hdr.dev_maj, 8)
 #        self.assertEqual(hdr.dev_min, 10)
