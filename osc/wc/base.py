@@ -213,6 +213,7 @@ class AbstractTransactionState(object):
         instance is returned.
 
         """
+        raise NotImplementedError()
 
     @staticmethod
     def rollback(path):
