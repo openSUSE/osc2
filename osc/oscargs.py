@@ -430,7 +430,7 @@ class OscArgs(object):
     def _parse_entries(self, format_entries, path, separators):
         """Create for each entry in format_entries the corresponding object.
 
-        path is a path or the emptry str and separators is a list
+        path is a path or the empty str and separators is a list
         of separators.
 
         """
