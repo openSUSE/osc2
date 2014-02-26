@@ -323,8 +323,8 @@ class Project(WorkingCopy):
             self.notifier.processed(package, ' ', None)
 
     def _perform_deletes(self, ustate):
-        uinfo = ustate.info
         global _STORE
+        uinfo = ustate.info
         for package in uinfo.deleted:
             st = self._status(package)
             # a delete is always possible

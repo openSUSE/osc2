@@ -144,8 +144,8 @@ class MockUrllib2Request(unittest.TestCase):
         return os.path.abspath(path)
 
     def setUp(self):
-        super(MockUrllib2Request, self).setUp()
         global EXPECTED_REQUESTS
+        super(MockUrllib2Request, self).setUp()
         EXPECTED_REQUESTS = []
         self._orig_build_opener = urllib2.build_opener
         def build_opener(*handlers):

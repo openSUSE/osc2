@@ -83,11 +83,11 @@ class WCLock(object):
         has a lock on the working copy.
 
         """
+        global _LOCK
         if self.has_lock():
             # a double lock is no problem at all but if it occurs
             # it smells like a programming/logic error (IMHO)
             raise RuntimeError('Double lock occured')
-        global _LOCK
         lock = _storefile(self._path, _LOCK)
         f = open(lock, 'w')
         fcntl.lockf(f, fcntl.LOCK_EX)
@@ -100,12 +100,12 @@ class WCLock(object):
         RuntimeError is raised.
 
         """
+        global _LOCK
         if not self.has_lock():
             raise RuntimeError('Attempting to release an unaquired lock.')
         fcntl.lockf(self._fobj, fcntl.LOCK_UN)
         self._fobj.close()
         self._fobj = None
-        global _LOCK
         lock = _storefile(self._path, _LOCK)
         os.unlink(lock)
 
@@ -348,11 +348,11 @@ class XMLTransactionState(AbstractTransactionState):
         states -- maps each wc file to its current state
 
         """
+        global _PKG_DATA
         if ((info is not None and xml_data)
             or (info is None and xml_data is None)):
             raise ValueError('either specify info or xml_data')
         super(XMLTransactionState, self).__init__(path)
-        global _PKG_DATA
         trans_dir = _storefile(self._path, XMLTransactionState.DIR)
         data_dir = os.path.join(trans_dir, _PKG_DATA)
         self._location = data_dir
@@ -521,13 +521,13 @@ def missing_storepaths(path, *paths, **kwargs):
 
 
     """
+    global _PKG_DATA
     dirs = kwargs.get('dirs', False)
     data = kwargs.get('data', False)
     if not _has_storedir(path):
         return list(paths)
     storedir = _storedir(path)
     if data:
-        global _PKG_DATA
         storedir = _storefile(path, _PKG_DATA)
     missing = []
     for p in paths:
@@ -756,6 +756,7 @@ def wc_init(path, ext_storedir=None):
                     ext_storedir.
 
     """
+    global _PKG_DATA
     if (ext_storedir is not None and
         (not os.path.isdir(ext_storedir) or
          not os.access(ext_storedir, os.W_OK))):
@@ -785,7 +786,6 @@ def wc_init(path, ext_storedir=None):
     else:
         os.mkdir(storedir)
     wc_write_version(path)
-    global _PKG_DATA
     data_path = _storefile(path, _PKG_DATA)
     os.mkdir(data_path)
 
