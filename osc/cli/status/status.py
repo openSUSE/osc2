@@ -30,15 +30,27 @@ def _package_status(renderer, prj, pkg, info):
     package_state = ''
     if prj is not None:
         package_state = prj._status(package)
-    states = _package_states(pkg, path=pkg.path)
+    states = {}
+    # pkg might be none if this is called from _project_status and
+    # the package is missing  (state !)
+    if pkg is not None:
+        states = _package_states(pkg, path=pkg.path)
     renderer.render(STATUS_PACKAGE_TEMPLATE, states=states, package=package,
                     package_state=package_state, info=info,
                     path_prefix=pkg.name)
 
 
 def _project_status(renderer, prj, info):
+    global STATUS_PACKAGE_TEMPLATE
     for package in prj.packages():
-        _package_status(renderer, prj, prj.package(package), info)
+        pkg = prj.package(package)
+        if pkg is None:
+            package_state = prj._status(package)
+            renderer.render(STATUS_PACKAGE_TEMPLATE, states={},
+                            package=package, package_state=package_state,
+                            info=info, path_prefix='')
+        else:
+            _package_status(renderer, prj, prj.package(package), info)
 
 
 def _package_states(pkg, *filenames, **kwargs):
