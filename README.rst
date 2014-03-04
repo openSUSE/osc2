@@ -1,3 +1,6 @@
+osc2
+====
+
 osc2 is an object-oriented rewrite of the Open Build Service command line
 tool osc.
 
