@@ -3,6 +3,7 @@
 import os
 import inspect
 import logging
+import urlparse
 from ConfigParser import SafeConfigParser
 
 from osc.core import Osc
@@ -42,6 +43,13 @@ def _init(apiurl):
             if cp.has_option(section, 'passx'):
                 password = cp.get(section, 'pass', raw=True)
                 password = password.decode('base64').decode('bz2')
+            if cp.has_option(section, 'keyring') and cp.get(section, 'keyring', raw=True) == '1':
+                try:
+                    import keyring
+                    host = urlparse.urlparse(apiurl).hostname
+                    password = keyring.get_password(host, user)
+                except ImportError:
+                    raise ValueError('Keyring module not available, but ~/.oscrc stores password there')
             if password is None:
                 raise ValueError('No password provided for {0}'.format(section))
             Osc.init(section, username=user, password=password)
