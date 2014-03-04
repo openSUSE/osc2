@@ -36,10 +36,14 @@ def _init(apiurl):
         aliases = aliases.split(',')
         if section.strip('/') == apiurl or apiurl in aliases:
             user = cp.get(section, 'user', raw=True)
-            password = cp.get(section, 'pass', raw=True)
+            password = None
+            if cp.has_option(section, 'pass'):
+                password = cp.get(section, 'pass', raw=True)
             if cp.has_option(section, 'passx'):
                 password = cp.get(section, 'pass', raw=True)
                 password = password.decode('base64').decode('bz2')
+            if password is None:
+                raise ValueError('No password provided for {0}'.format(section))
             Osc.init(section, username=user, password=password)
             return section
 
