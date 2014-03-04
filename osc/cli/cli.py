@@ -43,15 +43,19 @@ def _init(apiurl):
             if cp.has_option(section, 'passx'):
                 password = cp.get(section, 'pass', raw=True)
                 password = password.decode('base64').decode('bz2')
-            if cp.has_option(section, 'keyring') and cp.get(section, 'keyring', raw=True) == '1':
+            if (cp.has_option(section, 'keyring')
+                and cp.getboolean(section, 'keyring')):
                 try:
                     import keyring
                     host = urlparse.urlparse(apiurl).hostname
                     password = keyring.get_password(host, user)
                 except ImportError:
-                    raise ValueError('Keyring module not available, but ~/.oscrc stores password there')
+                    msg = ("keyring module not available but '%s' "
+                           "stores password there") % conf_filename
+                    raise ValueError(msg)
             if password is None:
-                raise ValueError('No password provided for {0}'.format(section))
+                msg = "No password provided for %s" % section
+                raise ValueError(msg)
             Osc.init(section, username=user, password=password)
             return section
 
