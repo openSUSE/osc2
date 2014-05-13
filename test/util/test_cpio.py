@@ -4,8 +4,8 @@ import unittest
 # use StringIO instead of cStringIO because seek will be overridden
 from StringIO import StringIO
 
-from osc.util.cpio import (FileWrapper, NewAsciiReader, CpioError,
-                           NewAsciiWriter, CpioArchive, cpio_open)
+from osc2.util.cpio import (FileWrapper, NewAsciiReader, CpioError,
+                            NewAsciiWriter, CpioArchive, cpio_open)
 from test.osctest import OscTest
 
 

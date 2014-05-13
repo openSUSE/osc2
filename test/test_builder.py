@@ -4,8 +4,8 @@ from tempfile import NamedTemporaryFile
 
 from lxml import etree
 
-from osc.builder import (Builder, su_cmd, sudo_cmd, hostarch, can_build,
-                         build_helper)
+from osc2.builder import (Builder, su_cmd, sudo_cmd, hostarch, can_build,
+                          build_helper)
 from test.osctest import OscTest
 
 

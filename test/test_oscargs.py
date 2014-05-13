@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from osc.oscargs import OscArgs
+from osc2.oscargs import OscArgs
 from test.osctest import OscTest
 
 

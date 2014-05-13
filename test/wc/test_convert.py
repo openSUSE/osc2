@@ -1,10 +1,10 @@
 import os
 import unittest
 
-from osc.wc.convert import convert_package, convert_project
-from osc.wc.project import Project
-from osc.wc.package import Package
-from osc.wc.util import WCInconsistentError, WCFormatVersionError
+from osc2.wc.convert import convert_package, convert_project
+from osc2.wc.project import Project
+from osc2.wc.package import Package
+from osc2.wc.util import WCInconsistentError, WCFormatVersionError
 from test.osctest import OscTest
 from test.httptest import GET
 

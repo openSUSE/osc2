@@ -2,7 +2,7 @@ import os
 import sys
 
 from test.httptest import MockUrllib2Request
-from osc.core import Osc
+from osc2.core import Osc
 
 
 # copied from unittest/case.py (python 2.7)

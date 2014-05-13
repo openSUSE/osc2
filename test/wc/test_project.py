@@ -3,10 +3,10 @@ import unittest
 import tempfile
 import shutil
 
-from osc.wc.base import (FileConflictError, TransactionListener,
-                         UpdateStateMixin)
-from osc.wc.project import Project, ProjectUpdateState
-from osc.wc.util import WCInconsistentError
+from osc2.wc.base import (FileConflictError, TransactionListener,
+                          UpdateStateMixin)
+from osc2.wc.project import Project, ProjectUpdateState
+from osc2.wc.util import WCInconsistentError
 from test.osctest import OscTest
 from test.httptest import GET, PUT, POST, DELETE
 from test.wc.test_package import TL, UPLOAD_REV

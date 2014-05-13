@@ -2,8 +2,8 @@ import os
 import unittest
 
 from test.osctest import OscTest
-from osc.wc.util import (wc_is_project, wc_is_package, wc_read_project,
-                         wc_read_package, wc_read_apiurl, WCLock, wc_parent)
+from osc2.wc.util import (wc_is_project, wc_is_package, wc_read_project,
+                          wc_read_package, wc_read_apiurl, WCLock, wc_parent)
 
 
 def suite():

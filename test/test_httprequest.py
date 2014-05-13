@@ -5,7 +5,7 @@ import urllib2
 from lxml import etree
 
 from test.osctest import OscTest
-from osc.httprequest import Urllib2HTTPRequest, HTTPError
+from osc2.httprequest import Urllib2HTTPRequest, HTTPError
 from test.httptest import GET, PUT, POST, DELETE
 
 

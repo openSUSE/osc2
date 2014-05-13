@@ -7,13 +7,13 @@ import sys
 
 from lxml import etree
 
-from osc.wc.base import (TransactionListener, FileConflictError,
-                         PendingTransactionError)
-from osc.wc.package import (Package, FileSkipHandler, PackageUpdateState,
-                            FileUpdateInfo, file_md5, is_binaryfile,
-                            FileCommitPolicy, UnifiedDiff, Diff)
-from osc.wc.util import WCInconsistentError, WCFormatVersionError
-from osc.source import Package as SourcePackage
+from osc2.wc.base import (TransactionListener, FileConflictError,
+                          PendingTransactionError)
+from osc2.wc.package import (Package, FileSkipHandler, PackageUpdateState,
+                             FileUpdateInfo, file_md5, is_binaryfile,
+                             FileCommitPolicy, UnifiedDiff, Diff)
+from osc2.wc.util import WCInconsistentError, WCFormatVersionError
+from osc2.source import Package as SourcePackage
 from test.osctest import OscTest
 from test.httptest import GET, PUT, POST
 

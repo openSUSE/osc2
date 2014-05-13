@@ -5,8 +5,8 @@ from cStringIO import StringIO, OutputType
 
 from lxml import etree
 
-from osc.remote import (RemoteProject, RemotePackage, Request,
-                        RORemoteFile, RWRemoteFile, RWLocalFile)
+from osc2.remote import (RemoteProject, RemotePackage, Request,
+                         RORemoteFile, RWRemoteFile, RWLocalFile)
 from test.osctest import OscTest
 from test.httptest import GET, PUT, POST, DELETE
 

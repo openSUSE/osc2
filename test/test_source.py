@@ -2,7 +2,7 @@ import unittest
 
 from lxml import etree
 
-from osc.source import Project, Package
+from osc2.source import Project, Package
 from test.osctest import OscTest
 from test.httptest import GET
 

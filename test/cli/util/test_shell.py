@@ -2,7 +2,7 @@ import os
 import unittest
 from collections import namedtuple
 
-from osc.cli.util.shell import AbstractShell, ShellSyntaxError
+from osc2.cli.util.shell import AbstractShell, ShellSyntaxError
 from test.osctest import OscTest
 
 

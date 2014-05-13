@@ -3,7 +3,7 @@ from cStringIO import StringIO
 
 from lxml import etree
 
-from osc.build import BuildResult, BinaryList, BuildInfo, BuildDependency
+from osc2.build import BuildResult, BinaryList, BuildInfo, BuildDependency
 from test.osctest import OscTest
 from test.httptest import GET, POST
 

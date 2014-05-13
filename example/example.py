@@ -17,14 +17,14 @@ import os
 import sys
 from ConfigParser import SafeConfigParser
 
-from osc.core import Osc
-from osc.oscargs import OscArgs
-from osc.source import Package as SourcePackage
-from osc.source import Project as SourceProject
-from osc.wc.base import TransactionListener
-from osc.wc.project import Project
-from osc.wc.package import Package, UnifiedDiff
-from osc.wc.util import wc_is_project, wc_is_package
+from osc2.core import Osc
+from osc2.oscargs import OscArgs
+from osc2.source import Package as SourcePackage
+from osc2.source import Project as SourceProject
+from osc2.wc.base import TransactionListener
+from osc2.wc.project import Project
+from osc2.wc.package import Package, UnifiedDiff
+from osc2.wc.util import wc_is_project, wc_is_package
 
 
 class MyTransactionListener(TransactionListener):

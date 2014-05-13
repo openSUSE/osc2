@@ -14,13 +14,13 @@ class BuildDocumentation(build, object):
         if not os.path.exists(html_dir):
             os.makedirs(html_dir)
         os.chdir(html_dir)
-        writedoc('osc')
+        writedoc('osc2')
         os.rename('osc.html', 'index.html')
         modules = ('build', 'core', 'httprequest', 'oscargs', 'remote',
                    'source', 'util', 'util.io', 'util.xml', 'wc', 'wc.base',
                    'wc.convert', 'wc.package', 'wc.project', 'wc.util')
         for mod in modules:
-            writedoc('osc.' + mod)
+            writedoc('osc2.' + mod)
         os.chdir(olddir)
 
     def run(self, *args, **kwargs):
@@ -38,7 +38,7 @@ setup(name='osc2',
       author_email='suse-tux@gmx.de',
       url='http://github.com/openSUSE/osc2',
       download_url='http://github.com/openSUSE/osc2/tarball/master',
-      packages=['osc', 'osc.util', 'osc.wc'],
+      packages=['osc2', 'osc2.util', 'osc2.wc'],
       test_suite='test.suite',
       license='GPL',
       cmdclass={'build': BuildDocumentation})

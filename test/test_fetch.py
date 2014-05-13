@@ -2,10 +2,10 @@ import os
 import unittest
 from cStringIO import StringIO
 
-from osc.build import BuildInfo, BuildDependency
-from osc.fetch import (FilenameCacheManager, NamePreferCacheManager,
-                       BuildDependencyFetcher, BuildDependencyFetchError,
-                       FetchListener)
+from osc2.build import BuildInfo, BuildDependency
+from osc2.fetch import (FilenameCacheManager, NamePreferCacheManager,
+                        BuildDependencyFetcher, BuildDependencyFetchError,
+                        FetchListener)
 from test.osctest import OscTest
 from test.httptest import GET
 

@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from osc.util.xpath import XPathBuilder, XPathSyntaxError, Tree
+from osc2.util.xpath import XPathBuilder, XPathSyntaxError, Tree
 from test.osctest import OscTest
 
 

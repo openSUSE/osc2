@@ -2,8 +2,8 @@ import unittest
 
 from lxml import etree
 
-from osc.search import find_request, RequestCollection
-from osc.util.xpath import XPathBuilder
+from osc2.search import find_request, RequestCollection
+from osc2.util.xpath import XPathBuilder
 from test.osctest import OscTest
 from test.httptest import GET
 
