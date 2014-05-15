@@ -1,11 +1,11 @@
-<package project="openSUSE:Tools" name="osc">
+<package name="osc" project="openSUSE:Tools">
   <title>tiny title</title>
   <description>some useless
 description...</description>
-  <person userid="foobar" role="maintainer"/>
+  <person role="maintainer" userid="foobar"/>
   <build>
     <enable arch="x86_64"/>
     <disable arch="i586"/>
   </build>
-  <devel project="openSUSE:Factory" package="osc"/>
+  <devel package="osc" project="openSUSE:Factory"/>
 </package>

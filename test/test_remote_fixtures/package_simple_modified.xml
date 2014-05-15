@@ -1,1 +1,1 @@
-<package project="newprj" name="bar"/>
+<package name="bar" project="newprj"/>

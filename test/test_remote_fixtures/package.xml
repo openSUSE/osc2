@@ -1,4 +1,4 @@
-<package project="openSUSE:Tools" name="osc">
+<package name="osc" project="openSUSE:Tools">
   <debuginfo>
     <disable/>
     <enable repository="openSUSE_Factory"/>
@@ -7,5 +7,5 @@
   <title>tiny title</title>
   <description>some useless
 description...</description>
-  <person userid="foobar" role="maintainer"/>
+  <person role="maintainer" userid="foobar"/>
 </package>

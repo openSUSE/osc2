@@ -239,7 +239,7 @@ class TestRemoteModel(OscTest):
                           'foo', 'bar')
 
     @PUT('http://localhost/source/foo/bar/_meta', text='<INVALID />',
-         exp='<package project="foo" name="bar"/>\n',
+         exp='<package name="bar" project="foo"/>\n',
          exp_content_type='application/xml')
     def test_package8(self):
         """test package validation (invalid xml response after store)"""

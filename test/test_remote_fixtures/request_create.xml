@@ -1,6 +1,6 @@
 <request>
   <action type="submit">
-    <source project="foo" rev="12345" package="bar"/>
+    <source package="bar" project="foo" rev="12345"/>
     <target project="foobar"/>
     <options>
       <sourceupdate>cleanup</sourceupdate>
