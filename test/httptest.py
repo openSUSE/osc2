@@ -37,9 +37,8 @@ class RequestDataMismatch(Exception):
         # skip diff header
         diff.next()
         diff.next()
-        r = '%s, %s, %s\nDiff:\n%s' % (self.url, self.got, self.exp,
-                                         '\n'.join(diff))
-        return r
+        return '%s, %s, %s\nDiff:\n%s' % (self.url, self.got, self.exp,
+                                          '\n'.join(diff))
 
 
 class MyHTTPHandler(urllib2.HTTPHandler):
