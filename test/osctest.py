@@ -28,7 +28,7 @@ class _AssertRaisesContext(object):
         if not issubclass(exc_type, self.expected):
             # let unexpected exceptions pass through
             return False
-        self.exception = exc_value # store for later retrieval
+        self.exception = exc_value  # store for later retrieval
         if self.expected_regexp is None:
             return True
 

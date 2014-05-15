@@ -148,6 +148,7 @@ class MockUrllib2Request(unittest.TestCase):
         super(MockUrllib2Request, self).setUp()
         EXPECTED_REQUESTS = []
         self._orig_build_opener = urllib2.build_opener
+
         def build_opener(*handlers):
             handlers += (MyHTTPHandler(exp_requests=EXPECTED_REQUESTS,
                                        fixtures_dir=self._fixtures_dir), )

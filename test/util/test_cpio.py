@@ -750,8 +750,8 @@ class TestCpio(OscTest):
                 self.assertEqual(archive_file.read(), contents.pop(0))
             self.assertEqual(archive.filenames(), ['bar', 'file1', 'foo'])
             self.assertEqual(len(archive.files()), 3)
-            # read file bar again (no content because the whole file was already
-            # read)
+            # read file bar again (no content because the whole file was
+            # already read)
             archive_file = archive.find('bar')
             self.assertIsNotNone(archive_file)
             self.assertEqual(archive_file.read(), '')
