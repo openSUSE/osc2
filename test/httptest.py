@@ -5,6 +5,7 @@ import urllib2
 import httplib
 import tempfile
 import shutil
+from difflib import unified_diff
 
 EXPECTED_REQUESTS = []
 
@@ -32,7 +33,13 @@ class RequestDataMismatch(Exception):
         self.exp = exp
 
     def __str__(self):
-        return '%s, %s, %s' % (self.url, self.got, self.exp)
+        diff = unified_diff(self.exp.split('\\n'), self.got.split('\\n'))
+        # skip diff header
+        diff.next()
+        diff.next()
+        r = '%s, %s, %s\nDiff:\n%s' % (self.url, self.got, self.exp,
+                                         '\n'.join(diff))
+        return r
 
 
 class MyHTTPHandler(urllib2.HTTPHandler):
