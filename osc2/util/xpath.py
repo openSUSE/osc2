@@ -227,6 +227,7 @@ class XPathFactory(object):
 
         """
         base_cls = delegate.__class__
+
         class GeneratorDelegate(base_cls):
             """Used to generate expressions from a common base expression.
 

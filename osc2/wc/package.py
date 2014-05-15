@@ -24,8 +24,8 @@ from osc2.wc.util import (wc_read_package, wc_read_project, wc_read_apiurl,
                           wc_write_apiurl, wc_write_files, wc_read_files,
                           missing_storepaths, WCInconsistentError,
                           wc_pkg_data_filename, XMLTransactionState,
-                          wc_diff_mkdir, _storedir, _PKG_DATA, wc_verify_format,
-                          wc_write_version)
+                          wc_diff_mkdir, _storedir, _PKG_DATA,
+                          wc_verify_format, wc_write_version)
 
 
 def file_md5(filename):
