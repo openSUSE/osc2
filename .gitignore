@@ -1,2 +1,5 @@
 *.pyc
 *.sw[op]
+docs/
+build/
+osc2.egg-info/
