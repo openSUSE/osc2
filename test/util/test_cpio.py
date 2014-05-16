@@ -601,7 +601,7 @@ class TestCpio(OscTest):
         hdr = archive_reader.next_header()
         self.assertEqual(hdr.magic, '070701')
 #        self.assertEqual(hdr.ino, 1788176)
-        self.assertEqual(hdr.mode, 33188)
+        self.assertEqual(hdr.mode, st.st_mode)
         self.assertEqual(hdr.uid, st.st_uid)
         self.assertEqual(hdr.gid, st.st_gid)
         self.assertEqual(hdr.nlink, 1)
