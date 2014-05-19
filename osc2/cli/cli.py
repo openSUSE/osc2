@@ -240,8 +240,9 @@ def execute(args=None):
     info.set('apiurl', _init(apiurl))
     info.func(info)
 
-
-if __name__ == '__main__':
+def main(args=None):
+    """Main entry point for CLI.
+    """
     import_ui()
     plugin.load_plugins()
     logger = logging.StreamHandler()
@@ -254,4 +255,7 @@ if __name__ == '__main__':
     logging.getLogger('osc.cli.review.review').setLevel(logging.DEBUG)
     logging.getLogger('osc.cli.description').addHandler(logger)
     logging.getLogger('osc.cli.description').setLevel(logging.WARN)
-    execute()
+    execute(args)
+
+if __name__ == '__main__':
+    main()
