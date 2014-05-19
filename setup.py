@@ -15,7 +15,7 @@ class BuildDocumentation(build, object):
             os.makedirs(html_dir)
         os.chdir(html_dir)
         writedoc('osc2')
-        os.rename('osc.html', 'index.html')
+        os.rename('osc2.html', 'index.html')
         modules = ('build', 'core', 'httprequest', 'oscargs', 'remote',
                    'source', 'util', 'util.io', 'util.xml', 'wc', 'wc.base',
                    'wc.convert', 'wc.package', 'wc.project', 'wc.util')
