@@ -56,6 +56,8 @@ def _init(apiurl):
             if password is None:
                 msg = "No password provided for %s" % section
                 raise ValueError(msg)
+            if '://' not in section:
+                section = 'https://{0}'.format(section)
             Osc.init(section, username=user, password=password)
             return section
 
