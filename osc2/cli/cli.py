@@ -240,9 +240,9 @@ def execute(args=None):
     info.set('apiurl', _init(apiurl))
     info.func(info)
 
+
 def main(args=None):
-    """Main entry point for CLI.
-    """
+    """Main entry point for CLI."""
     import_ui()
     plugin.load_plugins()
     logger = logging.StreamHandler()
