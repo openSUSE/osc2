@@ -30,7 +30,7 @@
 {%- endif -%}
 {% endblock history -%}
 {% block description -%}
-{% if request.description.text is not none %}
+{% if request.description and request.description.text is not none %}
         Descr: {{ request.description.text | indent(15, false) }}
 {%- endif -%}
 {% endblock description -%}
