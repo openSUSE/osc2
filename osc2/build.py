@@ -202,7 +202,6 @@ class BuildResult(object):
         """
         if not (self.repository and self.arch and self.package):
             raise ValueError("repository, arch, package are mandatory for log")
-        request = Osc.get_osc().get_reqobj()
         path = "/build/%s/%s/%s/%s/_log" % (self.project, self.repository,
                                             self.arch, self.package)
         return RWRemoteFile(path, **kwargs)

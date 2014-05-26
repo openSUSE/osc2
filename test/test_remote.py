@@ -147,7 +147,7 @@ class TestRemoteModel(OscTest):
         self.assertTrue(RemoteProject.delete('foo'))
 
     @DELETE('http://localhost/source/foo', text='<OK/>', code=404)
-    def test_project11(self):
+    def test_project12(self):
         """test delete method"""
         self.assertFalse(RemoteProject.delete('foo'))
 
@@ -268,7 +268,7 @@ class TestRemoteModel(OscTest):
         self.assertTrue(RemotePackage.delete('foo', 'bar'))
 
     @DELETE('http://localhost/source/foo/bar', text='<OK/>', code=404)
-    def test_package11(self):
+    def test_package12(self):
         """test delete method"""
         self.assertFalse(RemotePackage.delete('foo', 'bar'))
 

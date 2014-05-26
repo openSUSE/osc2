@@ -19,8 +19,7 @@ from lxml import etree, objectify
 
 from osc2.core import Osc
 from osc2.httprequest import HTTPError
-from osc2.util.xml import (ElementClassLookup, get_parser, fromstring,
-                           OscElement)
+from osc2.util.xml import get_parser, fromstring, OscElement
 from osc2.util.io import copy_file, iter_read, mkstemp
 
 __all__ = ['RemoteModel', 'RemoteProject', 'RemotePackage', 'Request',
@@ -525,7 +524,7 @@ class RORemoteFile(object):
             if mtime is not None:
                 self.mtime = int(mtime)
             self.mode = int(mode)
-        except ValueError as e:
+        except ValueError:
             raise ValueError("mtime and mode must be integers")
         if not lazy_open:
             self._init_read()

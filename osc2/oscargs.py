@@ -21,7 +21,6 @@ Some notes about terminology:
 
 import os
 import re
-import urlparse
 import logging
 
 from osc2.wc.project import Project

@@ -762,7 +762,6 @@ class TestCpio(OscTest):
     def test27(self):
         """test invalid cpio archive (simple text file)"""
         fname = self.fixture_file('foo')
-        sio = StringIO(open(fname, 'r').read())
         self.assertRaises(ValueError, CpioArchive, filename=fname)
 
     def test28(self):

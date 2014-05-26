@@ -458,7 +458,6 @@ class TestXPath(OscTest):
         path = xpb.foo.bar
         pred_expr = path[pred]
         self.assertEqual(pred_expr.tostring(), '/foo/bar[@foo = "bar"]')
-        l = [xpb.foo]
         pred.reparent(None)
         self.assertRaises(XPathSyntaxError, pred_expr.tostring)
 

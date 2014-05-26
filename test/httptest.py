@@ -2,7 +2,6 @@ import os
 import cStringIO
 import unittest
 import urllib2
-import httplib
 import shutil
 from difflib import unified_diff
 

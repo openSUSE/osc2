@@ -1,10 +1,7 @@
 """Class to manage a project working copy."""
 
 import os
-import fcntl
 import shutil
-
-from lxml import objectify, etree
 
 from osc2.wc.base import (WorkingCopy, UpdateStateMixin, CommitStateMixin,
                           PendingTransactionError, FileConflictError)
@@ -156,7 +153,7 @@ class Project(WorkingCopy):
             raise WCInconsistentError(path, meta, xml_data, pkg_data)
         self.apiurl = wc_read_apiurl(path)
         self.name = wc_read_project(path)
-        with wc_lock(path) as lock:
+        with wc_lock(path):
             self._packages = wc_read_packages(path)
         super(Project, self).__init__(path, ProjectUpdateState,
                                       ProjectCommitState, **kwargs)
@@ -268,7 +265,7 @@ class Project(WorkingCopy):
                     to the Package's update method
 
         """
-        with wc_lock(self.path) as lock:
+        with wc_lock(self.path):
             ustate = ProjectUpdateState.read_state(self.path)
             if not self.is_updateable(rollback=True):
                 raise PendingTransactionError('commit')
@@ -412,7 +409,7 @@ class Project(WorkingCopy):
         comment -- a commit message (default: '')
 
         """
-        with wc_lock(self.path) as lock:
+        with wc_lock(self.path):
             cstate = ProjectCommitState.read_state(self.path)
             if not self.is_commitable(rollback=True):
                 raise PendingTransactionError('commit')
@@ -559,7 +556,7 @@ class Project(WorkingCopy):
         no_files = kwargs.get('no_files', False)
         if filenames and no_files:
             raise ValueError("filenames and no_files are mutually exclusive")
-        with wc_lock(self.path) as lock:
+        with wc_lock(self.path):
             if self._status(package) != '?':
                 raise ValueError("package \"%s\" is already tracked" % package)
             pkg_path = os.path.join(self.path, package)
@@ -591,7 +588,7 @@ class Project(WorkingCopy):
 
         """
         super(Project, self).remove(package)
-        with wc_lock(self.path) as lock:
+        with wc_lock(self.path):
             st = self._status(package)
             if st == '?':
                 msg = "package \"%s\" is not under version control" % package
@@ -643,7 +640,7 @@ class Project(WorkingCopy):
         # check if _packages file is a valid xml
         try:
             packages = wc_read_packages(path)
-        except ValueError as e:
+        except ValueError:
             return (missing, wc_read_packages(path, raw=True), [])
         packages = [p.get('name') for p in packages]
         pkg_data = missing_storepaths(path, *packages, data=True, dirs=True)

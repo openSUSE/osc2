@@ -4,7 +4,7 @@ from collections import Sequence
 
 from lxml import etree, objectify
 
-__all__ = ['ElementLookupClass', 'get_parser']
+__all__ = ['ElementClassLookup', 'get_parser']
 
 
 class XPathFindMixin:

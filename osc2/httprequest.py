@@ -299,8 +299,8 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
         if (os.path.exists(cookie_filename) and not
                 os.path.isfile(cookie_filename)):
             raise ValueError("%s exists but is no file" % cookie_filename)
-        elif not os.path.exists(cookie_file):
-            open(cookie_file, 'w').close()
+        elif not os.path.exists(cookie_filename):
+            open(cookie_filename, 'w').close()
         cookiejar = cookielib.LWPCookieJar(cookie_filename)
         cookiejar.load(ignore_discard=True)
         return urllib2.HTTPCookieProcessor(cookiejar)

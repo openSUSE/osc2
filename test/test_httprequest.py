@@ -1,4 +1,3 @@
-import os
 import unittest
 import urllib2
 
@@ -152,7 +151,7 @@ class TestHTTPRequest(OscTest):
         """test exception handling (check exception object)"""
         r = Urllib2HTTPRequest('http://localhost', True, '', '', '', False)
         with self.assertRaises(HTTPError) as cm:
-            f = r.get('/source')
+            r.get('/source')
         self.assertEqual(cm.exception.url, 'http://localhost/source')
         self.assertEqual(cm.exception.code, 403)
         self.assertEqual(cm.exception.headers['foo'], 'bar')

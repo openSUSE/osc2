@@ -4,7 +4,6 @@ import os
 import mmap
 from struct import pack, unpack
 from collections import namedtuple
-from posix import stat_result
 from cStringIO import StringIO
 
 from osc2.util.io import copy_file, iter_read

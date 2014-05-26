@@ -275,7 +275,7 @@ class ItemSelector(AbstractShell):
             attrs = {'cmd': cmd,
                      'help_str': str(item),
                      'func': staticmethod(lambda info: item)}
-            cls = build_command(description_cls, self._root_cmd, **attrs)
+            build_command(description_cls, self._root_cmd, **attrs)
 
     def _root_cmd_cls(self):
         return self._root_cmd

@@ -1,7 +1,5 @@
 """Provides classes and functions to commit a wc or files in a wc."""
 
-import os
-
 from osc2.wc.base import TransactionListener
 from osc2.wc.package import UnifiedDiff
 from osc2.cli.util.env import edit_message

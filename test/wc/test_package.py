@@ -1,6 +1,5 @@
 import os
 import unittest
-import shutil
 import stat
 import sys
 

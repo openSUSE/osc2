@@ -5,7 +5,6 @@ import os
 import argparse
 
 from osc2.oscargs import OscArgs
-from osc2.core import Osc
 
 
 class CustomOscArgs(OscArgs):

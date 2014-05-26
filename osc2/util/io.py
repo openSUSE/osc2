@@ -18,7 +18,6 @@ __all__ = ['copy_file', 'iter_read']
 def _copy_file(fsource_obj, fdest_obj, bufsize, size,
                read_method, write_method):
     """Read from fsource_obj and write to fdest_obj"""
-    read = getattr(fsource_obj, read_method)
     write = getattr(fdest_obj, write_method)
     for data in iter_read(fsource_obj, bufsize=bufsize, size=size,
                           read_method=read_method):

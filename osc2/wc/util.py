@@ -260,7 +260,7 @@ class XMLEntryTracker(AbstractEntryTracker):
         try:
             data = _read_storefile(path, cls.filename())
             objectify.fromstring(data)
-        except etree.XMLSyntaxError as e:
+        except etree.XMLSyntaxError:
             return False
         return True
 
@@ -281,7 +281,6 @@ class XMLPackageTracker(XMLEntryTracker):
                 self.add(package, st)
             else:
                 self.set(package, st)
-        delete = []
         for package in self._xml.findall(self._tag):
             name = package.get('name')
             if name not in new_states.keys():
@@ -486,7 +485,7 @@ class XMLTransactionState(AbstractTransactionState):
         try:
             data = _read_storefile(path, XMLTransactionState.FILENAME)
             ret = cls(path, xml_data=data)
-        except ValueError as e:
+        except ValueError:
             pass
         return ret
 

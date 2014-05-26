@@ -307,7 +307,6 @@ class TestOscArgs(OscTest):
         # disable this behaviour for now (needs further thinking)
         # path = self.fixture_file('project')
         # self.assertRaises(ValueError, oargs.resolve, '', path=path)
-        path = self.fixture_file('project')
         info = oargs.resolve(args)
         self.assertEqual(info.apiurl, 'obs')
         self.assertEqual(info.project, 'openSUSE:Factory')

@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 
 from test.httptest import MockUrllib2Request
 from osc2.core import Osc

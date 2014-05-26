@@ -1,8 +1,6 @@
 import os
 import unittest
 
-from lxml import etree
-
 from osc2.builder import (Builder, su_cmd, sudo_cmd, hostarch, can_build,
                           build_helper)
 from osc2.util.io import mkstemp

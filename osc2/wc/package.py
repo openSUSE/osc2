@@ -3,8 +3,8 @@
 import os
 import hashlib
 import copy
-import shutil
 import subprocess
+import errno
 from difflib import unified_diff
 
 from lxml import etree
@@ -508,7 +508,7 @@ class Package(WorkingCopy):
         self.skip_handlers = skip_handlers or []
         self.commit_policies = commit_policies or []
         self.merge_class = merge_class
-        with wc_lock(path) as lock:
+        with wc_lock(path):
             self._files = wc_read_files(path)
         # call super at the end due to finish_pending_transaction
         super(Package, self).__init__(path, PackageUpdateState,
@@ -634,7 +634,7 @@ class Package(WorkingCopy):
                     request
 
         """
-        with wc_lock(self.path) as lock:
+        with wc_lock(self.path):
             ustate = PackageUpdateState.read_state(self.path)
             if not self.is_updateable(rollback=True):
                 if self.has_conflicts():
@@ -827,7 +827,7 @@ class Package(WorkingCopy):
                     http request
 
         """
-        with wc_lock(self.path) as lock:
+        with wc_lock(self.path):
             cstate = self._pending_transaction()
             if not self.is_commitable(rollback=True):
                 if self.has_conflicts():
@@ -975,7 +975,7 @@ class Package(WorkingCopy):
         A ValueError is raised if filename is not "conflicted".
 
         """
-        with wc_lock(self.path) as lock:
+        with wc_lock(self.path):
             self._resolved(filename)
 
     def _resolved(self, filename):
@@ -996,7 +996,7 @@ class Package(WorkingCopy):
         if not filenames:
             filenames = [f for f in self.files() if self.status(f) != 'S']
         super(Package, self).revert(*filenames)
-        with wc_lock(self.path) as lock:
+        with wc_lock(self.path):
             for filename in filenames:
                 self._revert(filename)
 
@@ -1031,7 +1031,7 @@ class Package(WorkingCopy):
 
         """
         super(Package, self).add(filename)
-        with wc_lock(self.path) as lock:
+        with wc_lock(self.path):
             self._add(filename)
 
     def _add(self, filename):
@@ -1062,7 +1062,7 @@ class Package(WorkingCopy):
 
         """
         super(Package, self).remove(filename)
-        with wc_lock(self.path) as lock:
+        with wc_lock(self.path):
             self._remove(filename)
 
     def _remove(self, filename):
@@ -1190,7 +1190,7 @@ class Package(WorkingCopy):
         # check if _files file is a valid xml
         try:
             files = wc_read_files(path)
-        except ValueError as e:
+        except ValueError:
             return (missing, wc_read_files(path, raw=True), [])
         filenames = [f.get('name') for f in files
                      if f.get('state') not in ('A', 'S')]
@@ -1233,7 +1233,6 @@ class Package(WorkingCopy):
             wc_write_files(path, xml_data)
         if '_version' in missing:
             wc_write_version(path)
-        data_name = os.path.basename(wc_pkg_data_filename(path, ''))
         if _PKG_DATA in missing:
             os.mkdir(wc_pkg_data_filename(path, ''))
         files = wc_read_files(path)

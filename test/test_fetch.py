@@ -523,7 +523,7 @@ class TestFetch(OscTest):
         cmgr = FilenameCacheManager(root)
         fetcher = BuildDependencyFetcher(cmgr=cmgr)
         self.assertTrue(cmgr.exists(bdep))
-        with self.assertRaises(ValueError) as cm:
+        with self.assertRaises(ValueError):
             fetcher._fetch(binfo, bdep)
         # it still exists in the cache
         self.assertTrue(cmgr.exists(bdep))
@@ -995,7 +995,6 @@ class TestFetch(OscTest):
         binfo = BuildInfo(xml_data=open(fname, 'r').read())
         attr_bdep = binfo.bdep[0]
         python_bdep = binfo.bdep[1]
-        instimg_bdep = binfo.bdep[2]
         ksc_bdep = binfo.bdep[3]
         kscsrc_bdep = binfo.bdep[4]
         mc_bdep = binfo.bdep[5]
@@ -1095,7 +1094,6 @@ class TestFetch(OscTest):
         binfo = BuildInfo(xml_data=open(fname, 'r').read())
         attr_bdep = binfo.bdep[0]
         python_bdep = binfo.bdep[1]
-        instimg_bdep = binfo.bdep[2]
         ksc_bdep = binfo.bdep[3]
         kscsrc_bdep = binfo.bdep[4]
         mc_bdep = binfo.bdep[5]
@@ -1150,7 +1148,6 @@ class TestFetch(OscTest):
         binfo = BuildInfo(xml_data=open(fname, 'r').read())
         attr_bdep = binfo.bdep[0]
         python_bdep = binfo.bdep[1]
-        instimg_bdep = binfo.bdep[2]
         ksc_bdep = binfo.bdep[3]
         kscsrc_bdep = binfo.bdep[4]
         mc_bdep = binfo.bdep[5]

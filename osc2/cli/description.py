@@ -271,7 +271,6 @@ class AbstractCommandDescription(object):
                     logger().warn(msg)
                     continue
                 seen.setdefault(sub_cls.cmd, []).append(sub_cls)
-                descr = sub_cls.description()
                 kw = {'description': sub_cls.description(),
                       # keep indention and newlines in docstr
                       'formatter_class': argparse.RawDescriptionHelpFormatter}

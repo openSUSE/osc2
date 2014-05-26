@@ -280,7 +280,7 @@ class TextualAlias(object):
             help_str = "%s: alias for %s" % (cmd, alias)
         attrs = {'cmd': cmd, 'alias': alias, 'help_str': help_str,
                  '__module__': __name__}
-        cls = type(name, bases, attrs)
+        return type(name, bases, attrs)
 
 
 def execute(args=None):

@@ -69,7 +69,6 @@ class TestSearch(OscTest):
          file='collection_request2.xml')
     def test_request3(self):
         """test find_request (xpath as string)"""
-        xpb = XPathBuilder()
         xpath = '/state[@name = "new"]'
         collection = find_request(xpath)
         self.assertTrue(len(collection.request[:]) == 1)

@@ -23,7 +23,6 @@ class File(OscElement):
         **kwargs -- optional parameters for the http request
 
         """
-        request = Osc.get_osc().get_reqobj()
         path = "/source/%(project)s/%(package)s/%(file)s"
         parent = self.getparent()
         data = {'project': parent.get('project'),
