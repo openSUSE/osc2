@@ -6,7 +6,8 @@ from cStringIO import StringIO, OutputType
 from lxml import etree
 
 from osc2.remote import (RemoteProject, RemotePackage, Request,
-                         RORemoteFile, RWRemoteFile, RWLocalFile)
+                         RORemoteFile, RWRemoteFile, RWLocalFile,
+                         RemotePerson)
 from test.osctest import OscTest
 from test.httptest import GET, PUT, POST, DELETE
 
@@ -917,6 +918,13 @@ class TestRemoteModel(OscTest):
                         append=True)
         f.write_back(force=True)
         f.close()
+
+    @GET('http://localhost/person/foo', file='person.xml')
+    def test_person(self):
+        """get a request"""
+        req = RemotePerson.find('foo')
+        self.assertEqual(req.realname, 'Foo Bar')
+        self.assertEqual(req.email, 'foo@example.com')
 
 if __name__ == '__main__':
     unittest.main()

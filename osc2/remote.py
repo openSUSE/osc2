@@ -24,7 +24,7 @@ from osc2.util.xml import ElementClassLookup, get_parser, fromstring
 from osc2.util.io import copy_file, iter_read
 
 __all__ = ['RemoteModel', 'RemoteProject', 'RemotePackage', 'Request',
-           'RORemoteFile', 'RWRemoteFile']
+           'RORemoteFile', 'RWRemoteFile', 'RemotePerson']
 
 
 def _get_http_method(request_obj, method):
@@ -718,3 +718,34 @@ class RWLocalFile(RWRemoteFile):
             self._fobj = open(self.path, 'a+')
         else:
             self._fobj = open(self.path, 'w+')
+
+
+class RemotePerson(RemoteModel):
+    PATH = '/person/%(userid)s'
+    DELETE_PATH = '/person/%(userid)s'
+    SCHEMA = ''
+    # used to validate the response after the xml is stored
+    PUT_RESPONSE_SCHEMA = ''
+
+    def __init__(self, name='', **kwargs):
+        store_schema = RemotePerson.PUT_RESPONSE_SCHEMA
+        super(RemotePerson, self).__init__(tag='person', name=name,
+                                            schema=RemotePerson.SCHEMA,
+                                            store_schema=store_schema,
+                                            **kwargs)
+
+    @classmethod
+    def find(cls, userid, **kwargs):
+        path = RemotePerson.PATH % {'userid': userid}
+        if 'schema' not in kwargs:
+            kwargs['schema'] = RemotePerson.SCHEMA
+        return super(RemotePerson, cls).find(path, **kwargs)
+
+    def store(self, **kwargs):
+        path = RemotePerson.PATH % {'userid': self.get('name')}
+        return super(RemotePerson, self).store(path, method='PUT', **kwargs)
+
+    @classmethod
+    def delete(cls, userid, **kwargs):
+        path = RemotePerson.DELETE_PATH % {'userid': userid}
+        return super(RemotePerson, cls).delete(path, **kwargs)

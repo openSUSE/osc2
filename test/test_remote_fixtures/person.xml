@@ -1,0 +1,6 @@
+<person>
+  <login>foo</login>
+  <email>foo@example.com</email>
+  <realname>Foo Bar</realname>
+  <state>confirmed</state>
+</person>
