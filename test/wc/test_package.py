@@ -1166,11 +1166,13 @@ class TestPackage(OscTest):
     @GET('http://apiurl/source/prj/update_2?rev=latest',
          file='commit_1_latest.xml')
     @POST('http://apiurl/source/prj/update_2?cmd=commitfilelist',
-          expfile='commit_1_lfiles.xml', file='commit_1_mfiles.xml')
+          exp_content_type='application/xml', expfile='commit_1_lfiles.xml',
+          file='commit_1_mfiles.xml')
     @PUT('http://apiurl/source/prj/update_2/foo?rev=repository',
          expfile='commit_1_foo', text=UPLOAD_REV)
     @POST('http://apiurl/source/prj/update_2?cmd=commitfilelist',
-          expfile='commit_1_lfiles.xml', file='commit_1_files.xml')
+          exp_content_type='application/xml', expfile='commit_1_lfiles.xml',
+          file='commit_1_files.xml')
     def test_commit1(self):
         """test commit (modified)"""
         path = self.fixture_file('update_2')
