@@ -31,7 +31,7 @@ class RequestList(CommandDescription, Request):
                        choices=['new', 'review', 'accepted', 'revoked',
                                 'declined', 'superseded'], action='append',
                        default=['new', 'review'])
-    opt_interactive = Option('i', '--interactive',
+    opt_interactive = Option('i', 'interactive',
                              'start an interactive request shell',
                              action='store_true')
     func = call(RequestController.list)

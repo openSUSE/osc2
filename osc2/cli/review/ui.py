@@ -42,7 +42,7 @@ class ReviewList(CommandDescription, Review, ReviewGlobalOptions):
                         'STATE'),
                        choices=['new', 'accepted', 'revoked', 'declined'],
                        action='append', default=['new'])
-    opt_interactive = Option('i', '--interactive',
+    opt_interactive = Option('i', 'interactive',
                              'start an interactive request shell',
                              action='store_true')
     func = call(ReviewController.list)
