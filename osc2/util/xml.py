@@ -1,14 +1,53 @@
 """xml utility functions"""
 
+from collections import Sequence
+
 from lxml import etree, objectify
 
 __all__ = ['ElementLookupClass', 'get_parser']
+
+
+class XPathFindMixin:
+    """Mixes find and findall methods in that support an xpath.
+
+    This is an old-style class to avoid issues when inheriting
+    from this class and ObjectifiedElement, which in turn
+    inherits from ElementBase, whose __init__ must not be
+    overriden by subclasses (see comment in lxml/classlookup.pxi).
+
+    """
+
+    def find(self, xp):
+        elms = self.findall(xp)
+        if isinstance(elms, Sequence):
+            if elms:
+                return elms[0]
+            return None
+        # happens if, for example, xp == '2 + 3' (see testcases)
+        return elms
+
+    def findall(self, xp):
+        return self.xpath(xp)
+
+
+class OscElement(XPathFindMixin, objectify.ObjectifiedElement):
+    """Base class for xml elements."""
+    pass
+
+
+class OscStringElement(XPathFindMixin, objectify.StringElement):
+    """Base class for all data elements of type string."""
+    pass
 
 
 class ElementClassLookup(etree.PythonElementClassLookup):
     """Element lookup class"""
 
     def __init__(self, tree_class=None, empty_data_class=None, **tag_class):
+        if tree_class is None:
+            tree_class = OscElement
+        if empty_data_class is None:
+            empty_data_class = OscStringElement
         fallback = objectify.ObjectifyElementClassLookup(
             tree_class=tree_class,
             empty_data_class=empty_data_class)
@@ -21,7 +60,7 @@ class ElementClassLookup(etree.PythonElementClassLookup):
             return klass
         # use StringElement if we have text and no children
         if root.text and not root:
-            return objectify.StringElement
+            return OscStringElement
         return None
 
 
