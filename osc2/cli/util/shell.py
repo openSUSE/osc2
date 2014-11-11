@@ -68,7 +68,7 @@ class AbstractShell(object):
             if i == 0 or i == len(inp) - 1:
                 continue
             if (cnt % 2 == 0 and inp[i + 1] != ' '
-                or cnt % 2 == 1 and inp[i - 1] != ' '):
+                    or cnt % 2 == 1 and inp[i - 1] != ' '):
                 msg = "invalid user input: %s (wrong quoting)" % inp
                 raise ShellSyntaxError(msg)
         return cnt % 2 == 0

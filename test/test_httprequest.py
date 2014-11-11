@@ -131,7 +131,7 @@ class TestHTTPRequest(OscTest):
 
     @GET('http://localhost/source',
          exception=urllib2.HTTPError('http://localhost/source', 403, 'error',
-                                    {}, None))
+                                     {}, None))
     def test12(self):
         """test exception handling (get)"""
         r = Urllib2HTTPRequest('http://localhost', True, '', '', '', False)
@@ -139,7 +139,7 @@ class TestHTTPRequest(OscTest):
 
     @PUT('http://localhost/source', exp='foo bar',
          exception=urllib2.HTTPError('http://localhost/source', 400, 'error',
-                                    {}, None))
+                                     {}, None))
     def test13(self):
         """test exception handling (put)"""
         r = Urllib2HTTPRequest('http://localhost', True, '', '', '', False)
@@ -147,7 +147,7 @@ class TestHTTPRequest(OscTest):
 
     @GET('http://localhost/source',
          exception=urllib2.HTTPError('http://localhost/source', 403, 'error',
-                                    {'foo': 'bar'}, None))
+                                     {'foo': 'bar'}, None))
     def test14(self):
         """test exception handling (check exception object)"""
         r = Urllib2HTTPRequest('http://localhost', True, '', '', '', False)

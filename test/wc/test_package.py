@@ -84,7 +84,7 @@ class TestPackage(OscTest):
             apiurl_fname = os.path.join(tmpdir, '.osc', '_apiurl')
             self.assertTrue(os.path.exists(apiurl_fname))
             self.assertEqual(open(apiurl_fname, 'r').read(),
-                            'https://api.opensuse.org\n')
+                             'https://api.opensuse.org\n')
             files_fname = os.path.join(tmpdir, '.osc', '_files')
             self.assertTrue(os.path.exists(files_fname))
             self.assertEqual(open(files_fname, 'r').read(),
@@ -116,7 +116,7 @@ class TestPackage(OscTest):
             apiurl_fname = os.path.join(tmpdir, '.osc', '_apiurl')
             self.assertTrue(os.path.exists(apiurl_fname))
             self.assertEqual(open(apiurl_fname, 'r').read(),
-                            'https://api.opensuse.org\n')
+                             'https://api.opensuse.org\n')
             files_fname = os.path.join(tmpdir, '.osc', '_files')
             self.assertTrue(os.path.exists(files_fname))
             self.assertEqual(open(files_fname, 'r').read(),
@@ -1429,12 +1429,12 @@ class TestPackage(OscTest):
          file='commit_12_latest.xml')
     @POST(('http://localhost/source/prj/update_11?cmd=commitfilelist'
            '&expand=1&keeplink=1'), expfile='commit_2_lfiles.xml',
-           file='commit_2_mfiles.xml')
+          file='commit_2_mfiles.xml')
     @PUT('http://localhost/source/prj/update_11/foo?rev=repository',
          expfile='commit_2_foo', text=UPLOAD_REV)
     @POST(('http://localhost/source/prj/update_11?cmd=commitfilelist'
            '&expand=1&keeplink=1'), expfile='commit_2_lfiles.xml',
-           file='commit_12_files.xml')
+          file='commit_12_files.xml')
     def test_commit12(self):
         """test commit (expanded link)"""
         path = self.fixture_file('commit_12')
@@ -1465,11 +1465,11 @@ class TestPackage(OscTest):
     @GET('http://localhost/source/prj/update_11?rev=latest',
          file='commit_13_latest.xml')
     @POST('http://localhost/source/prj/update_11?cmd=commitfilelist',
-           expfile='commit_13_lfiles.xml', file='commit_2_mfiles.xml')
+          expfile='commit_13_lfiles.xml', file='commit_2_mfiles.xml')
     @PUT('http://localhost/source/prj/update_11/foo?rev=repository',
          expfile='commit_2_foo', text=UPLOAD_REV)
     @POST('http://localhost/source/prj/update_11?cmd=commitfilelist',
-           expfile='commit_13_lfiles.xml', file='commit_13_files.xml')
+          expfile='commit_13_lfiles.xml', file='commit_13_files.xml')
     def test_commit13(self):
         """test commit (unexpanded link)"""
         path = self.fixture_file('commit_13')
@@ -1610,7 +1610,7 @@ class TestPackage(OscTest):
           '?rev=ccccaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), file='binary_deleted')
     @GET(('http://localhost/source/foo/binary/deleted_no_bin'
           '?rev=ccccaaaaaaaaaaaaaaaaaaaaaaaaaaaa'),
-          file='binary_deleted_no_bin')
+         file='binary_deleted_no_bin')
     def test_diff9(self):
         """test diff (binary and remote revision)"""
         path = self.fixture_file('binary')

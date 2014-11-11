@@ -41,7 +41,7 @@ class _OscNamespace(argparse.Namespace):
         # add options etc. to info object
         for i in self.__dict__.keys():
             if (i.startswith('oargs') or i in info or i in self.oargs
-                or i == 'func_defaults'):
+                    or i == 'func_defaults'):
                 continue
             elif i.startswith('opt_oargs_'):
                 self._resolve_option(info, i)

@@ -41,7 +41,7 @@ class AbstractSubcommandFilterMeta(type):
         real_bases, parent_cmds, ext_alias_cmd = cls._calculate_bases(bases)
         # check if we extend or alias an existing command
         extends_cmd = False
-        if ext_alias_cmd and not 'cmd' in attrs:
+        if ext_alias_cmd and 'cmd' not in attrs:
             extends_cmd = True
         real_bases = tuple(real_bases)
         descr = super(AbstractSubcommandFilterMeta, cls).__new__(cls, name,
@@ -82,14 +82,14 @@ class AbstractSubcommandFilterMeta(type):
                        if issubclass(base, cls.filter_cls)]
         # just a small sanity check: it makes no sense to extend multiple
         # commands
-        if len(filter_subs) != 1 and not cls.filter_cls in filter_subs:
+        if len(filter_subs) != 1 and cls.filter_cls not in filter_subs:
             raise ValueError('exactly one cmd can be extended or aliased')
         ext_alias_cmd = (len(filter_subs) == 1
-                         and not cls.filter_cls in filter_subs)
+                         and cls.filter_cls not in filter_subs)
         for base in bases:
             if (base.__name__ == cls.filter_cls.__name__
-                or ext_alias_cmd
-                or not issubclass(base, cls.filter_cls)):
+                    or ext_alias_cmd
+                    or not issubclass(base, cls.filter_cls)):
                 real_bases.append(base)
             else:
                 parent_cmds.append(base)
@@ -135,7 +135,7 @@ class AbstractSubcommandFilterMeta(type):
         for parent_cmd in parent_cmds:
             name = parent_cmd.__name__
             names = [s.__name__ for s in descr.cls_map().setdefault(name, [])]
-            if not descr.__name__ in names:
+            if descr.__name__ not in names:
                 descr.cls_map()[name].append(descr)
 
 

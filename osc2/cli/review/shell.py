@@ -151,10 +151,10 @@ class ReviewShell(AbstractRequestShell):
     def _augment_info(self, info):
         super(ReviewShell, self)._augment_info(info)
         if (self._global_by_kind_filter is not None
-            and 'user' in info and 'group' in info
-            and 'project' in info and 'package' in info
-            and info.user is None and info.group is None
-            and info.project is None and not info.package):
+                and 'user' in info and 'group' in info
+                and 'project' in info and 'package' in info
+                and info.user is None and info.group is None
+                and info.project is None and not info.package):
             # use global_by_kind_filter if no filter was specified
             # by the user
             info.set(self._global_by_kind_filter[0],

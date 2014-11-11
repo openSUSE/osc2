@@ -76,7 +76,7 @@ def find_request(xp, **kwargs):
 
     """
     path = '/search/request'
-    if not 'schema' in kwargs:
+    if 'schema' not in kwargs:
         kwargs['schema'] = RequestCollection.SCHEMA
     tag_class = {'collection': RequestCollection, 'request': RORequest}
     return _find(path, xp, tag_class, **kwargs)

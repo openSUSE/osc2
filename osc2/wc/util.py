@@ -284,7 +284,7 @@ class XMLPackageTracker(XMLEntryTracker):
         delete = []
         for package in self._xml.findall(self._tag):
             name = package.get('name')
-            if not name in new_states.keys():
+            if name not in new_states.keys():
                 self.remove(name)
         self.write()
 
@@ -300,7 +300,7 @@ class XMLFileTracker(XMLEntryTracker):
         # ignore locally added files
         st_filenames = [f for f, st in new_states.iteritems() if st != 'A']
         if (len(filenames) != len(st_filenames)
-            or set(filenames) != set(st_filenames)):
+                or set(filenames) != set(st_filenames)):
             raise ValueError("data of new_states and new_entries mismatch")
         self._xml = new_entries
         for filename, st in new_states.iteritems():
@@ -350,7 +350,7 @@ class XMLTransactionState(AbstractTransactionState):
         """
         global _PKG_DATA
         if ((info is not None and xml_data)
-            or (info is None and xml_data is None)):
+                or (info is None and xml_data is None)):
             raise ValueError('either specify info or xml_data')
         super(XMLTransactionState, self).__init__(path)
         trans_dir = _storefile(self._path, XMLTransactionState.DIR)
@@ -364,7 +364,7 @@ class XMLTransactionState(AbstractTransactionState):
             os.mkdir(trans_dir)
             os.mkdir(data_dir)
             xml_data = ('<transaction name="%s" state="%s"/>'
-                % (name, initial_state))
+                        % (name, initial_state))
             self._xml = fromstring(xml_data, entry=File, directory=Directory,
                                    linkinfo=Linkinfo)
             self._xml.append(self._xml.makeelement('states'))

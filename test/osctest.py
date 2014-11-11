@@ -36,8 +36,9 @@ class _AssertRaisesContext(object):
         if isinstance(expected_regexp, basestring):
             expected_regexp = re.compile(expected_regexp)
         if not expected_regexp.search(str(exc_value)):
-            raise self.failureException('"%s" does not match "%s"' %
-                     (expected_regexp.pattern, str(exc_value)))
+            msg = ('"%s" does not match "%s"'
+                   % (expected_regexp.pattern, str(exc_value)))
+            raise self.failureException(msg)
         return True
 
 

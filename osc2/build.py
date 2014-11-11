@@ -54,7 +54,7 @@ class BinaryList(OscElement):
                   parameters)
 
         """
-        if not 'schema' in kwargs:
+        if 'schema' not in kwargs:
             kwargs['schema'] = BinaryList.SCHEMA
         f = BinaryList._perform_request(project, repository, arch, package,
                                         **kwargs)
@@ -166,7 +166,7 @@ class BuildResult(object):
         arch = kwargs.pop('arch', self.arch)
         request = Osc.get_osc().get_reqobj()
         path = "/build/%s/_result" % self.project
-        if not 'schema' in kwargs:
+        if 'schema' not in kwargs:
             kwargs['schema'] = BuildResult.RESULT_SCHEMA
         f = request.get(path, package=package, repository=repository,
                         arch=arch, **kwargs)
@@ -175,7 +175,7 @@ class BuildResult(object):
 
     def _prepare_kwargs(self, kwargs, *required):
         for i in required:
-            if not i in kwargs and getattr(self, i, ''):
+            if i not in kwargs and getattr(self, i, ''):
                 kwargs[i] = getattr(self, i)
             else:
                 raise ValueError("missing parameter: %s" % i)
@@ -224,7 +224,7 @@ class BuildResult(object):
         view = 'pkgnames'
         if reverse:
             view = 'revpkgnames'
-        if not 'schema' in kwargs:
+        if 'schema' not in kwargs:
             kwargs['schema'] = BuildResult.BUILDDEPINFO_SCHEMA
         f = request.get(path, view=view, **kwargs)
         # no custom parser needed atm
@@ -257,7 +257,7 @@ class BuildInfo(object):
 
         """
         if ((project or package or repository or arch) and xml_data
-            or not (project and repository and arch) and not xml_data):
+                or not (project and repository and arch) and not xml_data):
             msg = 'Either project, package, repository, arch or xml_data'
             raise ValueError(msg)
         elif not xml_data:

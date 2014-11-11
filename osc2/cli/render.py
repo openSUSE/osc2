@@ -30,7 +30,7 @@ class Renderer(object):
 
         """
         if (path is None and loader is None
-            or path is not None and loader is not None):
+                or path is not None and loader is not None):
             raise ValueError('Either specify path oder loader')
         if path is not None:
             loader = FileSystemLoader(path)

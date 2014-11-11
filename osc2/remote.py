@@ -215,9 +215,9 @@ class RemoteModel(object):
         self.validate()
         request = Osc.get_osc().get_reqobj()
         http_method = _get_http_method(request, method)
-        if not 'data' in kwargs:
+        if 'data' not in kwargs:
             kwargs['data'] = self.tostring()
-        if not 'schema' in kwargs:
+        if 'schema' not in kwargs:
             kwargs['schema'] = self._store_schema
         # FIXME: api.o.o does not like this for requests
         kwargs['content_type'] = 'application/xml'
@@ -300,7 +300,7 @@ class RemoteProject(RemoteModel):
     @classmethod
     def find(cls, project, **kwargs):
         path = RemoteProject.PATH % {'project': project}
-        if not 'schema' in kwargs:
+        if 'schema' not in kwargs:
             kwargs['schema'] = RemoteProject.SCHEMA
         return super(RemoteProject, cls).find(path, **kwargs)
 
@@ -334,7 +334,7 @@ class RemotePackage(RemoteModel):
     @classmethod
     def find(cls, project, package, **kwargs):
         path = RemotePackage.PATH % {'project': project, 'package': package}
-        if not 'schema' in kwargs:
+        if 'schema' not in kwargs:
             kwargs['schema'] = RemotePackage.SCHEMA
         return super(RemotePackage, cls).find(path, **kwargs)
 
@@ -361,7 +361,7 @@ class Request(RemoteModel):
     @classmethod
     def find(cls, reqid, **kwargs):
         path = Request.GET_PATH % {'reqid': reqid}
-        if not 'schema' in kwargs:
+        if 'schema' not in kwargs:
             kwargs['schema'] = Request.SCHEMA
         return super(Request, cls).find(path, **kwargs)
 
@@ -670,7 +670,7 @@ class RWRemoteFile(RORemoteFile):
             self._init_fobj(read_required=True)
         request = Osc.get_osc().get_reqobj()
         http_method = _get_http_method(request, self.wb_method)
-        if not 'schema' in kwargs:
+        if 'schema' not in kwargs:
             kwargs['schema'] = self._schema
         data = None
         filename = ''
@@ -732,9 +732,9 @@ class RemotePerson(RemoteModel):
     def __init__(self, name='', **kwargs):
         store_schema = RemotePerson.PUT_RESPONSE_SCHEMA
         super(RemotePerson, self).__init__(tag='person', name=name,
-                                            schema=RemotePerson.SCHEMA,
-                                            store_schema=store_schema,
-                                            **kwargs)
+                                           schema=RemotePerson.SCHEMA,
+                                           store_schema=store_schema,
+                                           **kwargs)
 
     @classmethod
     def find(cls, userid, **kwargs):

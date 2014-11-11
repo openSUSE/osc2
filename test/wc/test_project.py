@@ -66,7 +66,7 @@ class TestProject(OscTest):
             apiurl_fname = os.path.join(tmpdir, '.osc', '_apiurl')
             self.assertTrue(os.path.exists(apiurl_fname))
             self.assertEqual(open(apiurl_fname, 'r').read(),
-                            'https://api.opensuse.org\n')
+                             'https://api.opensuse.org\n')
             data_dir = os.path.join(tmpdir, '.osc', 'data')
             self.assertTrue(os.path.exists(data_dir))
             self.assertEqual(prj.name, 'openSUSE:Tools')
@@ -95,7 +95,7 @@ class TestProject(OscTest):
             apiurl_fname = os.path.join(tmpdir, '.osc', '_apiurl')
             self.assertTrue(os.path.exists(apiurl_fname))
             self.assertEqual(open(apiurl_fname, 'r').read(),
-                            'https://api.opensuse.org\n')
+                             'https://api.opensuse.org\n')
             data_dir = os.path.join(tmpdir, '.osc', 'data')
             self.assertTrue(os.path.exists(data_dir))
             self.assertEqual(prj.name, 'openSUSE:Tools')
@@ -766,12 +766,12 @@ class TestProject(OscTest):
          file='commit_1_latest.xml')
     @POST(('http://localhost/source/prj2/foo_modified?cmd=commitfilelist'
            '&comment=foo+bar'), expfile='commit_9_lfiles.xml',
-           file='commit_9_mfiles.xml')
+          file='commit_9_mfiles.xml')
     @PUT('http://localhost/source/prj2/foo_modified/file?rev=repository',
          expfile='commit_1_file', text=UPLOAD_REV)
     @POST(('http://localhost/source/prj2/foo_modified?cmd=commitfilelist'
            '&comment=foo+bar'), expfile='commit_9_lfiles.xml',
-           file='commit_9_files.xml')
+          file='commit_9_files.xml')
     def test_commit9(self):
         """test commit (specify file + comment; local state ' ')"""
         path = self.fixture_file('prj2')

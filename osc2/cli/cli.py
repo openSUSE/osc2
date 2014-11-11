@@ -44,7 +44,7 @@ def _init(apiurl):
                 password = cp.get(section, 'pass', raw=True)
                 password = password.decode('base64').decode('bz2')
             if (cp.has_option(section, 'keyring')
-                and cp.getboolean(section, 'keyring')):
+                    and cp.getboolean(section, 'keyring')):
                 try:
                     import keyring
                     host = urlparse.urlparse(apiurl).hostname
@@ -96,7 +96,7 @@ def illegal_options(*args, **kwargs):
                         break
                 return '\n'.join(res)
             params = inspect.getargspec(f)[0]
-            if not 'info' in params:
+            if 'info' not in params:
                 return f(*f_args, **f_kwargs)
             i = params.index('info')
             info = f_kwargs.get('info', f_args[i])
@@ -148,7 +148,7 @@ def call(func):
             # skip self and cls - that's just a convention
             if arg in ('self', 'cls'):
                 continue
-            if not arg in info and arg in required_args:
+            if arg not in info and arg in required_args:
                 msg = ("cannot call \"%s\": cannot bind \"%s\" parameter"
                        % (func.__name__, arg))
                 raise ValueError(msg)

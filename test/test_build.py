@@ -67,7 +67,7 @@ class TestBuild(OscTest):
         # result is the same as in test1 (so just do a small check here)
         self.assertTrue(len(res.result[:]) == 2)
 
-    @GET('http://localhost/build/test/_result?arch=x86_64&' \
+    @GET('http://localhost/build/test/_result?arch=x86_64&'
          'repository=openSUSE_Factory', file='prj_repo_arch_result.xml')
     def test_buildresult3(self):
         """project repo arch result"""
@@ -100,7 +100,7 @@ class TestBuild(OscTest):
         self.assertEqual(res.result[1].status[0].get('code'), 'excluded')
         self.assertEqual(res.result[1].status[0].details, '')
 
-    @GET('http://localhost/build/test/_result?arch=x86_64&' \
+    @GET('http://localhost/build/test/_result?arch=x86_64&'
          'package=bar&repository=openSUSE_Factory&x=y',
          file='pkg_repo_arch_result.xml')
     def test_buildresult5(self):
@@ -241,7 +241,7 @@ class TestBuild(OscTest):
         br = BuildResult('test', repository='repo', arch='x86_64')
         self.assertRaises(ValueError, br.log)
 
-    @GET('http://localhost/build/test/repo/x86_64/_repository/_builddepinfo?' \
+    @GET('http://localhost/build/test/repo/x86_64/_repository/_builddepinfo?'
          'view=pkgnames',
          file='builddepinfo.xml')
     def test_builddepinfo1(self):
@@ -262,7 +262,7 @@ class TestBuild(OscTest):
         self.assertEqual(info.cycle[0].package[0], 'bar')
         self.assertEqual(info.cycle[0].package[1], 'foobar')
 
-    @GET('http://localhost/build/test/repo/x86_64/foo/_builddepinfo?' \
+    @GET('http://localhost/build/test/repo/x86_64/foo/_builddepinfo?'
          'view=revpkgnames',
          file='builddepinfo_revpkgnames.xml')
     def test_builddepinfo2(self):
@@ -277,7 +277,7 @@ class TestBuild(OscTest):
         self.assertEqual(info.cycle[0].package[0], 'bar')
         self.assertEqual(info.cycle[0].package[1], 'foobar')
 
-    @GET('http://localhost/build/test/repo/x86_64/_repository/_builddepinfo?' \
+    @GET('http://localhost/build/test/repo/x86_64/_repository/_builddepinfo?'
          'view=pkgnames',
          text='<invalid />')
     def test_builddepinfo3(self):
@@ -290,7 +290,7 @@ class TestBuild(OscTest):
 
     @GET(('http://localhost/build/project/openSUSE_Factory/x86_64/package/'
           '_buildinfo'),
-          file='buildinfo1.xml')
+         file='buildinfo1.xml')
     def test_buildinfo1(self):
         """test BuildInfo (simple get)"""
         binfo = BuildInfo('project', 'package', 'openSUSE_Factory', 'x86_64')
@@ -456,7 +456,7 @@ class TestBuild(OscTest):
 
     @GET(('http://localhost/build/openSUSE%3ATools/Debian_5.0/x86_64/osc/'
           '_buildinfo'),
-          file='buildinfo_deb.xml')
+         file='buildinfo_deb.xml')
     def test_buildinfo9(self):
         """test BuildInfo (deb binarytype)"""
         binfo = BuildInfo('openSUSE:Tools', 'osc', 'Debian_5.0', 'x86_64')

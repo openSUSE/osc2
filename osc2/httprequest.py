@@ -41,7 +41,7 @@ def build_url(apiurl, path, **query):
     quoted_path = '/'.join([urllib.quote_plus(p) for p in path.split('/')])
     # rewrite to internal key -> ['val'] representation
     query.update([(k, [query[k]]) for k in query.keys()
-                                  if not hasattr(query[k], 'pop')])
+                  if not hasattr(query[k], 'pop')])
     # sort query keys (to get a reproduceable url)
     sorted_keys = sorted(query.keys())
     quoted_query = '&'.join([urllib.quote_plus(k) + '=' +
@@ -297,7 +297,7 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
         if not cookie_filename:
             return None
         if (os.path.exists(cookie_filename) and not
-            os.path.isfile(cookie_filename)):
+                os.path.isfile(cookie_filename)):
             raise ValueError("%s exists but is no file" % cookie_filename)
         elif not os.path.exists(cookie_file):
             open(cookie_file, 'w').close()

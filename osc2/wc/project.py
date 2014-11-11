@@ -213,13 +213,13 @@ class Project(WorkingCopy):
             pkg = self.package(package)
             if pkg is not None and not pkg.is_updateable():
                 conflicted.append(package)
-            elif st != 'A' and not package in remote_pkgs:
+            elif st != 'A' and package not in remote_pkgs:
                 deleted.append(package)
         # check for conflicts
         for package in candidates[:]:
             pkg = self.package(package)
             if (self._status(package) in ('A', '!')
-                or not pkg.is_updateable()):
+                    or not pkg.is_updateable()):
                 conflicted.append(package)
                 candidates.remove(package)
         for package in added[:]:
@@ -273,7 +273,7 @@ class Project(WorkingCopy):
             if not self.is_updateable(rollback=True):
                 raise PendingTransactionError('commit')
             if (ustate is not None
-                and ustate.state == UpdateStateMixin.STATE_UPDATING):
+                    and ustate.state == UpdateStateMixin.STATE_UPDATING):
                 self._clear_uinfo(ustate)
                 self._update(ustate)
             else:
@@ -417,7 +417,7 @@ class Project(WorkingCopy):
             if not self.is_commitable(rollback=True):
                 raise PendingTransactionError('commit')
             if (cstate is not None
-                and cstate.state == CommitStateMixin.STATE_COMMITTING):
+                    and cstate.state == CommitStateMixin.STATE_COMMITTING):
                 self._clear_cinfo(cstate)
                 self._commit(cstate, {}, '')
             else:

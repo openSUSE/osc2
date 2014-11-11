@@ -34,8 +34,8 @@ class TestRemoteModel(OscTest):
         """get a remote project"""
         prj = RemoteProject.find('foo')
         self.assertEqual(prj.title, 'just a dummy title')
-        self.assertEqual(prj.description, 'This is a detailed and more' \
-                                          ' lengthy\ndescription of the foo' \
+        self.assertEqual(prj.description, 'This is a detailed and more'
+                                          ' lengthy\ndescription of the foo'
                                           '\nproject.')
         self.assertEqual(prj.repository.get('name'), 'openSUSE_Factory')
         self.assertEqual(prj.repository.path.get('project'),
@@ -53,8 +53,8 @@ class TestRemoteModel(OscTest):
         """create a remote project"""
         prj = RemoteProject(name='foo')
         prj.title = 'just a dummy title'
-        prj.description = 'This is a detailed and more lengthy\ndescription' \
-                          ' of the foo\nproject.'
+        prj.description = ('This is a detailed and more lengthy\ndescription'
+                           ' of the foo\nproject.')
         prj.add_person(userid='testuser', role='maintainer')
         prj.add_person(userid='foobar', role='bugowner')
         repo = prj.add_repository(name='openSUSE_Factory')
@@ -652,7 +652,7 @@ class TestRemoteModel(OscTest):
         """get a simple file1"""
         f = RORemoteFile('/source/project/package/fname')
         self.assertEqual(f.read(5), 'This ')
-        self.assertEqual(f.read(), 'is a simple file\nwith some newlines\n\n' \
+        self.assertEqual(f.read(), 'is a simple file\nwith some newlines\n\n'
                                    'and\ntext.\n')
 
     @GET('http://localhost/source/project/package/fname', file='remotefile1')

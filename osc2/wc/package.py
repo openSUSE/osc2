@@ -571,7 +571,7 @@ class Package(WorkingCopy):
         for rfile in remote_files:
             rfname = rfile.get('name')
             data[rfname] = rfile
-            if not rfname in local_files:
+            if rfname not in local_files:
                 if os.path.exists(os.path.join(self.path, rfname)):
                     conflicted.append(rfname)
                 else:
@@ -589,7 +589,7 @@ class Package(WorkingCopy):
                 modified.append(rfname)
         remote_fnames = [f.get('name') for f in remote_files]
         for lfname in local_files:
-            if not lfname in remote_fnames:
+            if lfname not in remote_fnames:
                 st = self.status(lfname)
                 if st == 'A':
                     # added files shouldn't be deleted
@@ -610,8 +610,8 @@ class Package(WorkingCopy):
         """
         for handler in self.skip_handlers:
             skips, unskips = handler.skip(copy.deepcopy(uinfo))
-            inv = [f for f in skips if not f in uinfo.data.keys()]
-            inv += [f for f in unskips if not f in uinfo.skipped]
+            inv = [f for f in skips if f not in uinfo.data.keys()]
+            inv += [f for f in unskips if f not in uinfo.skipped]
             if inv:
                 msg = "invalid skip/unskip files: %s" % ', '.join(inv)
                 raise ValueError(msg)
@@ -642,7 +642,7 @@ class Package(WorkingCopy):
                 # commit can be the only pending transaction
                 raise PendingTransactionError('commit')
             elif (ustate is not None
-                and ustate.state == UpdateStateMixin.STATE_UPDATING):
+                    and ustate.state == UpdateStateMixin.STATE_UPDATING):
                 self._update(ustate)
             else:
                 uinfo = self._calculate_updateinfo(revision=revision, **kwargs)
@@ -739,7 +739,7 @@ class Package(WorkingCopy):
             if os.path.exists(store_filename):
                 store_md5 = file_md5(store_filename)
             if (os.path.isfile(wc_filename)
-                and file_md5(wc_filename) == store_md5):
+                    and file_md5(wc_filename) == store_md5):
                 os.unlink(wc_filename)
             if store_md5:
                 os.unlink(store_filename)
@@ -769,7 +769,7 @@ class Package(WorkingCopy):
             filenames = wc_filenames
         for filename in wc_filenames:
             st = self.status(filename)
-            if not filename in filenames:
+            if filename not in filenames:
                 # no 'A' state because unchanged files are part
                 # of the commit
                 if st != 'A':
@@ -787,7 +787,7 @@ class Package(WorkingCopy):
                 unchanged.append(filename)
         # check for untracked
         for filename in filenames:
-            if not filename in wc_filenames:
+            if filename not in wc_filenames:
                 conflicted.append(filename)
         return FileCommitInfo(self.name, unchanged, added, deleted,
                               modified, conflicted)
@@ -809,7 +809,7 @@ class Package(WorkingCopy):
             lists = {'unchanged': unchanged, 'deleted': deleted}
             for listname, data in lists.iteritems():
                 for filename in data:
-                    if not filename in filenames:
+                    if filename not in filenames:
                         msg = ("commit policy: file \"%s\" isn't tracked"
                                % filename)
                         raise ValueError(msg)
@@ -835,7 +835,7 @@ class Package(WorkingCopy):
                 # update can be the only pending transaction
                 raise PendingTransactionError('update')
             elif (cstate is not None
-                and cstate.state == CommitStateMixin.STATE_COMMITTING):
+                    and cstate.state == CommitStateMixin.STATE_COMMITTING):
                 self._commit(cstate)
             else:
                 cinfo = self._calculate_commitinfo(*filenames)
@@ -1107,7 +1107,7 @@ class Package(WorkingCopy):
             # only consider filenames
             remove = []
             for filename in info:
-                if not filename in filenames:
+                if filename not in filenames:
                     remove.append(filename)
             for filename in remove:
                 info.remove(filename)
@@ -1188,7 +1188,7 @@ class Package(WorkingCopy):
         except ValueError as e:
             return (missing, wc_read_files(path, raw=True), [])
         filenames = [f.get('name') for f in files
-                     if not f.get('state') in ('A', 'S')]
+                     if f.get('state') not in ('A', 'S')]
         pkg_data = missing_storepaths(path, *filenames, data=True)
         return (missing, '', pkg_data)
 
@@ -1211,10 +1211,10 @@ class Package(WorkingCopy):
             wc_init(path, ext_storedir=ext_storedir)
         missing, xml_data, pkg_data = Package.wc_check(path)
         for filename in ('_project', '_package', '_apiurl'):
-            if not filename in missing:
+            if filename not in missing:
                 continue
             key = filename[1:]
-            if not key in kwargs:
+            if key not in kwargs:
                 raise ValueError("%s argument required" % key)
             meth_name = 'wc_write_' + key
             globals()[meth_name](path, kwargs[key])

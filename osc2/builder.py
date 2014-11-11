@@ -83,7 +83,7 @@ def can_build(hostarch, buildarch, cando):
     Otherwise False is returned.
 
     """
-    if not hostarch in cando.keys():
+    if hostarch not in cando.keys():
         raise ValueError("hostarch \"%s\" is not supported" % hostarch)
     return buildarch in cando[hostarch].keys()
 
@@ -166,7 +166,7 @@ class Builder(object):
         append -- do not overwrite old value(s) (default: False)
 
         """
-        if not opt in self._options:
+        if opt not in self._options:
             self._options[opt] = ListDelegate()
         values = self._options[opt]
         if val is None:
@@ -186,7 +186,7 @@ class Builder(object):
         for opt in sorted(self._options.keys()):
             for val in self._options[opt]:
                 l.append("--%s" % opt.replace('_', '-'))
-                if val != True:
+                if val is not True:
                     # option has a value
                     l.append(str(val))
         return l

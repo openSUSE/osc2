@@ -29,7 +29,7 @@ class File(OscElement):
         data = {'project': parent.get('project'),
                 'package': parent.get('name'), 'file': self.get('name')}
         # specifying a different rev probably makes no sense...
-        if not 'rev' in kwargs:
+        if 'rev' not in kwargs:
             kwargs['rev'] = self.getparent().get('srcmd5')
         path = path % data
         mtime = int(self.get('mtime'))
@@ -76,7 +76,7 @@ class Project(object):
         """
         request = Osc.get_osc().get_reqobj()
         path = '/source/' + self.name
-        if not 'schema' in kwargs:
+        if 'schema' not in kwargs:
             kwargs['schema'] = Project.LIST_SCHEMA
         f = request.get(path, **kwargs)
         entries = fromstring(f.read())
@@ -116,7 +116,7 @@ class Package(object):
         """
         request = Osc.get_osc().get_reqobj()
         path = "/source/%s/%s" % (self.project, self.name)
-        if not 'schema' in kwargs:
+        if 'schema' not in kwargs:
             kwargs['schema'] = Package.LIST_SCHEMA
         f = request.get(path, **kwargs)
         directory = fromstring(f.read(), directory=Directory, entry=File,
@@ -134,7 +134,7 @@ class Package(object):
         """
         request = Osc.get_osc().get_reqobj()
         path = "/source/%s/%s/_history" % (self.project, self.name)
-        if not 'schema' in kwargs:
+        if 'schema' not in kwargs:
             kwargs['schema'] = Package.HISTORY_SCHEMA
         f = request.get(path, **kwargs)
         return fromstring(f.read())

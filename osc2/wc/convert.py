@@ -5,9 +5,10 @@ import os
 from osc2.wc.project import Project
 from osc2.wc.package import Package
 from osc2.wc.util import (wc_read_files, wc_pkg_data_filename, _storefile,
-                         _write_storefile, _VERSION, wc_read_project,
-                         _read_storefile, wc_read_packages, missing_storepaths,
-                         wc_read_apiurl, wc_pkg_data_mkdir, _storedir)
+                          _write_storefile, _VERSION, wc_read_project,
+                          _read_storefile, wc_read_packages,
+                          missing_storepaths, wc_read_apiurl,
+                          wc_pkg_data_mkdir, _storedir)
 
 
 def convert_package(path, ext_storedir=None, **kwargs):
