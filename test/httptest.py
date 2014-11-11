@@ -6,6 +6,7 @@ import httplib
 import tempfile
 import shutil
 from difflib import unified_diff
+from test.xmltest import compare_xml
 
 EXPECTED_REQUESTS = []
 
@@ -78,7 +79,10 @@ class MyHTTPHandler(urllib2.HTTPHandler):
         if exp_content_type:
             assert req.get_header('Content-type', '') == exp_content_type
         data = str(req.get_data())
-        if exp is not None and data != exp:
+        if exp_content_type == 'application/xml' and exp is not None:
+            if not compare_xml(exp, data):
+                raise RequestDataMismatch(req.get_full_url(), exp, data)
+        elif exp is not None and data != exp:
             raise RequestDataMismatch(req.get_full_url(), repr(req.get_data()),
                                       repr(exp))
         return self._get_response(req.get_full_url(), **kwargs)
