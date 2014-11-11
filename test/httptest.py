@@ -76,11 +76,12 @@ class MyHTTPHandler(urllib2.HTTPHandler):
             # if a obs request's state is changed)
             raise ValueError('exp or expfile required')
 
+        content_type = req.get_header('Content-type', '')
         exp_content_type = kwargs.pop('exp_content_type', '')
         if exp_content_type:
-            assert req.get_header('Content-type', '') == exp_content_type
+            assert content_type == exp_content_type
         data = str(req.get_data())
-        if exp_content_type == 'application/xml' and exp is not None:
+        if content_type == 'application/xml' and exp is not None:
             if not compare_xml(exp, data):
                 raise RequestDataMismatch(req.get_full_url(), exp, data)
         elif exp is not None and data != exp:
