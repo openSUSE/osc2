@@ -6,6 +6,7 @@ import httplib
 import tempfile
 import shutil
 from difflib import unified_diff
+
 from test.xmltest import compare_xml
 
 EXPECTED_REQUESTS = []
@@ -91,10 +92,10 @@ class MyHTTPHandler(urllib2.HTTPHandler):
         f = None
         if 'exception' in kwargs:
             raise kwargs['exception']
-        if not 'text' in kwargs and 'file' in kwargs:
+        if 'text' not in kwargs and 'file' in kwargs:
             filename = os.path.join(self._fixtures_dir, kwargs.pop('file'))
             f = cStringIO.StringIO(open(filename, 'r').read())
-        elif 'text' in kwargs and not 'file' in kwargs:
+        elif 'text' in kwargs and 'file' not in kwargs:
             f = cStringIO.StringIO(kwargs.pop('text'))
         else:
             raise ValueError('either specify text or file')
