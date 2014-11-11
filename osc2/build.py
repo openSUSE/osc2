@@ -5,18 +5,18 @@ To access the remote build data use the class BuildResult.
 
 from cStringIO import StringIO
 
-from lxml import etree, objectify
+from lxml import etree
 
 from osc2.remote import RORemoteFile, RWRemoteFile
 from osc2.util.io import copy_file
-from osc2.util.xml import fromstring
+from osc2.util.xml import fromstring, OscElement
 from osc2.util.cpio import CpioArchive
 from osc2.core import Osc
 
 __all__ = ['BuildResult']
 
 
-class Status(objectify.ObjectifiedElement):
+class Status(OscElement):
     """Represents a status tag"""
 
     def __getattr__(self, name):
@@ -28,7 +28,7 @@ class Status(objectify.ObjectifiedElement):
             raise
 
 
-class BinaryList(objectify.ObjectifiedElement):
+class BinaryList(OscElement):
     """Represents a binarylist + some additional data"""
     SCHEMA = ''
 
@@ -98,7 +98,7 @@ class BinaryList(objectify.ObjectifiedElement):
                                       **kwargs)
 
 
-class Binary(objectify.ObjectifiedElement):
+class Binary(OscElement):
     """Represents a binary tag + some additional data"""
 
     def file(self, **kwargs):
@@ -352,7 +352,7 @@ class BuildInfo(object):
         return getattr(self._xml, name)
 
 
-class BuildDependency(objectify.ObjectifiedElement):
+class BuildDependency(OscElement):
     """Represents a build dependency (bdep element)."""
 
     def get(self, name, *args, **kwargs):

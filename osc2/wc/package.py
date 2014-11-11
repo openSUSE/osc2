@@ -7,7 +7,7 @@ import shutil
 import subprocess
 from difflib import unified_diff
 
-from lxml import etree, objectify
+from lxml import etree
 
 from osc2.core import Osc
 from osc2.source import File, Directory, Linkinfo

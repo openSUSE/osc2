@@ -20,7 +20,8 @@ from lxml import etree, objectify
 
 from osc2.core import Osc
 from osc2.httprequest import HTTPError
-from osc2.util.xml import ElementClassLookup, get_parser, fromstring
+from osc2.util.xml import (ElementClassLookup, get_parser, fromstring,
+                           OscElement)
 from osc2.util.io import copy_file, iter_read
 
 __all__ = ['RemoteModel', 'RemoteProject', 'RemotePackage', 'Request',
@@ -100,8 +101,8 @@ class ElementFactory(object):
         return self._add_data(args[0], kwargs)
 
 
-class OscElement(objectify.ObjectifiedElement):
-    """Base class for all osc elements.
+class RemoteModelElement(OscElement):
+    """Base class for all remote model elements.
 
     This class overrides __getattr__ in order to return our special
     method object if name matches the pattern: add_tagname.
@@ -112,7 +113,7 @@ class OscElement(objectify.ObjectifiedElement):
     def __getattr__(self, name):
         data = name.split('_', 1)
         if len(data) == 1 or not data[0] == 'add':
-            return super(OscElement, self).__getattr__(name)
+            return super(RemoteModelElement, self).__getattr__(name)
         factory = ElementFactory(self, data[1])
         return factory
 
@@ -153,11 +154,12 @@ class RemoteModel(object):
         self._xml = fromstring(xml_data, parser=parser)
 
     def _get_parser(self):
-        """Returns a parser object which is configured with OscElement as the
-        default tree_class and uses a StringElement for all data elements.
+        """Returns a parser object which is configured with RemoteModelElement
+        as the default tree_class and uses a StringElement for all data
+        elements.
 
         """
-        return get_parser(tree_class=OscElement)
+        return get_parser(tree_class=RemoteModelElement)
 
     def __getattr__(self, name):
         return getattr(self._xml, name)

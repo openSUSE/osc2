@@ -4,14 +4,14 @@ Currently only the search for requests is supported.
 
 """
 
-from lxml import objectify, etree
+from lxml import etree
 
 from osc2.remote import Request
-from osc2.util.xml import fromstring
+from osc2.util.xml import fromstring, OscElement
 from osc2.core import Osc
 
 
-class RequestCollection(objectify.ObjectifiedElement):
+class RequestCollection(OscElement):
     """Contains the request search results.
 
     All request objects are read only. In order to "work"
@@ -26,7 +26,7 @@ class RequestCollection(objectify.ObjectifiedElement):
             yield r.real_obj()
 
 
-class RORequest(objectify.ObjectifiedElement):
+class RORequest(OscElement):
     """Represents a read only request.
 
     This kind of request object is usually used in a collection.

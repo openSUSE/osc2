@@ -1,19 +1,17 @@
 """Provides classes to access the source
 route"""
 
-from lxml import objectify
-
-from osc2.util.xml import fromstring
+from osc2.util.xml import fromstring, OscElement
 from osc2.remote import RORemoteFile
 from osc2.core import Osc
 
 
-class Directory(objectify.ObjectifiedElement):
+class Directory(OscElement):
     def __iter__(self):
         return self.iterfind('entry')
 
 
-class File(objectify.ObjectifiedElement):
+class File(OscElement):
     """Represents a file entry"""
 
     def file(self, **kwargs):
@@ -38,7 +36,7 @@ class File(objectify.ObjectifiedElement):
         return RORemoteFile(path, mtime=mtime, **kwargs)
 
 
-class Linkinfo(objectify.ObjectifiedElement):
+class Linkinfo(OscElement):
     """Represents a linkinfo entry."""
 
     def is_expanded(self):
