@@ -928,7 +928,8 @@ class Package(WorkingCopy):
             query['keeplink'] = '1'
             query['expand'] = '1'
         query.update(kwargs)
-        f = request.post(path, data=xml_data, apiurl=self.apiurl, **query)
+        f = request.post(path, data=xml_data, apiurl=self.apiurl,
+                         content_type='application/xml', **query)
         return fromstring(f.read(), directory=Directory, entry=File,
                           linkinfo=Linkinfo)
 
