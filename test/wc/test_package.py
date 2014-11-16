@@ -887,6 +887,35 @@ class TestPackage(OscTest):
         pkg.revert('added_missing')
         self.assertEqual(pkg.status('added_missing'), '?')
 
+    def test_revert6(self):
+        """revert mutliple files"""
+        path = self.fixture_file('status1_no_conflict')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('modified'), 'M')
+        self.assertEqual(pkg.status('added'), 'A')
+        self.assertEqual(pkg.status('delete_mod'), 'D')
+        pkg.revert('modified', 'added', 'delete_mod')
+        self.assertEqual(pkg.status('modified'), ' ')
+        self.assertEqual(pkg.status('added'), '?')
+        # state 'M' is expected (see test_revert2)
+        self.assertEqual(pkg.status('delete_mod'), 'M')
+
+    def test_revert7(self):
+        """revert all files (except skipped files)"""
+        path = self.fixture_file('status1_no_conflict')
+        pkg = Package(path)
+        self.assertEqual(pkg.status('skipped'), 'S')
+        pkg.revert()
+        self.assertEqual(pkg.status('skipped'), 'S')
+        self.assertEqual(pkg.status('file1'), ' ')
+        self.assertEqual(pkg.status('added'), '?')
+        self.assertEqual(pkg.status('added2'), '?')
+        self.assertEqual(pkg.status('unknown'), '?')
+        self.assertEqual(pkg.status('modified'), ' ')
+        # state 'M' is expected (see test_revert2)
+        self.assertEqual(pkg.status('delete_mod'), 'M')
+        self.assertEqual(pkg.status('delete'), ' ')
+
     def test_add1(self):
         """test add"""
         path = self.fixture_file('status1_no_conflict')
