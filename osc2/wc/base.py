@@ -380,13 +380,15 @@ class WorkingCopy(object):
 
     @no_conflicts
     @no_pending_transaction
-    def revert(self, entry, *args, **kwargs):
-        """Revert an entry.
+    def revert(self, *entries, **kwargs):
+        """Revert working copy entries.
 
+        If no entries are specified, all working copy entries
+        will be reverted.
         A ValueError is raised if a state is not
         allowed (for instance if entry has a specific state).
 
-        Usage of *args and **kwargs is implementation specific.
+        Usage of **kwargs is implementation specific.
 
         """
         pass

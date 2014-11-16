@@ -984,16 +984,21 @@ class Package(WorkingCopy):
             raise ValueError("file \"%s\" has no conflicts" % filename)
         self._files.set(filename, ' ')
 
-    def revert(self, filename):
-        """Revert filename.
+    def revert(self, *filenames):
+        """Revert filenames.
 
+        If no filenames are specified, all working copy
+        files (except skipped files) will be reverted.
         If filename is marked as 'C', '?' or 'S' a
         ValueError is raised.
 
         """
-        super(Package, self).revert(filename)
+        if not filenames:
+            filenames = [f for f in self.files() if self.status(f) != 'S']
+        super(Package, self).revert(*filenames)
         with wc_lock(self.path) as lock:
-            self._revert(filename)
+            for filename in filenames:
+                self._revert(filename)
 
     def _revert(self, filename):
         st = self.status(filename)
