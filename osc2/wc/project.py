@@ -487,6 +487,56 @@ class Project(WorkingCopy):
             cstate.processed(package, ' ')
             self.notifier.processed(package, ' ', ' ')
 
+    def revert(self, *packages):
+        """Reverts the specified packages.
+
+        If no packages are specified, all packages in the
+        working copy will be reverted. If a package in packages
+        is marked as '?', a ValueError is raised.
+
+        """
+        if not packages:
+            packages = self.packages()
+        super(Project, self).revert(*packages)
+        with wc_lock(self.path):
+            for package in packages:
+                self._revert(package)
+
+    def _revert(self, package):
+        global _STORE
+        # we do not need a "transaction" here, because an interrupted revert
+        # can be easily continued later (in the worst case after a repair
+        # of the project wc)
+        st = self._status(package)
+        if st == '?':
+            msg = "cannot revert untracked package: %s" % package
+            raise ValueError(msg)
+        elif st == 'A':
+            path = os.path.join(self.path, package)
+            store = os.path.join(path, _STORE)
+            if os.path.islink(store):
+                os.unlink(store)
+            # TODO: refactor this code path (and the on in _remove_wc_dir)
+            # into a new function in the util module
+            store = wc_pkg_data_filename(self.path, package)
+            if os.path.exists(store):
+                shutil.rmtree(store)
+            self._packages.remove(package)
+            self._packages.write()
+            return
+        # just revert the package
+        pkg = self.package(package)
+        if pkg is None:
+            path = os.path.join(self.path, package)
+            storedir = wc_pkg_data_filename(self.path, package)
+            wc_init(path, ext_storedir=storedir)
+            # now the package can be obtained
+            pkg = self.package(package)
+        pkg.revert()
+        if st != ' ':
+            self._packages.set(package, ' ')
+            self._packages.write()
+
     def add(self, package, *filenames, **kwargs):
         """Add a new package to the project.
 
