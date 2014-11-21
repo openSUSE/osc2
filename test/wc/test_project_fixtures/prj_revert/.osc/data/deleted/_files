@@ -1,0 +1,5 @@
+<directory name="deleted" rev="7" srcmd5="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa">
+  <entry state="D" name="dummy" md5="809db8de8a84816fd23862786baa1d75" mtime="1310328921" size="31"/>
+  <entry state="D" name="foo" md5="938435eeadd5b657044f7f4387f692fb" mtime="1312647654" size="9"/>
+  <entry state="D" name="modified" md5="e9f44ff0353087e37a45cd5578b215a4" mtime="1312647680" size="25"/>
+</directory>

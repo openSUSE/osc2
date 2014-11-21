@@ -887,5 +887,106 @@ class TestProject(OscTest):
         self.assertEqual(prj._status('missing'), '?')
         self.assertEqual(prj._status('added'), 'A')
 
+    def test_revert1(self):
+        """revert modified package"""
+        path = self.fixture_file('prj_revert')
+        prj = Project(path)
+        self.assertEqual(prj._status('modified'), ' ')
+        pkg = prj.package('modified')
+        self.assertEqual(pkg.status('add'), 'A')
+        self.assertEqual(pkg.status('file'), 'M')
+        prj.revert('modified')
+        self.assertEqual(prj._status('modified'), ' ')
+        pkg = prj.package('modified')
+        self.assertEqual(pkg.status('add'), '?')
+        self.assertEqual(pkg.status('file'), ' ')
+
+    def test_revert2(self):
+        """revert added package"""
+        path = self.fixture_file('prj_revert')
+        prj = Project(path)
+        self.assertEqual(prj._status('added'), 'A')
+        self._exists(path, 'added')
+        self._exists(path, 'added', 'foo')
+        self._exists(path, 'added', '.osc')
+        prj.revert('added')
+        self.assertEqual(prj._status('added'), '?')
+        # the directory and its files are kept
+        self._exists(path, 'added')
+        self._exists(path, 'added', 'foo')
+        self._not_exists(path, 'added', '.osc')
+
+    def test_revert3(self):
+        """revert a missing package"""
+        path = self.fixture_file('prj_revert')
+        prj = Project(path)
+        self.assertEqual(prj._status('xxx'), '!')
+        self._not_exists(path, 'xxx')
+        prj.revert('xxx')
+        self.assertEqual(prj._status('xxx'), ' ')
+        self._exists(path, 'xxx')
+        self._exists(path, 'xxx', 'dummy')
+
+    def test_revert4(self):
+        """revert a deleted package (dir exists)"""
+        path = self.fixture_file('prj_revert')
+        prj = Project(path)
+        self.assertEqual(prj._status('deleted'), 'D')
+        self._exists(path, 'deleted')
+        pkg = prj.package('deleted')
+        self.assertEqual(pkg.status('dummy'), 'D')
+        self.assertEqual(pkg.status('foo'), 'D')
+        self.assertEqual(pkg.status('modified'), 'D')
+        self.assertEqual(pkg.status('untracked'), '?')
+        prj.revert('deleted')
+        self.assertEqual(prj._status('deleted'), ' ')
+        self._exists(path, 'deleted')
+        pkg = prj.package('deleted')
+        self.assertEqual(pkg.status('dummy'), ' ')
+        self.assertEqual(pkg.status('foo'), ' ')
+        # this file is modified and its old state was 'D'
+        # so the new state is 'M' (after the revert)
+        self.assertEqual(pkg.status('modified'), 'M')
+        # untracked files are kept
+        self.assertEqual(pkg.status('untracked'), '?')
+
+    def test_revert5(self):
+        """revert a deleted package (dir does not exist)"""
+        path = self.fixture_file('prj_revert')
+        prj = Project(path)
+        self.assertEqual(prj._status('del'), 'D')
+        self._not_exists(path, 'del')
+        prj.revert('del')
+        self.assertEqual(prj._status('del'), ' ')
+        self._exists(path, 'del')
+        pkg = prj.package('del')
+        self.assertEqual(pkg.status('file'), ' ')
+
+    def test_revert6(self):
+        """revert a package whose storedir was deleted"""
+        path = self.fixture_file('prj_revert')
+        prj = Project(path)
+        self.assertEqual(prj._status('modified_no_storedir'), ' ')
+        self._not_exists(path, 'modified_no_storedir', '.osc')
+        prj.revert('modified_no_storedir')
+        self._exists(path, 'modified_no_storedir', '.osc')
+        self.assertEqual(prj._status('modified_no_storedir'), ' ')
+        pkg = prj.package('modified_no_storedir')
+        self.assertEqual(pkg.status('add'), '?')
+        self.assertEqual(pkg.status('file'), ' ')
+
+    def test_revert7(self):
+        """revert all packages"""
+        path = self.fixture_file('prj_revert')
+        prj = Project(path)
+        # just check the state of some packages
+        self.assertEqual(prj._status('modified'), ' ')
+        self.assertEqual(prj._status('deleted'), 'D')
+        self.assertEqual(prj._status('xxx'), '!')
+        prj.revert()
+        self.assertEqual(prj._status('modified'), ' ')
+        self.assertEqual(prj._status('deleted'), ' ')
+        self.assertEqual(prj._status('xxx'), ' ')
+
 if __name__ == '__main__':
     unittest.main()

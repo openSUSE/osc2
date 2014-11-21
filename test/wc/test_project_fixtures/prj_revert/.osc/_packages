@@ -1,0 +1,8 @@
+<packages>
+  <package name="deleted" state="D"/>
+  <package name="xxx" state=" "/>
+  <package name="del" state="D"/>
+  <package name="modified" state=" "/>
+  <package name="modified_no_storedir" state=" "/>
+  <package name="added" state="A"/>
+</packages>
