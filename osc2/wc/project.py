@@ -570,7 +570,7 @@ class Project(WorkingCopy):
         """
         path = os.path.join(self.path, package)
         st = self._status(package)
-        if st in ('!', '?') or st == 'D' and not wc_is_package(path):
+        if st in ('!', '?') or not wc_is_package(path):
             return None
         return Package(path, *args, **kwargs)
 
