@@ -554,7 +554,16 @@ def _read_storefile(path, filename):
         msg = "'%s' is no valid storefile" % filename
         raise ValueError(msg)
     storefile = _storefile(path, filename)
-    with open(storefile, 'r') as f:
+    return _read_file(storefile)
+
+
+def _read_file(filename):
+    """Reads the file specified via filename.
+
+    The returned data is stripped.
+
+    """
+    with open(filename, 'r') as f:
         return f.read().strip()
 
 
@@ -748,7 +757,9 @@ def wc_init(path, ext_storedir=None):
     does not exist it will be created.
     Raises a ValueError if path is not readable/writable
     or if it is already a working copy or if ext_storedir
-    is no dir or is not readable/writable.
+    is no dir or is not readable/writable. A WCFormatVersionError
+    is raised, if ext_storedir is an already initialized storedir
+    with an invalid/unsupported format.
 
     Keyword arguments:
     ext_storedir -- path to an external storedir (default: None).
@@ -757,11 +768,18 @@ def wc_init(path, ext_storedir=None):
 
     """
     global _PKG_DATA
-    if (ext_storedir is not None and
-        (not os.path.isdir(ext_storedir) or
-         not os.access(ext_storedir, os.W_OK))):
-        msg = "ext_storedir \"%s\" is no dir or not writable" % ext_storedir
-        raise ValueError(msg)
+    write_version = True
+    if ext_storedir is not None:
+        # some sanity checks
+        if (not os.path.isdir(ext_storedir)
+                or not os.access(ext_storedir, os.W_OK)):
+            msg = ("ext_storedir \"%s\" is no dir or not writable"
+                   % ext_storedir)
+            raise ValueError(msg)
+        if os.listdir(ext_storedir):
+            _wc_verify_format(ext_storedir)
+            # _version file is present and valid
+            write_version = False
 
     storedir = _storedir(path)
     if os.path.exists(storedir) or os.path.islink(storedir):
@@ -785,9 +803,11 @@ def wc_init(path, ext_storedir=None):
         os.symlink(ext_storedir, storedir)
     else:
         os.mkdir(storedir)
-    wc_write_version(path)
+    if write_version:
+        wc_write_version(path)
     data_path = _storefile(path, _PKG_DATA)
-    os.mkdir(data_path)
+    if not os.path.isdir(data_path):
+        os.mkdir(data_path)
 
 
 def wc_pkg_data_mkdir(path, new_dir):
@@ -847,13 +867,30 @@ def wc_verify_format(path):
     copy format is out of date.
 
     """
+    storedir = _storedir(path)
+    _wc_verify_format(storedir)
+
+
+def _wc_verify_format(storedir):
+    """Verifies the wc format of the specified storedir.
+
+    A WCFormatVersionError is raised if storedir has an
+    invalid/unsupported wc version format.
+
+    """
     global _VERSION
+    filename = os.path.join(storedir, '_version')
     try:
-        format = float(_read_storefile(path, '_version'))
-    except ValueError as e:
+        version_fmt = _read_file(filename)
+        version_fmt = float(version_fmt)
+    except IOError as e:
+        if e.errno != errno.ENOENT:
+            raise
         raise WCFormatVersionError(None)
-    if format - _VERSION >= 1 or format - _VERSION <= -1:
-        raise WCFormatVersionError(format)
+    except ValueError as e:
+        raise WCFormatVersionError(version_fmt)
+    if version_fmt - _VERSION >= 1 or version_fmt - _VERSION <= -1:
+        raise WCFormatVersionError(version_fmt)
 
 
 def wc_parent(path):
