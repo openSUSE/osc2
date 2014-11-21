@@ -1,9 +1,11 @@
 import os
+import tempfile
 import unittest
 
 from test.osctest import OscTest
-from osc2.wc.util import (wc_is_project, wc_is_package, wc_read_project,
-                          wc_read_package, wc_read_apiurl, WCLock, wc_parent)
+from osc2.wc.util import (WCFormatVersionError, wc_is_project, wc_is_package,
+                          wc_read_project, wc_read_package, wc_read_apiurl,
+                          WCLock, wc_parent, wc_init)
 
 
 def suite():
@@ -211,6 +213,90 @@ class TestWCUtil(OscTest):
         self.assertTrue(os.path.isdir(path))
         par_dir = wc_parent(path)
         self.assertIsNone(par_dir)
+
+    def test_wc_init1(self):
+        """simple init wc"""
+        path = self.fixture_file('init')
+        self._not_exists(path, '.osc')
+        wc_init(path)
+        self._exists(path, '.osc')
+        storedir = self.fixture_file('init', '.osc')
+        self.assertFalse(os.path.islink(storedir))
+        self.assertTrue(os.path.isdir(storedir))
+        self.assertEqual(sorted(os.listdir(storedir)), ['_version', 'data'])
+
+    def test_wc_init2(self):
+        """simple init wc external, empty storedir"""
+        path = self.fixture_file('init')
+        # we do not have to remove storedir later (cleanup happens
+        # after each testcase)
+        storedir = tempfile.mkdtemp(dir=self._tmp_fixtures)
+        storedir_lnk = self.fixture_file(path, '.osc')
+        self._not_exists(path, '.osc')
+        wc_init(path, ext_storedir=storedir)
+        self._exists(path, '.osc')
+        self.assertTrue(os.path.islink(storedir_lnk))
+        self.assertTrue(os.path.isdir(storedir_lnk))
+        self.assertEqual(sorted(os.listdir(storedir)),
+                         ['_version', 'data'])
+
+    def test_wc_init3(self):
+        """init wc external, non-empty storedir"""
+        path = self.fixture_file('init')
+        storedir = self.fixture_file('storedir_non_empty')
+        storedir_lnk = self.fixture_file(path, '.osc')
+        self._not_exists(path, '.osc')
+        wc_init(path, ext_storedir=storedir)
+        self._exists(path, '.osc')
+        self.assertTrue(os.path.islink(storedir_lnk))
+        self.assertTrue(os.path.isdir(storedir_lnk))
+        contents = ['_apiurl', '_files', '_package', '_project', '_version',
+                    'data']
+        self.assertEqual(sorted(os.listdir(storedir)), contents)
+
+    def test_wc_init4(self):
+        """init wc external storedir with unsupported format"""
+        path = self.fixture_file('init')
+        self._not_exists(path, '.osc')
+        storedir = self.fixture_file('storedir_inv_format')
+        self.assertRaises(WCFormatVersionError, wc_init, path,
+                          ext_storedir=storedir)
+        self._not_exists(path, '.osc')
+
+    def test_wc_init5(self):
+        """init wc external storedir does not exist"""
+        path = self.fixture_file('init')
+        self._not_exists(path, '.osc')
+        storedir = self.fixture_file('nonexistent')
+        self.assertFalse(os.path.exists(storedir))
+        self.assertRaises(ValueError, wc_init, path, ext_storedir=storedir)
+        self._not_exists(path, '.osc')
+        self.assertFalse(os.path.exists(storedir))
+
+    def test_wc_init6(self):
+        """init wc (create new directory)"""
+        path = self.fixture_file('init_nonexistent')
+        self.assertFalse(os.path.exists(path))
+        wc_init(path)
+        self.assertTrue(os.path.exists(path))
+
+    def test_wc_init7(self):
+        """init wc (create new directory, nonexistent ext storedir)"""
+        path = self.fixture_file('init_nonexistent')
+        self.assertFalse(os.path.exists(path))
+        storedir = self.fixture_file('nonexistent')
+        self.assertFalse(os.path.exists(storedir))
+        self.assertRaises(ValueError, wc_init, path, ext_storedir=storedir)
+        self.assertFalse(os.path.exists(path))
+
+    def test_wc_init8(self):
+        """init wc (create new directory, ext storedir invalid format)"""
+        path = self.fixture_file('init_nonexistent')
+        self.assertFalse(os.path.exists(path))
+        storedir = self.fixture_file('storedir_inv_format')
+        self.assertRaises(WCFormatVersionError, wc_init, path,
+                          ext_storedir=storedir)
+        self.assertFalse(os.path.exists(path))
 
 if __name__ == '__main__':
     unittest.main()
