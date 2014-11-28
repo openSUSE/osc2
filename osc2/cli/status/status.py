@@ -65,6 +65,8 @@ def _package_states(pkg, *filenames, **kwargs):
     if pkg is None:
         return {}
     if not filenames:
-        filenames = [i for i in os.listdir(kwargs.get('path', os.curdir))
-                     if not i.startswith('.')]
+        filenames = pkg.files()
+        # collect unversioned files and directories
+        filenames.extend([i for i in os.listdir(kwargs.get('path', os.curdir))
+                          if not i.startswith('.') and i not in filenames])
     return dict([[filename, pkg.status(filename)] for filename in filenames])
