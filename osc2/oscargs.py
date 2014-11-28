@@ -244,9 +244,9 @@ class WCPathEntry(AbstractEntry):
         """
         project = package = filename = None
         project_path = package_path = filename_path = None
-        par_dir = wc_parent(path)
         if not path:
             path = os.getcwd()
+        par_dir = wc_parent(path)
         if wc_is_package(path):
             package_path = path
             project_path = par_dir
