@@ -698,5 +698,224 @@ class TestOscArgs(OscTest):
         # arch is a list
         self.assertEqual(info.arch, [None, 'x86_64'])
 
+    def test_alternative1(self):
+        """test a simple alternative"""
+        oargs = OscArgs('api://project|repo', ignore_clashes=False)
+        args = 'api://abc'
+        info = oargs.resolve(args)
+        self.assertEqual(info.apiurl, 'api')
+        self.assertEqual(info.project, 'abc')
+        self.assertFalse(hasattr(info, 'repo'))
+
+    def test_alternative2(self):
+        """test a simple alternative (alternative matches)"""
+        oargs = OscArgs('api://project|repo')
+        args = 'openSUSE_Factory'
+        info = oargs.resolve(args)
+        self.assertEqual(info.repo, 'openSUSE_Factory')
+        self.assertFalse(hasattr(info, 'apiurl'))
+        self.assertFalse(hasattr(info, 'project'))
+
+    def test_alternative3(self):
+        """test multiple alternatives"""
+        # actually, no clash occurs, but having clash support
+        # enabled might catch some (unexpected) glitches
+        oargs = OscArgs('api://project/package|repo/arch|repo',
+                        ignore_clashes=False)
+        # match first alternative
+        args = 'obs://foo/bar'
+        info = oargs.resolve(args)
+        self.assertEqual(info.apiurl, 'obs')
+        self.assertEqual(info.project, 'foo')
+        self.assertEqual(info.package, 'bar')
+        self.assertFalse(hasattr(info, 'repo'))
+        self.assertFalse(hasattr(info, 'arch'))
+        # match second alternative
+        args = 'openSUSE_Factory/x86_64'
+        info = oargs.resolve(args)
+        self.assertEqual(info.repo, 'openSUSE_Factory')
+        self.assertEqual(info.arch, 'x86_64')
+        self.assertFalse(hasattr(info, 'apiurl'))
+        self.assertFalse(hasattr(info, 'project'))
+        self.assertFalse(hasattr(info, 'package'))
+        # match third alternative
+        args = 'openSUSE_Factory'
+        info = oargs.resolve(args)
+        self.assertEqual(info.repo, 'openSUSE_Factory')
+        self.assertFalse(hasattr(info, 'apiurl'))
+        self.assertFalse(hasattr(info, 'project'))
+        self.assertFalse(hasattr(info, 'package'))
+        self.assertFalse(hasattr(info, 'arch'))
+
+    def test_alternative4(self):
+        """test ambiguous alternatives (first match (left to right) wins)"""
+        oargs = OscArgs('repo/arch?|repository')
+        # specify repo/arch
+        args = 'openSUSE_Factory/x86_64'
+        info = oargs.resolve(args)
+        self.assertEqual(info.repo, 'openSUSE_Factory')
+        self.assertEqual(info.arch, 'x86_64')
+        self.assertFalse(hasattr(info, 'repository'))
+        # specify repo only (first match (from left to right wins))
+        args = 'openSUSE_Factory'
+        info = oargs.resolve(args)
+        self.assertEqual(info.repo, 'openSUSE_Factory')
+        self.assertFalse(hasattr(info, 'arch'))
+        self.assertFalse(hasattr(info, 'repository'))
+
+    def test_alternative5(self):
+        """test ambiguous alternatives (see previous testcase)"""
+        oargs = OscArgs('repository|repo/arch?')
+        # specify repo only
+        args = 'openSUSE_Factory'
+        info = oargs.resolve(args)
+        self.assertEqual(info.repository, 'openSUSE_Factory')
+        self.assertFalse(hasattr(info, 'repo'))
+        self.assertFalse(hasattr(info, 'arch'))
+        # specify repo/arch
+        args = 'openSUSE_Factory/x86_64'
+        info = oargs.resolve(args)
+        self.assertEqual(info.repo, 'openSUSE_Factory')
+        self.assertEqual(info.arch, 'x86_64')
+        self.assertFalse(hasattr(info, 'repository'))
+
+    def test_alternative6(self):
+        """apiurl and wc_path alternatives"""
+        oargs = OscArgs('api://project/package|wc_path')
+        # specify apiurl
+        args = 'obs://foo/bar'
+        info = oargs.resolve(args)
+        self.assertEqual(info.apiurl, 'obs')
+        self.assertEqual(info.project, 'foo')
+        self.assertEqual(info.package, 'bar')
+        self.assertFalse(hasattr(info, 'path'))
+        # specify wc path
+        args = self.fixture_file('prj1', 'added')
+        info = oargs.resolve(args)
+        project_path = self.fixture_file('prj1')
+        self.assertEqual(info.path.project, 'prj1')
+        self.assertEqual(info.path.project_path, project_path)
+        self.assertEqual(info.path.package, 'added')
+        self.assertEqual(info.path.package_path, args)
+        self.assertIsNone(info.path.filename)
+        self.assertIsNone(info.path.filename_path)
+        self.assertFalse(hasattr(info, 'apiurl'))
+        self.assertFalse(hasattr(info, 'project'))
+        self.assertFalse(hasattr(info, 'package'))
+        # specify no args and cwd is a project
+        path = self.fixture_file('prj1')
+        cwd = os.getcwd()
+        args = ''
+        try:
+            os.chdir(path)
+            info = oargs.resolve(args)
+            project_path = self.fixture_file('prj1')
+            self.assertEqual(info.path.project, 'prj1')
+            self.assertEqual(info.path.project_path, project_path)
+            self.assertIsNone(info.path.package)
+            self.assertIsNone(info.path.package_path)
+            self.assertIsNone(info.path.filename)
+            self.assertIsNone(info.path.filename_path)
+            self.assertFalse(hasattr(info, 'apiurl'))
+            self.assertFalse(hasattr(info, 'project'))
+            self.assertFalse(hasattr(info, 'package'))
+        finally:
+            os.chdir(cwd)
+
+    def test_alternative7(self):
+        """test api and wc_path alternatives (resolve with path)"""
+        oargs = OscArgs('api://project/package|wc_path')
+        # specify empty args
+        path = self.fixture_file('prj1', 'added')
+        args = ''
+        info = oargs.resolve(args, path=path)
+        self.assertEqual(info.project, 'prj1')
+        self.assertEqual(info.package, 'added')
+        self.assertFalse(hasattr(info, 'path'))
+        # specify filename
+        args = self.fixture_file('prj1', 'added', 'foo')
+        info = oargs.resolve(args, path=path)
+        self.assertEqual(info.path.project, 'prj1')
+        self.assertEqual(info.path.package, 'added')
+        self.assertEqual(info.path.package_path, path)
+        self.assertEqual(info.path.filename, 'foo')
+        self.assertEqual(info.path.filename_path, args)
+        self.assertFalse(hasattr(info, 'apiurl'))
+        self.assertFalse(hasattr(info, 'project'))
+        self.assertFalse(hasattr(info, 'package'))
+        # read project from (wc_path) from cwd
+        cwd = os.getcwd()
+        path = self.fixture_file('prj1')
+        try:
+            os.chdir(path)
+            args = ''
+            info = oargs.resolve(args, path=path)
+            self.assertEqual(info.path.project, 'prj1')
+            self.assertEqual(info.path.project_path, path)
+            self.assertFalse(hasattr(info, 'apiurl'))
+            self.assertFalse(hasattr(info, 'project'))
+            self.assertFalse(hasattr(info, 'package'))
+        finally:
+            os.chdir(cwd)
+        # specify package via wc_path
+        args = path = self.fixture_file('prj1', 'added')
+        info = oargs.resolve(args, path=path)
+        self.assertEqual(info.path.project, 'prj1')
+        self.assertEqual(info.path.package, 'added')
+        self.assertEqual(info.path.package_path, path)
+        self.assertIsNone(info.path.filename)
+        self.assertFalse(hasattr(info, 'apiurl'))
+        self.assertFalse(hasattr(info, 'project'))
+        self.assertFalse(hasattr(info, 'package'))
+
+    def test_alternative8(self):
+        """test wc_path and api alternatives (see also previous testcase)"""
+        oargs = OscArgs('wc_path|api://project/package?')
+        # read package from cwd
+        path = self.fixture_file('prj1', 'added')
+        cwd = os.getcwd()
+        try:
+            os.chdir(path)
+            args = ''
+            info = oargs.resolve(args, path=path)
+            self.assertEqual(info.path.project, 'prj1')
+            self.assertEqual(info.path.package, 'added')
+            self.assertEqual(info.path.package_path, path)
+            self.assertFalse(hasattr(info, 'apiurl'))
+            self.assertFalse(hasattr(info, 'project'))
+            self.assertFalse(hasattr(info, 'package'))
+        finally:
+            os.chdir(cwd)
+        # read project from from path (wc_path)
+        args = path = self.fixture_file('prj1')
+        info = oargs.resolve(args, path=path)
+        self.assertEqual(info.path.project, 'prj1')
+        self.assertEqual(info.path.project_path, path)
+        self.assertFalse(hasattr(info, 'apiurl'))
+        self.assertFalse(hasattr(info, 'project'))
+        self.assertFalse(hasattr(info, 'package'))
+        # read project from path (via apiurl)
+        path = self.fixture_file('prj1')
+        args = ''
+        info = oargs.resolve(args, path=path)
+        self.assertEqual(info.apiurl, 'http://apiurl')
+        self.assertEqual(info.project, 'prj1')
+        self.assertFalse(hasattr(info, 'package'))
+        self.assertFalse(hasattr(info, 'path'))
+        # specify via apiurl
+        args = 'obs://foo/bar'
+        path = self.fixture_file('prj1', 'added')
+        info = oargs.resolve(args, path=path)
+        self.assertEqual(info.apiurl, 'obs')
+        self.assertEqual(info.project, 'foo')
+        self.assertEqual(info.package, 'bar')
+        self.assertFalse(hasattr(info, 'path'))
+
+    def test_alternative_illegal(self):
+        """test illegal alternative entries"""
+        self.assertRaises(ValueError, OscArgs, '|')
+        self.assertRaises(ValueError, OscArgs, '||')
+        self.assertRaises(ValueError, OscArgs, 'a|')
+
 if __name__ == '__main__':
     unittest.main()
