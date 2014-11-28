@@ -508,6 +508,24 @@ class TestOscArgs(OscTest):
         self.assertEqual(pkg.name, 'added')
         self.assertEqual(pkg.skip_handlers, ['skip'])
 
+    def test23_1(self):
+        """test wc path entry (prj/nonexistent)"""
+        oargs = OscArgs('wc_path')
+        path = self.fixture_file('prj1')
+        self._not_exists(path, 'nonexistent')
+        args = self.fixture_file('prj1', 'nonexistent')
+        info = oargs.resolve(args)
+        self.assertEqual(info.path.project, 'prj1')
+        self.assertEqual(info.path.project_path, path)
+        self.assertEqual(info.path.package, 'nonexistent')
+        self.assertEqual(info.path.package_path, args)
+        self.assertIsNone(info.path.filename)
+        self.assertIsNone(info.path.filename_path)
+        # get objects
+        self.assertIsNotNone(info.path.project_obj())
+        # package is None, because it does not exists/is no wc
+        self.assertIsNone(info.path.package_obj())
+
     def test24(self):
         """test wc path entry (prj/pkg)"""
         oargs = OscArgs('wc_path')
