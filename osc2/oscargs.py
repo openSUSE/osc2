@@ -435,28 +435,36 @@ class OscArgs(object):
 
         """
         for entry in format_entries:
-            if entry.startswith('wc_'):
-                name = entry.split('_', 1)[1]
-                if not name:
-                    raise ValueError('illegal identifier for a wc entry')
-                self._entries.append(WCPathEntry(name))
-                continue
-            elif entry.startswith('plain_'):
-                name = entry.split('_', 1)[1]
-                if not name:
-                    raise ValueError('illegal identifier for a plain entry')
-                self._entries.append(PlainEntry(name))
-                continue
-            e = ComponentEntry(path)
-            m = re.match(OscArgs.APIURL_RE, entry)
-            if m is not None:
-                api = m.group(1) or ''
-                e.append(Component(api, separators, api=True))
-                entry = re.sub(OscArgs.APIURL_RE, '', entry)
-            for sep, component in self._parse_component(entry, separators):
-                r = Component(component, separators, left_sep=sep)
-                e.append(r)
+            e = self._parse_entry(entry, path, separators)
             self._entries.append(e)
+
+    def _parse_entry(self, entry, path, separators):
+        """Returns an instance, whose supertype is AbstractEntry, for entry.
+
+        path is a path or the empty str and separators is a list
+        of separators.
+
+        """
+        if entry.startswith('wc_'):
+            name = entry.split('_', 1)[1]
+            if not name:
+                raise ValueError('illegal identifier for a wc entry')
+            return WCPathEntry(name)
+        elif entry.startswith('plain_'):
+            name = entry.split('_', 1)[1]
+            if not name:
+                raise ValueError('illegal identifier for a plain entry')
+            return PlainEntry(name)
+        e = ComponentEntry(path)
+        m = re.match(OscArgs.APIURL_RE, entry)
+        if m is not None:
+            api = m.group(1) or ''
+            e.append(Component(api, separators, api=True))
+            entry = re.sub(OscArgs.APIURL_RE, '', entry)
+        for sep, component in self._parse_component(entry, separators):
+            r = Component(component, separators, left_sep=sep)
+            e.append(r)
+        return e
 
     def unresolved(self, info, name):
         """Resolve unresolved components "manually".
