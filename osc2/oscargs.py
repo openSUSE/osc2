@@ -290,6 +290,52 @@ class PlainEntry(AbstractEntry):
         return 'plain_' + self._name
 
 
+class AlternativeEntry(AbstractEntry):
+    """Represents an alternative entry.
+
+    An alternative entry is used to provide different
+    syntaxes for an argument.
+    It consists of several entries, whose supertype is
+    AbstractEntry. The "match" method returns the match
+    result of the first matching entry. The "wc_resolve"
+    method is implemented analogously.
+
+    """
+
+    def __init__(self, *entries):
+        """Constructs a new AlternativeEntry instance.
+
+        *entries are instances of the class AbstractEntry.
+        If no entries are provided, a ValueError is raised.
+
+        """
+        if not entries:
+            raise ValueError('At least one entry is required')
+        self._entries = entries
+
+    @staticmethod
+    def _firstNonNone(meths, *args, **kwargs):
+        for meth in meths:
+            res = meth(*args, **kwargs)
+            if res is not None:
+                return res
+        return None
+
+    def match(self, arg):
+        """Return the match result of the first entry that matches arg."""
+        meths = [getattr(entry, 'match') for entry in self._entries]
+        return self._firstNonNone(meths, arg)
+
+    def wc_resolve(self, *args, **kwargs):
+        """Return the result of the first entry, where wc_resolve matches"""
+        meths = [getattr(entry, 'wc_resolve') for entry in self._entries]
+        return self._firstNonNone(meths, *args, **kwargs)
+
+    def __str__(self):
+        return OscArgs.ALTERNATIVE_SEP.join(
+            [str(entry) for entry in self._entries])
+
+
 class Component(object):
     """Represents a regex for a component"""
     APIURL_RE = "(?P<%s>.+)://"
@@ -380,6 +426,7 @@ class OscArgs(object):
 
     """
     APIURL_RE = "api\(?([^)]+)?\)?://"
+    ALTERNATIVE_SEP = '|'
 
     def __init__(self, *format_entries, **kwargs):
         """Constructs a new OscArgs instance.
@@ -445,7 +492,16 @@ class OscArgs(object):
         of separators.
 
         """
-        if entry.startswith('wc_'):
+        if self.ALTERNATIVE_SEP in entry:
+            entries = [i.strip()
+                       for i in entry.split(self.ALTERNATIVE_SEP)]
+            if not entries or '' in entries:
+                raise ValueError('illegal alternative entry')
+            es = []
+            for entry in entries:
+                es.append(self._parse_entry(entry, path, separators))
+            return AlternativeEntry(*es)
+        elif entry.startswith('wc_'):
             name = entry.split('_', 1)[1]
             if not name:
                 raise ValueError('illegal identifier for a wc entry')
