@@ -262,6 +262,7 @@ class WCPathEntry(AbstractEntry):
                     project_path = par_dir
             elif wc_is_project(par_dir):
                 project_path = par_dir
+                package_path = path
             else:
                 return None
         else:
@@ -386,7 +387,10 @@ class WCPath(object):
         if self.project_path is not None:
             self.project = wc_read_project(self.project_path)
         if self.package_path is not None:
-            self.package = wc_read_package(self.package_path)
+            if wc_is_package(self.package_path):
+                self.package = wc_read_package(self.package_path)
+            else:
+                self.package = os.path.basename(self.package_path)
         if self.filename_path is not None:
             self.filename = os.path.basename(self.filename_path)
 
@@ -410,7 +414,7 @@ class WCPath(object):
         returned.
 
         """
-        if self.package_path is None:
+        if self.package_path is None or not wc_is_package(self.package_path):
             return None
         return Package(self.package_path, *args, **kwargs)
 
