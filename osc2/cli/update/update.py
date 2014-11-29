@@ -1,10 +1,6 @@
 """Provides classes and functions to update a wc."""
 
-import os
-
 from osc2.wc.base import TransactionListener
-from osc2.wc.project import Project
-from osc2.wc.util import wc_is_project
 
 
 UPDATE_FILE_TEMPLATE = 'update/update_file.jinja2'
@@ -66,33 +62,12 @@ class RendererUpdateTransactionListener(TransactionListener):
 
 
 class WCUpdateController(object):
-    """Can be used to update/checkout a project or package."""
+    """Can be used to update a project or package."""
 
-    def __init__(self, path=None):
-        """Constructs a new WCUpdateController instance.
-
-        Keyword arguments:
-        path -- the base path where all operations should be executed
-                (default: os.getcwd())
-
-        """
+    def __init__(self):
+        """Constructs a new WCUpdateController instance."""
         super(WCUpdateController, self).__init__()
         self._renderer = None
-        self._path = path
-        if path is None:
-            self._path = os.path.join(os.getcwd())
-
-    def _path_join(self, path):
-        """Joins self._path with path"""
-        return os.path.join(self._path, path)
-
-    def checkout(self, renderer, project, package, info):
-        """Checks out a project or a package."""
-        self._renderer = renderer
-        if package is not None:
-            self._checkout_package(project, package, info)
-        elif project is not None:
-            self._checkout_project(project, info)
 
     def update(self, renderer, path, info):
         """Updates a project or a list of packages"""
@@ -117,24 +92,6 @@ class WCUpdateController(object):
         """Updates a package wc."""
         query = self._build_query(info)
         pkg.update(**query)
-
-    def _checkout_package(self, project, package, info):
-        path = self._path_join(project)
-        tl = RendererUpdateTransactionListener(self._renderer)
-        if wc_is_project(path):
-            prj = Project(path, transaction_listener=[tl])
-        else:
-            prj = Project.init(path, project, info.apiurl,
-                               transaction_listener=[tl])
-        self._update_project(prj, info, package)
-
-    def _checkout_project(self, project, info):
-        """Checks out the project project."""
-        path = self._path_join(project)
-        tl = RendererUpdateTransactionListener(self._renderer)
-        prj = Project.init(path, project, info.apiurl,
-                           transaction_listener=[tl])
-        self._update_project(prj, info)
 
     def _build_query(self, info):
         """Builds query dict."""
