@@ -67,6 +67,22 @@ class OscCommand(CommandDescription):
     """open Build Service commandline tool"""
 
 
+def _extract_info(f, *f_args, **f_kwargs):
+    """Extracts the info object from *f_args or **f_kwargs.
+
+    f is a function/method, *f_args are actual parameters, and
+    **f_kwargs are actual keyword parameters.
+    If f's signature does not define an "info" parameter, None
+    is returned.
+
+    """
+    params = inspect.getargspec(f)[0]
+    if 'info' not in params:
+        return None
+    i = params.index('info')
+    return f_kwargs.get('info', f_args[i])
+
+
 def illegal_options(*args, **kwargs):
     """Decorator which checks that certain options are not specified.
 
@@ -95,11 +111,9 @@ def illegal_options(*args, **kwargs):
                                 break
                         break
                 return '\n'.join(res)
-            params = inspect.getargspec(f)[0]
-            if 'info' not in params:
-                return f(*f_args, **f_kwargs)
-            i = params.index('info')
-            info = f_kwargs.get('info', f_args[i])
+            info = _extract_info(f, *fargs, **f_kwargs)
+            if info is None:
+                f(*f_args, **f_kwargs)
             for opt in args:
                 if info.get(opt):
                     msg = parse_illegal_options_doc(f.__doc__) % {'opt': opt}
@@ -108,6 +122,37 @@ def illegal_options(*args, **kwargs):
                 if info.get(opt) != value:
                     msg = parse_illegal_options_doc(f.__doc__) % {'opt': opt}
                     raise ValueError(msg)
+            return f(*f_args, **f_kwargs)
+        checker.func_name = f.func_name
+        return checker
+    return decorate
+
+
+def at_most(n, *args, **kwargs):
+    """Decorator, which checks that certain args are specified at most n times.
+
+    If an arg from args occurs more than n times in the info object, a
+    ValueError is raised.
+
+    Keyword arguments:
+    msg -- optional message, which is passed to the ValueError
+           (default: "Expected %(arg)s at most %(times)d times")
+
+    """
+    def decorate(f):
+        def checker(*f_args, **f_kwargs):
+            info = _extract_info(f, *f_args, **f_kwargs)
+            if info is not None:
+                tmp_msg = "Expected %(arg)s at most %(times)d times"
+                msg = kwargs.get('msg', tmp_msg)
+                for arg in args:
+                    val = info.get(arg)
+                    # checking for isinstance(val, Sequence) does not work
+                    # because val can also be a string
+                    if not hasattr(val, 'extend'):
+                        val = [val]
+                    if len(val) > n:
+                        raise ValueError(msg % {'arg': arg, 'times': n})
             return f(*f_args, **f_kwargs)
         checker.func_name = f.func_name
         return checker
