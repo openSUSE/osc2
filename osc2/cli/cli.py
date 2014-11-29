@@ -18,6 +18,11 @@ class UserAbort(Exception):
     """Exception is raised if user decides to abort."""
 
 
+def logger():
+    """Returns a logging.Logger object."""
+    return logging.getLogger(__name__)
+
+
 # TODO: move into config module
 def _init(apiurl):
     """Initialize osc library.
@@ -25,6 +30,11 @@ def _init(apiurl):
     apiurl is the apiurl which should be used.
 
     """
+    if hasattr(apiurl, 'extend') and len(set(apiurl)) > 1:
+        msg = ("Different apiurls are not supported at the moment: "
+               "%s (using %s)" % (', '.join(apiurl), apiurl[0]))
+        logger().info(msg)
+        apiurl = apiurl[0]
     conf_filename = os.environ.get('OSC_CONFIG', '~/.oscrc')
     conf_filename = os.path.expanduser(conf_filename)
     cp = SafeConfigParser({'plaintext_password': True, 'aliases': ''})
@@ -294,6 +304,8 @@ def main(args=None):
     plugin.load_plugins()
     logger = logging.StreamHandler()
     logger.setLevel(logging.DEBUG)
+    logging.getLogger(__name__).addHandler(logger)
+    logging.getLogger(__name__).setLevel(logging.DEBUG)
     logging.getLogger('osc.httprequest').addHandler(logger)
     logging.getLogger('osc.httprequest').setLevel(logging.DEBUG)
     logging.getLogger('osc.cli.request.request').addHandler(logger)
