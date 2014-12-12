@@ -526,6 +526,21 @@ class TestOscArgs(OscTest):
         # package is None, because it does not exists/is no wc
         self.assertIsNone(info.path.package_obj())
 
+    def test23_2(self):
+        """test wc path entry to nonexistent pkg with trailing slash"""
+        oargs = OscArgs('wc_path')
+        path = self.fixture_file('prj1')
+        self._not_exists(path, 'nonexistent')
+        args = self.fixture_file('prj1', 'nonexistent') + '/'
+        info = oargs.resolve(args)
+        self.assertEqual(info.path.project, 'prj1')
+        self.assertEqual(info.path.project_path, path)
+        self.assertEqual(info.path.package, 'nonexistent')
+        exp = self.fixture_file('prj1', 'nonexistent')
+        self.assertEqual(info.path.package_path, exp)
+        self.assertIsNone(info.path.filename)
+        self.assertIsNone(info.path.filename_path)
+
     def test24(self):
         """test wc path entry (prj/pkg)"""
         oargs = OscArgs('wc_path')
