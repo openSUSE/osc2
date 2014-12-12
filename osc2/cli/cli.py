@@ -121,7 +121,7 @@ def illegal_options(*args, **kwargs):
                                 break
                         break
                 return '\n'.join(res)
-            info = _extract_info(f, *fargs, **f_kwargs)
+            info = _extract_info(f, *f_args, **f_kwargs)
             if info is None:
                 f(*f_args, **f_kwargs)
             for opt in args:
