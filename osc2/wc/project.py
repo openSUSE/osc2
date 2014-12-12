@@ -570,7 +570,7 @@ class Project(WorkingCopy):
                        "working copy" % pkg_path)
                 raise ValueError(msg)
             storedir = wc_pkg_data_mkdir(self.path, package)
-            pkg = Package.init(pkg_path, package, self.name, self.apiurl,
+            pkg = Package.init(pkg_path, self.name, package, self.apiurl,
                                ext_storedir=storedir)
             self._packages.add(package, state='A')
             self._packages.write()
