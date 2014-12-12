@@ -1,4 +1,5 @@
 <packages>
   <package name="added" state="A"/>
   <package name="missing" state="D"/>
+  <package name="non-standard" state=" "/>
 </packages>

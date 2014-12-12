@@ -214,6 +214,18 @@ class TestWCUtil(OscTest):
         par_dir = wc_parent(path)
         self.assertIsNone(par_dir)
 
+    def test30(self):
+        """test wc_parent in non-standard hierarchy"""
+        # currently, such a hierarchy is not created by osc2
+        # but we should resolve the parent with the help of
+        # the storedir link
+        path = self.fixture_file('prj1', 'hierarchy', 'non-standard')
+        self.assertTrue(wc_is_package(path))
+        par_dir = wc_parent(path)
+        self.assertIsNotNone(par_dir)
+        self.assertTrue(wc_is_project(par_dir))
+        self.assertEqual(wc_read_project(par_dir), 'prj1')
+
     def test_wc_init1(self):
         """simple init wc"""
         path = self.fixture_file('init')
