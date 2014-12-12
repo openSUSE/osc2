@@ -9,10 +9,11 @@ STATUS_PACKAGE_TEMPLATE = 'status/status_package.jinja2'
 
 def status(renderer, path, info):
     """Shows the status."""
+    pkg = path.package_obj()
     if path.filename is not None:
-        _file_status(renderer, path.package_obj(), info, path.filename)
-    elif path.package is not None:
-        _package_status(renderer, None, path.package_obj(), info)
+        _file_status(renderer, pkg, info, path.filename)
+    elif pkg is not None:
+        _package_status(renderer, None, pkg, info)
     elif path.project is not None:
         _project_status(renderer, path.project_obj(), info)
 
