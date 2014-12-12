@@ -178,6 +178,7 @@ def import_ui():
     import osc2.cli.update.ui
     import osc2.cli.commit.ui
     import osc2.cli.status.ui
+    import osc2.cli.add.ui
 
 
 def call(func):
