@@ -203,6 +203,8 @@ class TestProject(OscTest):
         self.assertEqual(prj._status('added'), 'A')
         self.assertTrue(os.path.islink(os.path.join(pkg_path, '.osc')))
         pkg = prj.package('added')
+        self.assertEqual(pkg.project, 'project')
+        self.assertEqual(pkg.name, 'added')
         self.assertEqual(pkg.status('foo'), '?')
         self.assertEqual(pkg.status('bar'), '?')
 
