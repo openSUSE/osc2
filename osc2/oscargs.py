@@ -242,7 +242,6 @@ class WCPathEntry(AbstractEntry):
         otherwise None.
 
         """
-        project = package = filename = None
         project_path = package_path = filename_path = None
         if not path:
             path = os.getcwd()
