@@ -17,6 +17,7 @@ from test.util import test_xpath
 from test.util import test_cpio
 from test.util import test_xml
 from test.util import test_io
+from test.util import test_delegation
 from test.cli.util import test_shell
 
 
@@ -38,6 +39,7 @@ def additional_tests():
     suite.addTests(test_cpio.suite())
     suite.addTests(test_xml.suite())
     suite.addTests(test_io.suite())
+    suite.addTests(test_delegation.suite())
     suite.addTests(test_shell.suite())
     return suite
 
