@@ -16,6 +16,7 @@ from test.wc import test_convert
 from test.util import test_xpath
 from test.util import test_cpio
 from test.util import test_xml
+from test.util import test_io
 from test.cli.util import test_shell
 
 
@@ -36,6 +37,7 @@ def additional_tests():
     suite.addTests(test_xpath.suite())
     suite.addTests(test_cpio.suite())
     suite.addTests(test_xml.suite())
+    suite.addTests(test_io.suite())
     suite.addTests(test_shell.suite())
     return suite
 
