@@ -6,7 +6,8 @@ Additionally it provides some convenience methods.
 """
 
 import os
-from tempfile import NamedTemporaryFile
+import shutil
+from tempfile import NamedTemporaryFile, mkdtemp as orig_mkdtemp
 
 __all__ = ['copy_file', 'iter_read']
 
@@ -167,3 +168,96 @@ def iter_read(fsource, bufsize=8096, size=-1, read_method='read'):
     finally:
         if not source_flike and fsource_obj is not None:
             fsource_obj.close()
+
+
+# inspired by lnussel's mytmpdir class in osc's
+# (osc1) build.py module
+class TemporaryDirectory(object):
+    """Represents a temporary directory.
+
+    The temporary directory is created lazily. Once this instance
+    is destroyed, the corresponding temporary directory is removed
+    as well (unless delete=False was passed to the __init__ method).
+    Moreover, an instance of this class can be used as a
+    context manager (__exit__ deletes the temporary directory, unless
+    delete=False was passed to the __init__ method).
+
+    """
+    def __init__(self, rmdir=False, delete=True, *args, **kwargs):
+        """Constructs a new TemporaryDirectory instance.
+
+        If rmdir is set to True, os.rmdir is used to remove
+        the temporary directory (default: False; in this case,
+        shutil.rmtree is used).
+        If delete is set to False, the temporary directory is
+        not automatically removed (removing it is up to the
+        caller) (default: True).
+
+        *args and **kwargs are passed to the tempfile.mkdtemp
+        call.
+
+        """
+        super(TemporaryDirectory, self).__init__()
+        # _path represents 3 states: '' (no tmpdir exists), the actual tmpdir,
+        # and None (tmpdir removed (final state))
+        self._path = ''
+        self._params = (args, kwargs)
+        self._delete = delete
+        self._rm = self._rmtree
+        if rmdir:
+            self._rm = self._rmdir
+
+    # avoid corner cases: if this module is deleted, the global names
+    # "shutil"/"os" may not be available anymore (see documentation of
+    # __del__ (tempfile.NamedTemporaryFile uses a similar workaround
+    # for such a situation))
+    _rmtree = staticmethod(shutil.rmtree)
+
+    # staticmethod is not necessarily needed here
+    _rmdir = staticmethod(os.rmdir)
+
+    @property
+    def path(self):
+        """Returns the path of the tmpdir."""
+        if self._path == '':
+            args, kwargs = self._params
+            self._path = orig_mkdtemp(*args, **kwargs)
+        return self._path
+
+    def _cleanup(self, meth=None, delete=False):
+        """Removes the tmpdir, if it exists and delete is set to True.
+
+        Afterwards, this object becomes stale.
+        meth can be used to specify the cleanup method. If meth is None,
+        the default cleanup method, which was specified in __init__, is used.
+
+        """
+        if self._path and os.path.isdir(self._path) and delete:
+            if meth is None:
+                meth = self._rm
+            meth(self._path)
+        # if delete is True, the object becomes "stale"
+        # (regardless, if a tmpdir was created or not)
+        if delete:
+            self._path = None
+
+    def rmtree(self):
+        self._cleanup(meth=self._rmtree, delete=True)
+
+    def rmdir(self):
+        self._cleanup(meth=self._rmdir, delete=True)
+
+    def __enter__(self):
+        if self.path is None:
+            msg = 'tmpdir was already removed'
+            raise ValueError(msg)
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        self._cleanup(delete=self._delete)
+
+    def __del__(self):
+        self._cleanup(delete=self._delete)
+
+    def __str__(self):
+        return self.path
