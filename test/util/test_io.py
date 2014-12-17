@@ -2,7 +2,7 @@ import unittest
 import os
 import tempfile
 
-from osc2.util.io import TemporaryDirectory
+from osc2.util.io import TemporaryDirectory, mkdtemp
 
 
 def suite():
@@ -161,6 +161,61 @@ class TestIO(unittest.TestCase):
         self.assertFalse(os.path.exists(path))
         # as long as the directory is gone, we are fine
         tmpdir.rmdir()
+
+    def test_mkdtemp1(self):
+        """simple mkdtemp test"""
+        tmpdir = mkdtemp(dir=self._tmpdir)
+        self.assertTrue(os.path.isdir(tmpdir))
+        tmpdir.rmtree()
+        self.assertFalse(os.path.isdir(tmpdir))
+
+    def test_mkdtemp2(self):
+        """simple mkdtemp (remove with rmdir)"""
+        tmpdir = mkdtemp(dir=self._tmpdir)
+        self.assertTrue(os.path.isdir(tmpdir))
+        tmpdir.rmdir()
+        self.assertFalse(os.path.isdir(tmpdir))
+
+    def test_mkdtemp3(self):
+        """test __del__ method"""
+        tmpdir = mkdtemp(dir=self._tmpdir)
+        self.assertTrue(os.path.isdir(tmpdir))
+        path = str(tmpdir)
+        del tmpdir
+        self.assertFalse(os.path.isdir(path))
+
+    def test_mkdtemp4(self):
+        """advanced __del__ semantics"""
+        tmpdir = mkdtemp(dir=self._tmpdir)
+        self.assertTrue(os.path.isdir(tmpdir))
+        path = str(tmpdir)
+        ref = tmpdir
+        # ref still references the tmpdir, so the
+        # actual object is not deleted
+        del tmpdir
+        self.assertTrue(os.path.isdir(path))
+        del ref
+        self.assertFalse(os.path.isdir(path))
+
+    def test_mkdtemp5(self):
+        """test suffix and str operations"""
+        tmpdir = mkdtemp(dir=self._tmpdir, suffix='foo')
+        self.assertTrue(tmpdir.endswith('foo'))
+        os.path.join(tmpdir, 'test')
+        # test more str operations
+        tmpdir + 'foo'
+        'foo' + tmpdir
+        self.assertTrue(len(tmpdir) > 0)
+        self.assertTrue('foo' in tmpdir)
+        self.assertEqual(''.join(tmpdir), tmpdir)
+        # stat requires a "real" str (that is a str/unicode or buffer instance)
+        os.stat(tmpdir)
+
+    def test_mkdtemp6(self):
+        """test context manager"""
+        with mkdtemp(dir=self._tmpdir) as tmpdir:
+            self.assertTrue(os.path.isdir(tmpdir))
+        self.assertFalse(os.path.isdir(tmpdir))
 
 if __name__ == '__main__':
     unittest.main()
