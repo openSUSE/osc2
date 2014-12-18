@@ -232,5 +232,14 @@ class TestIO(unittest.TestCase):
             self.assertTrue(os.path.isfile(tmpfile))
         self.assertFalse(os.path.isfile(tmpfile))
 
+    def test_mkstemp3(self):
+        """write to tmpfile"""
+        with mkstemp(dir=self._tmpdir) as tmpfile:
+            tmpfile.write('foobar')
+            tmpfile.flush()
+            with open(tmpfile, 'r') as f:
+                self.assertEqual(f.read(), 'foobar')
+        self.assertFalse(os.path.isfile(tmpfile))
+
 if __name__ == '__main__':
     unittest.main()
