@@ -2,7 +2,7 @@ import unittest
 import os
 import tempfile
 
-from osc2.util.io import TemporaryDirectory, mkdtemp
+from osc2.util.io import TemporaryDirectory, mkdtemp, mkstemp
 
 
 def suite():
@@ -216,6 +216,21 @@ class TestIO(unittest.TestCase):
         with mkdtemp(dir=self._tmpdir) as tmpdir:
             self.assertTrue(os.path.isdir(tmpdir))
         self.assertFalse(os.path.isdir(tmpdir))
+
+    def test_mkstemp1(self):
+        """test simple mkstemp"""
+        tmpfile = mkstemp(dir=self._tmpdir)
+        self.assertTrue(os.path.isfile(tmpfile))
+        self.assertEqual(tmpfile.name, tmpfile)
+        self.assertIsNotNone(os.stat(tmpfile))
+        tmpfile.close()
+        self.assertFalse(os.path.isfile(tmpfile))
+
+    def test_mkstemp2(self):
+        """test context manager"""
+        with mkstemp(dir=self._tmpdir) as tmpfile:
+            self.assertTrue(os.path.isfile(tmpfile))
+        self.assertFalse(os.path.isfile(tmpfile))
 
 if __name__ == '__main__':
     unittest.main()
