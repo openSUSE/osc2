@@ -9,6 +9,9 @@ import os
 import shutil
 from tempfile import NamedTemporaryFile, mkdtemp as orig_mkdtemp
 
+from osc2.util.delegation import StringifiedDelegator
+
+
 __all__ = ['copy_file', 'iter_read']
 
 
@@ -261,3 +264,57 @@ class TemporaryDirectory(object):
 
     def __str__(self):
         return self.path
+
+
+class TemporaryEntityDelegator(StringifiedDelegator):
+    """Represents a TemporaryEntityDelegator.
+
+    In our setting, the __enter__ method has to be
+    implemented explicitly, otherwise the following
+    code fails with a ValueError:
+    with mkdtemp(...) as tmpdir:
+        ...
+    mkdtemp creates a delegator, whose __enter__ method
+    is called. But before the __enter__ method is called
+    the delegator is deleted. Consequently, the delegate
+    is deleted as well => the __enter__ method is invoked
+    in an illegal state and a ValueError is raised.
+
+    In addition to that, __enter__ should also return
+    the delegator instead of the delegate (otherwise it
+    cannot be passed to methods like os.stat, which expect
+    a str/unicode or buffer instance).
+
+    """
+    def __enter__(self):
+        self._delegate.__enter__()
+        return self
+
+    @staticmethod
+    def create(delegate):
+        """Creates a TemporaryEntityDelegator instance.
+
+        delegate is supposed to be a an instance of the class
+        TemporaryDirectory or NamedTemporaryFile.
+
+        """
+        return TemporaryEntityDelegator(
+            delegate, delegate.__del__, delegate.__exit__
+        )
+
+
+def mkdtemp(*args, **kwargs):
+    """Returns a temporary directory.
+
+    The returned instance can be treated like a str and a
+    TemporaryDirectory instance. For example, it can be passed
+    to os.stat and the temporary directory is automatically
+    deleted, if the instance is garbage collected.
+
+    *args and **kwargs are passed to the TemporaryDirectory's
+    __init__ method.
+
+    """
+    return TemporaryEntityDelegator.create(
+        TemporaryDirectory(*args, **kwargs)
+    )
