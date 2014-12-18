@@ -9,7 +9,7 @@ import os
 import shutil
 from tempfile import NamedTemporaryFile, mkdtemp as orig_mkdtemp
 
-from osc2.util.delegation import StringifiedDelegator
+from osc2.util.delegation import StringifiedDelegator, Delegator
 
 
 __all__ = ['copy_file', 'iter_read']
@@ -317,4 +317,31 @@ def mkdtemp(*args, **kwargs):
     """
     return TemporaryEntityDelegator.create(
         TemporaryDirectory(*args, **kwargs)
+    )
+
+
+def mkstemp(*args, **kwargs):
+    """Returns a temporary file.
+
+    The returned instance can be treated like a str and an
+    instance that is returned by tempfile.NamedTemporaryFile.
+    For example, it can be passed to os.stat and the temporary
+    file is automatically deleted, if the instance is garbage
+    collected.
+
+    *args and **kwargs are passed to the tempfile.NamedTemporaryFile
+    function.
+
+    """
+    # the instance, which is returned by the NamedTemporaryFile call,
+    # has no suitable __str__ method; thus, we provide one via yet
+    # another delegator
+    class NamedTemporaryFileDelegator(Delegator):
+        def __str__(self):
+            return self._delegate.name
+
+    # delegation is as follows:
+    # TemporaryEntityDelegator -> NamedTemporaryFileDelegator -> tmpfile
+    return TemporaryEntityDelegator.create(
+        NamedTemporaryFileDelegator(NamedTemporaryFile(*args, **kwargs))
     )
