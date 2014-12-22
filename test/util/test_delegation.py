@@ -1,7 +1,6 @@
-from __future__ import print_function
 import unittest
 
-from osc2.util.delegation import StringifiedDelegator
+from osc2.util.delegation import StringifiedDelegator, Delegator
 
 
 def suite():
@@ -158,6 +157,34 @@ class TestDelegation(unittest.TestCase):
         self.assertRaises(ValueError, StringifiedDelegator, None)
         self.assertRaises(ValueError, StringifiedDelegator, foo,
                           foo.endswith, endswith=foo.acc)
+
+    def test_getattr_no_max_recursion(self):
+        """count getattr calls to avoid a max recursion RuntimeError"""
+        class CountingDelegator(Delegator):
+            # use a class level counter so that the counting
+            # does not influence the behavior of __getattr__; if we
+            # would use an instance attribute, the behavior of __getattr__
+            # would have been altered (accessing an instance attribute leads
+            # to an infinite recursion)
+            _getattr_cnt = 0
+
+            def __getattr__(self, key):
+                CountingDelegator._getattr_cnt += 1
+                return super(CountingDelegator, self).__getattr__(key)
+
+        foo = Foo()
+        cdel = CountingDelegator(foo)
+        self.assertEqual(CountingDelegator._getattr_cnt, 0)
+        self.assertEqual(cdel.i, 0)
+        self.assertEqual(CountingDelegator._getattr_cnt, 1)
+        cdel.attr = None
+        self.assertEqual(CountingDelegator._getattr_cnt, 1)
+        self.assertIsNone(cdel.attr)
+        self.assertEqual(CountingDelegator._getattr_cnt, 2)
+        cdel.acc()
+        self.assertEqual(CountingDelegator._getattr_cnt, 3)
+        self.assertEqual(cdel.i, 1)
+        self.assertEqual(CountingDelegator._getattr_cnt, 4)
 
 if __name__ == '__main__':
     unittest.main()
