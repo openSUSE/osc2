@@ -119,10 +119,19 @@ class Delegator(DynamicDecorator):
         return getattr(self._delegate, key)
 
     def __setattr__(self, key, val):
-        # FIXME: the hasattr causes a "maximum recursion depth exceeded"
-        # RuntimeError; before the fixing this, I'll try to come up with
-        # a (minimal) testcase
-        if not hasattr(self, '_delegate'):
+        def _hasattr(key):
+            exists = True
+            try:
+                super(Delegator, self).__getattribute__(key)
+            except AttributeError:
+                exists = False
+            return exists
+
+        # as long as the _delegate was not set, all attributes
+        # are added to the delegator instance (instead of the delegate);
+        # once the _delegate is set, our own attributes can still be
+        # manipulated (see also the testcases)
+        if not _hasattr('_delegate') or _hasattr(key):
             super(Delegator, self).__setattr__(key, val)
         else:
             setattr(self._delegate, key, val)
