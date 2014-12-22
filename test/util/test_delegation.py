@@ -186,5 +186,74 @@ class TestDelegation(unittest.TestCase):
         self.assertEqual(cdel.i, 1)
         self.assertEqual(CountingDelegator._getattr_cnt, 4)
 
+    def test_correct_subclassing(self):
+        """test "correct"/"expected" subclassing behavior"""
+        class CorrectDelegator(Delegator):
+            def __init__(self, delegate):
+                self.foobar = 42
+                super(CorrectDelegator, self).__init__(delegate)
+        foo = Foo()
+        cdel = CorrectDelegator(foo)
+        self.assertEqual(cdel.foobar, 42)
+        # the foobar attribute was _not_ set on the delegate
+        self.assertFalse(hasattr(foo, 'foobar'))
+        # modify foobar
+        cdel.foobar = 24
+        self.assertEqual(cdel.foobar, 24)
+        self.assertFalse(hasattr(foo, 'foobar'))
+        # the delegate can be changed as well (usually instantiating
+        # a new delegator instance is the better choice (w.r.t.
+        # code readability))
+        foo2 = Foo()
+        cdel._delegate = foo2
+        cdel.acc()
+        self.assertEqual(cdel.i, 1)
+        self.assertEqual(foo2.i, 1)
+        # the old delegate was not changed
+        self.assertEqual(foo.i, 0)
+
+    def test_wrong_subclassing(self):
+        """test "wrong"/"unexpected" subclassing behavior"""
+        class WrongDelegator(Delegator):
+            def __init__(self, delegate):
+                # call the superclass' __init__ before setting
+                # our own attributes
+                super(WrongDelegator, self).__init__(delegate)
+                # this sets the foobar attribute on the delegate
+                # instead on the delegator instance
+                self.foobar = 42
+
+        foo = Foo()
+        wdel = WrongDelegator(foo)
+        self.assertEqual(wdel.foobar, 42)
+        # the foobar attribute was set on the delegate
+        self.assertTrue(hasattr(foo, 'foobar'))
+        # modify foobar
+        wdel.foobar = 24
+        self.assertEqual(wdel.foobar, 24)
+        self.assertEqual(foo.foobar, 24)
+
+    def test_hiding(self):
+        """delegator attributes hide delegate attributes"""
+        # hides the attribute "i" and method "acc"
+        class HidingDelegator(Delegator):
+            def __init__(self, delegate):
+                self.i = 42
+                super(HidingDelegator, self).__init__(delegate)
+
+            def acc(self):
+                self.i -= 1
+
+        foo = Foo()
+        hdel = HidingDelegator(foo)
+        self.assertEqual(hdel.i, 42)
+        self.assertEqual(foo.i, 0)
+        hdel.acc()
+        self.assertEqual(hdel.i, 41)
+        self.assertEqual(foo.i, 0)
+        foo.acc()
+        self.assertEqual(hdel.i, 41)
+        self.assertEqual(foo.i, 1)
+
 if __name__ == '__main__':
     unittest.main()
