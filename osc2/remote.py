@@ -12,7 +12,6 @@ Example usage:
 """
 
 import logging
-from tempfile import NamedTemporaryFile
 import os
 from cStringIO import StringIO
 
@@ -22,7 +21,7 @@ from osc2.core import Osc
 from osc2.httprequest import HTTPError
 from osc2.util.xml import (ElementClassLookup, get_parser, fromstring,
                            OscElement)
-from osc2.util.io import copy_file, iter_read
+from osc2.util.io import copy_file, iter_read, mkstemp
 
 __all__ = ['RemoteModel', 'RemoteProject', 'RemotePackage', 'Request',
            'RORemoteFile', 'RWRemoteFile', 'RemotePerson']
@@ -588,7 +587,7 @@ class RWRemoteFile(RORemoteFile):
     methods like readline, readlines are also provided.
     If the remote file is small than 8096 bytes the file is represented by
     a StringIO object (the size is configurable, see __init__). Otherwise the
-    file is represented by a NamedTemporaryFile which is written to disk.
+    file is represented by a temporary file, which is written to disk.
 
     """
 
@@ -633,7 +632,7 @@ class RWRemoteFile(RORemoteFile):
         if read_required:
             self._init_read()
         if self._remote_size >= self.tmp_size or self.use_tmp:
-            new_fobj = NamedTemporaryFile()
+            new_fobj = mkstemp()
         else:
             new_fobj = StringIO()
         if read_required:

@@ -2,10 +2,9 @@
 
 import os
 import subprocess
-from tempfile import NamedTemporaryFile
 
 from osc2.cli.cli import UserAbort
-from osc2.util.io import copy_file
+from osc2.util.io import copy_file, mkstemp
 
 
 def run_pager(source, pager='less', suffix=''):
@@ -22,13 +21,13 @@ def run_pager(source, pager='less', suffix=''):
 
     """
     cmd = [os.getenv('PAGER', default=pager)]
-    with NamedTemporaryFile(prefix='osc_', suffix=suffix) as f:
+    with mkstemp(prefix='osc_', suffix=suffix) as f:
         if hasattr(source, 'read'):
             copy_file(source, f)
         else:
             f.write(source)
         f.flush()
-        cmd.append(f.name)
+        cmd.append(f)
         return subprocess.call(cmd, shell=False)
 
 
@@ -60,7 +59,7 @@ def edit_message(template=None, footer=None, suffix=''):
 
     """
     delimeter = "--This line, and those below, will be ignored--\n"
-    with NamedTemporaryFile(prefix='osc_', suffix=suffix) as f:
+    with mkstemp(prefix='osc_', suffix=suffix) as f:
         if template is not None:
             f.write(template)
         f.write("\n" + delimeter)
@@ -69,7 +68,7 @@ def edit_message(template=None, footer=None, suffix=''):
         f.flush()
         message = ''
         while not message:
-            run_editor(f.name)
+            run_editor(f)
             f.seek(0, os.SEEK_SET)
             message = f.read().split(delimeter, 1)[0].rstrip()
             if not message or message == template:

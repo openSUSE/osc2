@@ -8,12 +8,12 @@ import os
 import errno
 import fcntl
 import shutil
-from tempfile import NamedTemporaryFile
 
 from lxml import etree, objectify
 
 from osc2.wc.base import AbstractTransactionState
 from osc2.source import File, Directory, Linkinfo
+from osc2.util.io import mkstemp
 from osc2.util.xml import fromstring
 from osc2.util.xpath import XPathBuilder
 
@@ -582,14 +582,14 @@ def _write_storefile(path, filename, data):
     fname = _storefile(path, filename)
     tmpfile = None
     try:
-        tmpfile = NamedTemporaryFile(dir=_storedir(path), delete=False)
+        tmpfile = mkstemp(dir=_storedir(path), delete=False)
         tmpfile.write(data)
         if data:
             tmpfile.write('\n')
     finally:
         if tmpfile is not None:
             tmpfile.close()
-            os.rename(tmpfile.name, fname)
+            os.rename(tmpfile, fname)
 
 
 def wc_lock(path):
