@@ -1,11 +1,11 @@
 import os
 import unittest
-from tempfile import NamedTemporaryFile
 
 from lxml import etree
 
 from osc2.builder import (Builder, su_cmd, sudo_cmd, hostarch, can_build,
                           build_helper)
+from osc2.util.io import mkstemp
 from test.osctest import OscTest
 
 
@@ -186,7 +186,7 @@ class TestBuilder(OscTest):
         """test run method (write stdout to tmpfile)"""
         build_cmd = self.fixture_file('dummy.sh')
         builder = Builder(build_cmd=build_cmd, su_cmd=None, out='blah')
-        with NamedTemporaryFile() as f:
+        with mkstemp(dir=self._tmp_dir) as f:
             ret = builder.run(stdout=f)
             self.assertEqual(ret, 0)
             f.seek(0, os.SEEK_SET)
@@ -196,7 +196,7 @@ class TestBuilder(OscTest):
         """test run method (no shell expansion)"""
         build_cmd = self.fixture_file('dummy.sh')
         builder = Builder(build_cmd=build_cmd, su_cmd=None, out='$PATH')
-        with NamedTemporaryFile() as f:
+        with mkstemp(dir=self._tmp_dir) as f:
             ret = builder.run(stdout=f)
             self.assertEqual(ret, 0)
             f.seek(0, os.SEEK_SET)
@@ -208,7 +208,7 @@ class TestBuilder(OscTest):
         """test run method (specify spec file)"""
         build_cmd = self.fixture_file('dummy.sh')
         builder = Builder(build_cmd=build_cmd, su_cmd=None)
-        with NamedTemporaryFile() as f:
+        with mkstemp(dir=self._tmp_dir) as f:
             ret = builder.run('foo.spec', stdout=f)
             self.assertEqual(ret, 0)
             f.seek(0, os.SEEK_SET)

@@ -1,8 +1,8 @@
 import os
-import tempfile
 import unittest
 
 from test.osctest import OscTest
+from osc2.util.io import mkdtemp
 from osc2.wc.util import (WCFormatVersionError, wc_is_project, wc_is_package,
                           wc_read_project, wc_read_package, wc_read_apiurl,
                           WCLock, wc_parent, wc_init)
@@ -242,7 +242,7 @@ class TestWCUtil(OscTest):
         path = self.fixture_file('init')
         # we do not have to remove storedir later (cleanup happens
         # after each testcase)
-        storedir = tempfile.mkdtemp(dir=self._tmp_fixtures)
+        storedir = mkdtemp(dir=self._tmp_dir)
         storedir_lnk = self.fixture_file(path, '.osc')
         self._not_exists(path, '.osc')
         wc_init(path, ext_storedir=storedir)

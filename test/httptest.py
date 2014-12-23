@@ -3,10 +3,10 @@ import cStringIO
 import unittest
 import urllib2
 import httplib
-import tempfile
 import shutil
 from difflib import unified_diff
 
+from osc2.util.io import mkdtemp
 from test.xmltest import compare_xml
 
 EXPECTED_REQUESTS = []
@@ -166,7 +166,7 @@ class MockUrllib2Request(unittest.TestCase):
                                        fixtures_dir=self._fixtures_dir), )
             return self._orig_build_opener(*handlers)
         urllib2.build_opener = build_opener
-        self._tmp_dir = tempfile.mkdtemp(prefix='osc_test')
+        self._tmp_dir = mkdtemp(prefix='osc_test')
         self._tmp_fixtures = os.path.join(self._tmp_dir, 'fixtures')
         shutil.copytree(self._fixtures_dir, self._tmp_fixtures, symlinks=True)
 
