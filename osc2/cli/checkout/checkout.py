@@ -61,7 +61,7 @@ class WCCheckoutController(WCUpdateController):
     def checkout(self, renderer, info):
         """Checks out a project, package or file."""
         self._renderer = renderer
-        if hasattr(info, 'path'):
+        if info.get('path') is not None:
             paths = info.path
             if not isinstance(paths, Sequence):
                 paths = [paths]
@@ -71,10 +71,10 @@ class WCCheckoutController(WCUpdateController):
                     self._checkout_package(wc.apiurl, wc.path, todo[0], info)
                 else:
                     wc.revert(*todo)
-        if hasattr(info, 'package') and info.package is not None:
+        if info.get('package') is not None:
             self._checkout_package(info.apiurl, info.project, info.package,
                                    info)
-        elif hasattr(info, 'project') and info.project is not None:
+        elif info.get('project') is not None:
             self._checkout_project(info)
 
     @at_most(1, 'package', msg="At most one remote argument allowed.")
