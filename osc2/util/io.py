@@ -210,14 +210,17 @@ class TemporaryDirectory(object):
         if rmdir:
             self._rm = self._rmdir
 
-    # avoid corner cases: if this module is deleted, the global names
+    # avoid corner cases: if this module is unloaded, the global names
     # "shutil"/"os" may not be available anymore (see documentation of
     # __del__ (tempfile.NamedTemporaryFile uses a similar workaround
-    # for such a situation))
+    # for such a situation)); for a detailed explanation, see
+    # test.util.test_io.TestIO.test_tmpdir13.
     _rmtree = staticmethod(shutil.rmtree)
 
     # staticmethod is not necessarily needed here
     _rmdir = staticmethod(os.rmdir)
+
+    _isdir = staticmethod(os.path.isdir)
 
     @property
     def path(self):
@@ -235,7 +238,7 @@ class TemporaryDirectory(object):
         the default cleanup method, which was specified in __init__, is used.
 
         """
-        if self._path and os.path.isdir(self._path) and delete:
+        if self._path and self._isdir(self._path) and delete:
             if meth is None:
                 meth = self._rm
             meth(self._path)
