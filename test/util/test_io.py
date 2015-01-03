@@ -1,6 +1,8 @@
 import unittest
 import os
+import sys
 import tempfile
+from cStringIO import StringIO
 
 from osc2.util.io import TemporaryDirectory, mkdtemp, mkstemp
 
@@ -161,6 +163,53 @@ class TestIO(unittest.TestCase):
         self.assertFalse(os.path.exists(path))
         # as long as the directory is gone, we are fine
         tmpdir.rmdir()
+
+    def test_tmpdir13(self):
+        """test __del__ method with module unloading"""
+        # avoid an unraised exception:
+        # Exception AttributeError: "'NoneType' object has no attribute 'path'"
+        # in <bound method TemporaryDirectory.__del__ of
+        # <osc2.util.io.TemporaryDirectory object at 0x7f8abc8d7910>> ignored
+        #
+        # This exception was "raised" in the TemporaryDirectory.__del__ method,
+        # if the "osc2.util.io" was already "unloaded" (the __del__ method
+        # calls the _cleanup method, which tried to call the
+        # os.path.isdir function).
+        # What happened is the following:
+        # If the "osc2.util.io" module is passed to _PyModule_Clear
+        # (Objects/moduleobject.c), almost all entries in the module dict are
+        # set to None. That is, the entry for the key "os" points to None.
+        # Now, suppose that there is still a TemporaryDirectory instance
+        # around, whose __del__ method is eventually called. During this call,
+        # "os" resolves to None and therefore the subsequent lookup for the
+        # name "path" leads to the AttributeError.
+        # Instead of raising this exception, it is just printed to stderr,
+        # because it occurred in a __del__ method (see slot_tp_del
+        # (Objects/typeobject.c) and PyErr_WriteUnraisable (Python/errors.c)).
+
+        # avoid fiddling with sys.modules in the "main" process
+        pid = os.fork()
+        if pid == 0:
+            ret = os.EX_SOFTWARE
+            try:
+                sio = StringIO()
+                sys.stderr = sio
+                tmpdir = TemporaryDirectory(dir=self._tmpdir)
+                tmpdir.path
+                # clean tmpdir manually, because del tmpdir could
+                # raise an exception
+                os.rmdir(tmpdir.path)
+                del sys.modules['osc2.util.io']
+                del sys.modules['osc2.util']
+                del sys.modules['osc2']
+                del tmpdir
+                self.assertEqual(sio.getvalue(), '')
+                ret = os.EX_OK
+            finally:
+                os._exit(ret)
+        else:
+            _, status = os.waitpid(pid, 0)
+            self.assertEqual(status, os.EX_OK)
 
     def test_mkdtemp1(self):
         """simple mkdtemp test"""
