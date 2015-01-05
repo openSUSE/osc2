@@ -207,9 +207,8 @@ class TestIO(unittest.TestCase):
                 ret = os.EX_OK
             finally:
                 os._exit(ret)
-        else:
-            _, status = os.waitpid(pid, 0)
-            self.assertEqual(status, os.EX_OK)
+        _, status = os.waitpid(pid, 0)
+        self.assertEqual(status, os.WEXITSTATUS(os.EX_OK))
 
     def test_mkdtemp1(self):
         """simple mkdtemp test"""
