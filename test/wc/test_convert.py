@@ -71,6 +71,19 @@ class TestConvert(OscTest):
         self._exists(path, '_version', store=True)
         self._not_exists(path, '_osclib_version', store=True)
 
+    def test_package4(self):
+        """test package convert (_project file missing)"""
+        path = self.fixture_file('convert_2_inv_project')
+        self.assertRaises(WCFormatVersionError, Package, path)
+        self.assertRaises(WCInconsistentError, Package, path,
+                          verify_format=False)
+        self._not_exists(path, '_project', store=True)
+        self.assertRaises(ValueError, convert_package, path)
+        convert_package(path, project='foobar')
+        pkg = Package(path)
+        self.assertEqual(pkg.project, 'foobar')
+        self._exists(path, '_project', store=True)
+
     def test_project1(self):
         """test project convert"""
         path = self.fixture_file('project_1')
