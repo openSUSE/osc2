@@ -87,7 +87,7 @@ class MyHeaders(dict):
         return [val]
 
 
-class MyHTTPHandler(urllib2.HTTPHandler):
+class MyHTTPHandler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
     def __init__(self, *args, **kwargs):
         self._exp_requests = kwargs.pop('exp_requests')
         self._fixtures_dir = kwargs.pop('fixtures_dir')
@@ -104,6 +104,8 @@ class MyHTTPHandler(urllib2.HTTPHandler):
             return self._mock_GET(req, **r[2])
         elif req.get_method() in ('PUT', 'POST'):
             return self._mock_PUT(req, req.get_method(), **r[2])
+
+    https_open = http_open
 
     def _mock_GET(self, req, **kwargs):
         return self._get_response(req, **kwargs)
