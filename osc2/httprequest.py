@@ -19,6 +19,7 @@ import urlparse
 import cStringIO
 import mmap
 import logging
+import base64
 
 from lxml import etree
 
@@ -244,6 +245,73 @@ class Urllib2HTTPError(HTTPError):
                                                exc.hdrs, exc)
 
 
+class AbstractUrllib2CredentialsManager(object):
+    """Abstract base class for a credentials manager.
+
+    A credentials manager is used to retrieve the credentials
+    (username, password) for a given url. Whether the manager
+    manages the credentials for just one url or various urls
+    is up to the implementation of the concrete subclass.
+
+    """
+    def get_credentials(self, url):
+        """Returns the credentials for the given url.
+
+        If credentials for passed url exist, a (username, password)
+        tuple is returned. Otherwise, the tuple (None, None) is
+        returned.
+
+        """
+        raise NotImplementedError()
+
+
+class Urllib2SingleCredentialsManager(AbstractUrllib2CredentialsManager):
+    """Manages the credentials for single url."""
+
+    def __init__(self, url, username, password):
+        """Constructs a new Urllib2SingleCredentialsManager instance.
+
+        username and password represent the credentials for the
+        url url.
+
+        """
+        self._password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+        self._password_mgr.add_password(None, url, username, password)
+
+    def get_credentials(self, url):
+        return self._password_mgr.find_user_password(None, url)
+
+
+class Urllib2BasicAuthHandler(urllib2.BaseHandler):
+    """A default urllib2 basic auth handler.
+
+    It always sends the credentials for the configured url.
+
+    """
+    AUTH_HEADER = 'Authorization'
+
+    def __init__(self, creds_mgr):
+        """Constructs a new Urllib2BasicAuthHandler object.
+
+        creds_mgr is an instance of a subclass of the class
+        AbstractUrllib2CredentialsManager.
+
+        """
+        self._creds_mgr = creds_mgr
+
+    def http_request(self, request):
+        if not request.has_header(self.AUTH_HEADER):
+            url = request.get_full_url()
+            user, password = self._creds_mgr.get_credentials(url)
+            if user is not None and password is not None:
+                creds = base64.b64encode("%s:%s" % (user, password))
+                auth = "Basic %s" % creds
+                request.add_unredirected_header(self.AUTH_HEADER, auth)
+        return request
+
+    https_request = http_request
+
+
 class Urllib2HTTPRequest(AbstractHTTPRequest):
     """Do http requests with urllib2.
 
@@ -254,7 +322,7 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
 
     def __init__(self, apiurl, validate=False, username='', password='',
                  cookie_filename='', debug=False, mmap=True,
-                 mmap_fsize=1024 * 512):
+                 mmap_fsize=1024 * 512, handlers=None):
         """constructs a new Urllib2HTTPRequest object.
 
         apiurl is the url which is used for every request.
@@ -270,6 +338,7 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
         mmap -- use mmap when POSTing or PUTing a file (default True)
         mmap_fsize -- specifies the minimum filesize for using mmap
                       (default 1024*512)
+        handlers -- list of additional urllib2 handlers (default None)
 
         """
         super(Urllib2HTTPRequest, self).__init__(apiurl, validate)
@@ -277,10 +346,11 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
         self._use_mmap = mmap
         self._mmap_fsize = mmap_fsize
         self._logger = logging.getLogger(__name__)
-        self._install_opener(username, password, cookie_filename)
+        self._install_opener(username, password, cookie_filename, handlers)
 
-    def _install_opener(self, username, password, cookie_filename):
-        handlers = []
+    def _install_opener(self, username, password, cookie_filename, handlers):
+        if handlers is None:
+            handlers = []
         cookie_processor = self._setup_cookie_processor(cookie_filename)
         if cookie_processor is not None:
             handlers.append(cookie_processor)
@@ -308,10 +378,9 @@ class Urllib2HTTPRequest(AbstractHTTPRequest):
     def _setup_authhandler(self, username, password):
         if username == '':
             return None
-        authhandler = urllib2.HTTPBasicAuthHandler(
-            urllib2.HTTPPasswordMgrWithDefaultRealm())
-        authhandler.add_password(None, self.apiurl, username, password)
-        return authhandler
+        creds_mgr = Urllib2SingleCredentialsManager(self.apiurl, username,
+                                                    password)
+        return Urllib2BasicAuthHandler(creds_mgr)
 
     def _build_request(self, method, path, apiurl, **query):
         if not apiurl:
