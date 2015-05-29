@@ -42,6 +42,51 @@ class RequestDataMismatch(Exception):
                                           '\n'.join(diff))
 
 
+class RequestUnexpectedHeader(Exception):
+    """raised if a request contains an unexpected header"""
+    def __init__(self, url, hdr, val):
+        super(Exception, self).__init__()
+        self.url = url
+        self.hdr = hdr
+        self.val = val
+
+    def __str__(self):
+        return "%s: unexpected header %s = %s" % (self.url, self.hdr, self.val)
+
+
+class RequestHeaderMismatch(Exception):
+    """raised if a request's header value mismatches or is not present"""
+    def __init__(self, url, hdr, got, exp):
+        super(Exception, self).__init__()
+        self.url = url
+        self.hdr = hdr
+        if got is None:
+            got = ''
+        self.got = got
+        self.exp = exp
+
+    def __str__(self):
+        return "%s: hdr %s: \'%s\' (got), \'%s\' (expected)" % (self.url,
+                                                                self.hdr,
+                                                                self.got,
+                                                                self.exp)
+
+
+class MyHeaders(dict):
+    """Used to mock a httplib.HTTPMessage object.
+
+    This implementation lacks several methods, but
+    this is sufficient for now.
+
+    """
+    def getheaders(self, name):
+        # e.g. used by cookielib.CookieJar
+        val = self.get(name, None)
+        if val is None:
+            return []
+        return [val]
+
+
 class MyHTTPHandler(urllib2.HTTPHandler):
     def __init__(self, *args, **kwargs):
         self._exp_requests = kwargs.pop('exp_requests')
@@ -56,12 +101,12 @@ class MyHTTPHandler(urllib2.HTTPHandler):
             raise RequestWrongOrder(req.get_full_url(), r[1], req.get_method(),
                                     r[0])
         if req.get_method() in ('GET', 'DELETE'):
-            return self._mock_GET(r[1], **r[2])
+            return self._mock_GET(req, **r[2])
         elif req.get_method() in ('PUT', 'POST'):
             return self._mock_PUT(req, req.get_method(), **r[2])
 
-    def _mock_GET(self, fullurl, **kwargs):
-        return self._get_response(fullurl, **kwargs)
+    def _mock_GET(self, req, **kwargs):
+        return self._get_response(req, **kwargs)
 
     def _mock_PUT(self, req, method, **kwargs):
         exp = kwargs.pop('exp', None)
@@ -86,9 +131,10 @@ class MyHTTPHandler(urllib2.HTTPHandler):
         elif exp is not None and data != exp:
             raise RequestDataMismatch(req.get_full_url(), repr(req.get_data()),
                                       repr(exp))
-        return self._get_response(req.get_full_url(), **kwargs)
+        return self._get_response(req, **kwargs)
 
-    def _get_response(self, url, **kwargs):
+    def _get_response(self, req, **kwargs):
+        self._check_headers(req, kwargs.pop('exp_headers', {}))
         f = None
         if 'exception' in kwargs:
             raise kwargs['exception']
@@ -99,14 +145,26 @@ class MyHTTPHandler(urllib2.HTTPHandler):
             f = cStringIO.StringIO(kwargs.pop('text'))
         else:
             raise ValueError('either specify text or file')
-        headers = {}
+        code = kwargs.pop('code', 200)
+        # everything else in kwargs are response headers
+        headers = MyHeaders()
         for k, v in kwargs.iteritems():
             k = k.replace('_', '-')
             headers[k] = v
-        resp = urllib2.addinfourl(f, headers, url)
-        resp.code = kwargs.get('code', 200)
+        resp = urllib2.addinfourl(f, headers, req.get_full_url())
+        resp.code = code
         resp.msg = ''
         return resp
+
+    def _check_headers(self, req, headers):
+        for hdr, exp_val in headers.iteritems():
+            # urllib2 stores the capitalized hdr
+            hdr = hdr.capitalize().replace('_', '-')
+            val = req.get_header(hdr)
+            if val != exp_val:
+                if exp_val is not None:
+                    raise RequestHeaderMismatch(req, hdr, val, exp_val)
+                raise RequestUnexpectedHeader(req, hdr, req.get_header(hdr))
 
 
 def urldecorator(method, fullurl, **kwargs):
