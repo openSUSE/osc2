@@ -20,7 +20,8 @@ class TestHTTPRequest(OscTest):
     def read_file(self, filename):
         return open(self.fixture_file(filename), 'r').read()
 
-    @GET('http://localhost/source', text='foobar')
+    @GET('http://localhost/source', text='foobar',
+         exp_headers={'Authorization': None})
     def test_1(self):
         """simple get"""
         r = Urllib2HTTPRequest('http://localhost', True, '', '', '', False)
@@ -222,6 +223,100 @@ class TestHTTPRequest(OscTest):
         r = Urllib2HTTPRequest('http://localhost', True, '', '', '', False)
         resp = r.get('/test', binary=['', 'foo'], test='4', x='', y=None,
                      z=[''], a=['', None])
+        self.assertEqual(resp.read(), 'foo')
+
+    @GET('http://localhost/test', text='foo',
+         exp_headers={'Authorization': 'Basic Zm9vOmJhcg=='})
+    def test_basic_auth_handler1(self):
+        """test the default basic auth handler"""
+        r = Urllib2HTTPRequest('http://localhost', username='foo',
+                               password='bar')
+        resp = r.get('/test')
+        self.assertEqual(resp.read(), 'foo')
+
+    @GET('http://localhost/test', text='foo', code=401,
+         exp_headers={'Authorization': 'Basic Zm9vOmJhcg=='},
+         www_authenticate='Basic realm="foo bar"')
+    def test_basic_auth_handler2(self):
+        """test the default basic auth handler (wrong creds)"""
+        r = Urllib2HTTPRequest('http://localhost', username='foo',
+                               password='bar')
+        self.assertRaises(HTTPError, r.get, '/test')
+
+    @GET('http://api.opensuse.org/source', text='foo',
+         exp_headers={'Authorization': 'Basic Zm9vOmJhcg==',
+                      'Cookie': 'openSUSE_session=xyz'})
+    def test_basic_auth_handler3(self):
+        """always send credentials (even if a cookie is used)"""
+        r = Urllib2HTTPRequest('http://api.opensuse.org', username='foo',
+                               password='bar',
+                               cookie_filename=self.fixture_file('cookie'))
+        resp = r.get('/source')
+        self.assertEqual(resp.read(), 'foo')
+
+    @GET('http://api.opensuse.org/source', text='foo',
+         exp_headers={'Authorization': None})
+    def test_basic_auth_handler4(self):
+        """do not send credentials to an arbitrary host"""
+        r = Urllib2HTTPRequest('http://localhost', username='foo',
+                               password='bar')
+        resp = r.get('/source', apiurl='http://api.opensuse.org')
+        self.assertEqual(resp.read(), 'foo')
+
+    @GET('http://localhost/test', text='', code=302,
+         exp_headers={'Authorization': 'Basic Zm9vOmJhcg=='},
+         location='http://example.com/foobar/test')
+    @GET('http://example.com/foobar/test', text='foo',
+         exp_headers={'Authorization': None})
+    def test_basic_auth_handler5(self):
+        """do not send credentials to an arbitrary redirect location"""
+        r = Urllib2HTTPRequest('http://localhost', username='foo',
+                               password='bar')
+        resp = r.get('/test')
+        self.assertEqual(resp.read(), 'foo')
+
+    @GET('https://localhost/test', text='foo',
+         exp_headers={'Authorization': 'Basic Zm9vOmJhcg=='})
+    def test_basic_auth_handler6(self):
+        """test a https request"""
+        r = Urllib2HTTPRequest('https://localhost', username='foo',
+                               password='bar')
+        resp = r.get('/test')
+        self.assertEqual(resp.read(), 'foo')
+
+    @staticmethod
+    def _setup_ext_basic_auth_handler(url, username, password):
+        authhandler = urllib2.HTTPBasicAuthHandler(
+            urllib2.HTTPPasswordMgrWithDefaultRealm())
+        authhandler.add_password(None, url, username, password)
+        return authhandler
+
+    @GET('http://localhost/test', text='', code=401,
+         www_authenticate='Basic realm="foo bar"')
+    @GET('http://localhost/test', text='foo',
+         exp_headers={'Authorization': 'Basic Zm9vOmJhcg=='})
+    def test_external_basic_auth_handler1(self):
+        """test external basic auth handler"""
+        handler = self._setup_ext_basic_auth_handler('http://localhost',
+                                                     'foo', 'bar')
+        r = Urllib2HTTPRequest('http://localhost', handlers=[handler])
+        resp = r.get('/test')
+        self.assertEqual(resp.read(), 'foo')
+
+    @GET('http://localhost/test', text='', code=401,
+         exp_headers={'Authorization': 'Basic Zm9vOmJhcg=='},
+         www_authenticate='Basic realm="foo bar"')
+    @GET('http://localhost/test', text='foo',
+         exp_headers={'Authorization': 'Basic Zm9vOmZvb2Jhcg=='})
+    def test_external_basic_auth_handler2(self):
+        """test external + default basic auth handler (pathological case)"""
+        # the default basic auth handler does not override an existing
+        # Authorization header
+        handler = self._setup_ext_basic_auth_handler('http://localhost',
+                                                     'foo', 'foobar')
+        r = Urllib2HTTPRequest('http://localhost', username='foo',
+                               password='bar', handlers=[handler])
+        resp = r.get('/test')
         self.assertEqual(resp.read(), 'foo')
 
 if __name__ == '__main__':
