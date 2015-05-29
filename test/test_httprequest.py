@@ -275,9 +275,21 @@ class TestHTTPRequest(OscTest):
         resp = r.get('/test')
         self.assertEqual(resp.read(), 'foo')
 
-    @GET('https://localhost/test', text='foo',
+    @GET('http://localhost/test', text='', code=302,
+         exp_headers={'Authorization': 'Basic Zm9vOmJhcg=='},
+         location='https://localhost/foobar/test')
+    @GET('https://localhost/foobar/test', text='foo',
          exp_headers={'Authorization': 'Basic Zm9vOmJhcg=='})
     def test_basic_auth_handler6(self):
+        """send credentials, if the redirect location's host did not change"""
+        r = Urllib2HTTPRequest('http://localhost', username='foo',
+                               password='bar')
+        resp = r.get('/test')
+        self.assertEqual(resp.read(), 'foo')
+
+    @GET('https://localhost/test', text='foo',
+         exp_headers={'Authorization': 'Basic Zm9vOmJhcg=='})
+    def test_basic_auth_handler7(self):
         """test a https request"""
         r = Urllib2HTTPRequest('https://localhost', username='foo',
                                password='bar')
