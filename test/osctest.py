@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+import unittest
 
 from test.httptest import MockUrllib2Request
 from osc2.core import Osc
@@ -43,8 +44,45 @@ class _AssertRaisesContext(object):
         return True
 
 
-class OscTest(MockUrllib2Request):
-    """Base class for all osc related testcases.
+class OscTestCase(unittest.TestCase):
+    """Base class for all osc related test cases.
+
+    It provides some methods for backward compatibility with
+    "old" python versions.
+
+    """
+    def assertIsNotNone(self, x):
+        if hasattr(super(OscTestCase, self), 'assertIsNotNone'):
+            return super(OscTestCase, self).assertIsNotNone(x)
+        return self.assertTrue(x is not None)
+
+    def assertIsNone(self, x):
+        if hasattr(super(OscTestCase, self), 'assertIsNone'):
+            return super(OscTestCase, self).assertIsNone(x)
+        return self.assertTrue(x is None)
+
+    def assertRaises(self, excClass, callableObj=None, *args, **kwargs):
+        """Overriden in order to provide backward compatibility.
+
+        With python < 2.7 it is not possible to use this as a context
+        manager.
+
+        """
+        if sys.version_info >= (2, 7):
+            return super(OscTestCase, self).assertRaises(excClass,
+                                                         callableObj,
+                                                         *args, **kwargs)
+        # backport ability to use this method as a context manager
+        # copied code from unittest/case.py (python 2.7)
+        context = _AssertRaisesContext(excClass, self)
+        if callableObj is None:
+            return context
+        with context:
+            callableObj(*args, **kwargs)
+
+
+class OscTest(MockUrllib2Request, OscTestCase):
+    """Base class for all osc related testcases that perform http requests.
 
     Sets up core.Osc class to use a dummy request object.
 
@@ -56,16 +94,6 @@ class OscTest(MockUrllib2Request):
     def setUp(self):
         super(OscTest, self).setUp()
         Osc.init(self.apiurl, validate=True)
-
-    def assertIsNotNone(self, x):
-        if hasattr(super(OscTest, self), 'assertIsNotNone'):
-            return super(OscTest, self).assertIsNotNone(x)
-        return self.assertTrue(x is not None)
-
-    def assertIsNone(self, x):
-        if hasattr(super(OscTest, self), 'assertIsNone'):
-            return super(OscTest, self).assertIsNone(x)
-        return self.assertTrue(x is None)
 
     def assertEqualFile(self, x, filename, mode='r'):
         with open(self.fixture_file(filename), mode) as f:
@@ -87,21 +115,3 @@ class OscTest(MockUrllib2Request):
     def _not_exists(self, path, *filenames, **kwargs):
         self.assertRaises(AssertionError, self._exists, path, *filenames,
                           **kwargs)
-
-    def assertRaises(self, excClass, callableObj=None, *args, **kwargs):
-        """Overriden in order to provide backward compatibility.
-
-        With python < 2.7 it is not possible to use this as a context
-        manager.
-
-        """
-        if sys.version_info >= (2, 7):
-            return super(OscTest, self).assertRaises(excClass, callableObj,
-                                                     *args, **kwargs)
-        # backport ability to use this method as a context manager
-        # copied code from unittest/case.py (python 2.7)
-        context = _AssertRaisesContext(excClass, self)
-        if callableObj is None:
-            return context
-        with context:
-            callableObj(*args, **kwargs)

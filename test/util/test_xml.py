@@ -2,13 +2,14 @@ import unittest
 from collections import Sequence
 
 from osc2.util.xml import fromstring
+from test.osctest import OscTestCase
 
 
 def suite():
     return unittest.makeSuite(TestXML)
 
 
-class TestXML(unittest.TestCase):
+class TestXML(OscTestCase):
     def setUp(self):
         self.xml = fromstring(
             """
@@ -28,27 +29,27 @@ class TestXML(unittest.TestCase):
     def test_find(self):
         """Find single element (child)"""
         elm = self.xml.find('foo')
-        self.assertTrue(elm is not None)
+        self.assertIsNotNone(elm)
         self.assertFalse(isinstance(elm, Sequence))
 
     def test_find_xpath(self):
         """Find single element using xpath"""
         elm = self.xml.find('//bar')
-        self.assertTrue(elm is not None)
+        self.assertIsNotNone(elm)
         self.assertFalse(isinstance(elm, Sequence))
         self.assertEqual(elm.get('name'), 'xyz')
 
     def test_find_result_xpath(self):
         """Call find with an xpath expr on the result returned by find"""
         elm = self.xml.find('//bar')
-        self.assertTrue(elm is not None)
+        self.assertIsNotNone(elm)
         elm = elm.find('//foo')
-        self.assertTrue(elm is not None)
+        self.assertIsNotNone(elm)
 
     def test_find_nonexistent(self):
         """Try to find a nonexistent element"""
         elm = self.xml.find('nonexistent')
-        self.assertTrue(elm is None)
+        self.assertIsNone(elm)
 
     def test_find_arbitrary_xpath(self):
         """Find also takes an aribtrary xpath"""

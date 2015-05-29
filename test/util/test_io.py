@@ -5,13 +5,14 @@ import tempfile
 from cStringIO import StringIO
 
 from osc2.util.io import TemporaryDirectory, mkdtemp, mkstemp
+from test.osctest import OscTestCase
 
 
 def suite():
     return unittest.makeSuite(TestIO)
 
 
-class TestIO(unittest.TestCase):
+class TestIO(OscTestCase):
     def setUp(self):
         # in order to avoid race conditions, all tmpdirs are created
         # in a testcase specific tmpdir (actually, we cannot avoid race

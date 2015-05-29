@@ -1,6 +1,7 @@
 import unittest
 
 from osc2.util.delegation import StringifiedDelegator, Delegator
+from test.osctest import OscTestCase
 
 
 def suite():
@@ -37,7 +38,7 @@ class Foo(object):
 
 # we only test the StringifiedDelegator, because this
 # indirectly tests the Delegator class as well
-class TestDelegation(unittest.TestCase):
+class TestDelegation(OscTestCase):
 
     def test_sdelegator1(self):
         """test simple delegation"""
