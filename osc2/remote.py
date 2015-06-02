@@ -23,7 +23,7 @@ from osc2.util.xml import get_parser, fromstring, OscElement
 from osc2.util.io import copy_file, iter_read, mkstemp
 
 __all__ = ['RemoteModel', 'RemoteProject', 'RemotePackage', 'Request',
-           'RORemoteFile', 'RWRemoteFile', 'RemotePerson']
+           'RORemoteFile', 'RWRemoteFile', 'RemotePerson', 'RemoteGroup']
 
 
 def _get_http_method(request_obj, method):
@@ -749,3 +749,38 @@ class RemotePerson(RemoteModel):
     def delete(cls, userid, **kwargs):
         path = RemotePerson.DELETE_PATH % {'userid': userid}
         return super(RemotePerson, cls).delete(path, **kwargs)
+
+
+class RemoteGroup(RemoteModel):
+    PATH = '/group/%(title)s'
+    DELETE_PATH = '/group/%(title)s'
+    SCHEMA = ''
+    # used to validate the response after the xml is stored
+    PUT_RESPONSE_SCHEMA = ''
+
+    def __init__(self, name='', **kwargs):
+        store_schema = RemoteGroup.PUT_RESPONSE_SCHEMA
+        super(RemoteGroup, self).__init__(tag='group', name=name,
+                                          schema=RemoteGroup.SCHEMA,
+                                          store_schema=store_schema,
+                                          **kwargs)
+
+    @classmethod
+    def find(cls, title, **kwargs):
+        path = RemoteGroup.PATH % {'title': title}
+        if 'schema' not in kwargs:
+            kwargs['schema'] = RemoteGroup.SCHEMA
+        return super(RemoteGroup, cls).find(path, **kwargs)
+
+    def store(self, **kwargs):
+        path = RemoteGroup.PATH % {'title': self.get('name')}
+        return super(RemoteGroup, self).store(path, method='PUT', **kwargs)
+
+    @classmethod
+    def delete(cls, title, **kwargs):
+        path = RemoteGroup.DELETE_PATH % {'title': title}
+        return super(RemoteGroup, cls).delete(path, **kwargs)
+
+    @property
+    def persons(self):
+        return [x.get('userid') for x in self.person.person]

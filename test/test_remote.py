@@ -7,7 +7,7 @@ from lxml import etree
 
 from osc2.remote import (RemoteProject, RemotePackage, Request,
                          RORemoteFile, RWRemoteFile, RWLocalFile,
-                         RemotePerson)
+                         RemotePerson, RemoteGroup)
 from test.osctest import OscTest
 from test.httptest import GET, PUT, POST, DELETE
 
@@ -925,6 +925,13 @@ class TestRemoteModel(OscTest):
         req = RemotePerson.find('foo')
         self.assertEqual(req.realname, 'Foo Bar')
         self.assertEqual(req.email, 'foo@example.com')
+
+    @GET('http://localhost/group/group-name', file='group.xml')
+    def test_group(self):
+        """get a request"""
+        req = RemoteGroup.find('group-name')
+        self.assertEqual(req.email, 'group@example.com')
+        self.assertEqual(req.persons, ['foo', 'bar'])
 
 if __name__ == '__main__':
     unittest.main()
