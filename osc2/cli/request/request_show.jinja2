@@ -12,7 +12,7 @@ Request: #{{ request.get('id') }}
 {% block description %}
 
 Message:
-{% if request.description.text is not none -%}
+{% if request.description and request.description.text is not none -%}
 {{ request.description.text }}
 {%- else -%}
 no message
