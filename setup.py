@@ -42,7 +42,7 @@ setup(name='osc2',
         'osc2', 'osc2.util', 'osc2.wc', 'osc2.cli', 'osc2.cli.util',
         'osc2.cli.request', 'osc2.cli.list', 'osc2.cli.status',
         'osc2.cli.commit', 'osc2.cli.checkout', 'osc2.cli.update',
-        'osc2.cli.review',
+        'osc2.cli.review', 'osc2.cli.add'
       ],
       package_data={'osc2': ['cli/*.jinja2', 'cli/*/*.jinja2']},
       scripts=['scripts/osc2'],
