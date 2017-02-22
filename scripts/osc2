@@ -1,0 +1,6 @@
+#!/usr/bin/python
+
+from osc2.cli import cli
+
+
+cli.main()
