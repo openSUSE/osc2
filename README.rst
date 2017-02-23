@@ -34,3 +34,5 @@ installing them using `pip`.
 
           export PYCURL_SSL_LIBRARY=openssl
           pip install -r requirements.txt
+
+The binaries to test osc2 can be found in OBS (devel:tools:scm): https://build.opensuse.org/package/show/devel:tools:scm/osc2
