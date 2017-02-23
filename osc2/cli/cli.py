@@ -5,6 +5,7 @@ import inspect
 import logging
 import urlparse
 from ConfigParser import SafeConfigParser
+from collections import Sequence
 
 from osc2.core import Osc
 from osc2.cli import plugin
@@ -295,6 +296,11 @@ def execute(args=None):
     apiurl = 'api'
     if 'apiurl' in info:
         apiurl = info.apiurl
+    elif getattr(info, 'path') is not None:
+        if isinstance(info.path, Sequence) and info.path:
+            apiurl = info.path[0].project_obj().apiurl
+        else:
+            apiurl = info.path.project_obj().apiurl
     info.set('apiurl', _init(apiurl))
     info.func(info)
 
