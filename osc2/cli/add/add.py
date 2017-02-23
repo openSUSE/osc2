@@ -17,7 +17,10 @@ def add(path, info):
         prj = path.project_obj()
         pkg = path.package_obj()
         if pkg is not None:
-            add_files(pkg, info, *(path.filename or []))
+            filenames = []
+            if path.filename:
+                filenames.append(path.filename)
+            add_files(pkg, info, *filenames)
         elif prj is not None:
             add_package(prj, path.package, info)
 
