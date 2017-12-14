@@ -1,7 +1,9 @@
 #!/usr/bin/python
 
+import sys
 import os
-from setuptools import setup, find_packages
+from setuptools import setup
+
 from distutils.command.build import build
 from pydoc import writedoc
 
@@ -9,7 +11,12 @@ from pydoc import writedoc
 class BuildDocumentation(build, object):
     def _generate_docs(self):
         # FIXME: this is really hacky
+        # Need to work in the modules directory.
+        # Otherwise install with e.g. pip will not work.
         olddir = os.getcwd()
+        module_dir = os.path.dirname(os.path.abspath(__file__))
+        sys.path.append(module_dir)
+        os.chdir(module_dir)
         html_dir = os.path.join('docs', 'html')
         if not os.path.exists(html_dir):
             os.makedirs(html_dir)
@@ -49,4 +56,10 @@ setup(name='osc2',
       test_suite='test.suite',
       entry_points={'console_scripts': ['osc2 = osc2.cli.cli:main']},
       license='GPL',
-      cmdclass={'build': BuildDocumentation})
+      cmdclass={'build': BuildDocumentation},
+      install_requires=[
+          "lxml",
+          "urlgrabber",
+          "jinja2"
+      ],
+      classifiers=["Programming Language :: Python :: 2.7"])
