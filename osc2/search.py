@@ -6,7 +6,7 @@ Currently only the search for requests is supported.
 
 from lxml import etree
 
-from osc2.remote import Request, RemoteProject
+from osc2.remote import Request, RemoteProject, RemotePackage
 from osc2.util.xml import fromstring, OscElement
 from osc2.core import Osc
 
@@ -75,6 +75,36 @@ class RORequest(OscElement):
         return Request(xml_data=etree.tostring(self))
 
 
+class PackageCollection(OscElement):
+    """Contains the package search results.
+
+    All package objects are read only. In order to "work"
+    with the package objects (except reading) a call to
+    the Package's real_obj method is required.
+    """
+    SCHEMA = ''
+
+    def __iter__(self):
+        for r in self.iterfind('package'):
+            yield r.real_obj()
+
+
+class ROPackage(OscElement):
+    """Represents a read only package.
+
+    This kind of package object is usually used in a collection.
+    """
+
+    def real_obj(self):
+        """Returns a "real" Request object.
+
+        The returned object is "writable" too that is
+        its state can be changed etc.
+
+        """
+        return RemotePackage(xml_data=etree.tostring(self))
+
+
 def _find(path, xp, tag_class={}, **kwargs):
     """Returns a Collection with objects which match the xpath.
 
@@ -128,4 +158,20 @@ def find_project(xp, **kwargs):
     if 'schema' not in kwargs:
         kwargs['schema'] = ProjectCollection.SCHEMA
     tag_class = {'collection': ProjectCollection, 'project': ROProject}
+    return _find(path, xp, tag_class, **kwargs)
+
+
+def find_package(xp, **kwargs):
+    """Returns a PackageCollection with objects which match the xpath.
+
+    xp is the xpath which is used for the search (either an
+    Expression object or a string).
+
+    Keyword arguments:
+    **kwargs -- optional parameters for the http request
+    """
+    path = '/search/package'
+    if 'schema' not in kwargs:
+        kwargs['schema'] = PackageCollection.SCHEMA
+    tag_class = {'collection': PackageCollection, 'package': ROPackage}
     return _find(path, xp, tag_class, **kwargs)
