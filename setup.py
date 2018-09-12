@@ -59,7 +59,6 @@ setup(name='osc2',
       cmdclass={'build': BuildDocumentation},
       install_requires=[
           "lxml",
-          "urlgrabber",
           "jinja2"
       ],
       classifiers=["Programming Language :: Python :: 2.7"])

@@ -7,7 +7,6 @@ import os
 from collections import namedtuple
 
 import urlparse
-from urlgrabber import grabber, mirror
 
 from osc2.build import BuildResult
 from osc2.util.listinfo import ListInfo
@@ -213,50 +212,55 @@ def _download_url_builder(binfo, bdep):
     return downloadurl, path, {}
 
 
-class CustomMirrorGroup(mirror.MirrorGroup, object):
-    """It's sole purpose is to override the _join_url methods for our needs."""
+class CustomMirrorGroup(object):
+    """Manages a pool of mirrors to retrieve data from.
 
-    def __init__(self, *args, **kwargs):
+    It subsequently tries each mirror from the mirror pool, until a mirror
+    is found that can be opened by a specific opener instance (usually a
+    MirrorUrlOpener instance).
+
+    This is a very simplified variant of the urlgrabber.mirror.MirrorGroup
+    class.
+
+    """
+
+    def __init__(self, opener, mirror_pool):
         """Constructs a new CustomMirrorGroup object.
 
-        For *args and **kwargs see class urlgrabber.mirror.MirrorGroup.
+        opener is a MirrorUrlOpener instance (or any other object that provides
+        a corresponding urlopen method). mirror_pool is an iterable whose values
+        are a (host, path, query) tuple where host and path are strings and
+        query is a dict.
 
         """
-        super(CustomMirrorGroup, self).__init__(*args, **kwargs)
+        super(CustomMirrorGroup, self).__init__()
+        self._opener = opener
+        self._mirror_pool = mirror_pool
         self.used_mirror_urls = []
 
-    def _join_url(self, base_url, rel_url):
-        """Joins base_url with rel_url.
+    def urlopen(self, **kwargs):
+        """Returns the data from one of the mirrors or None.
 
-        In our scenario rel_url is always the empty str. The
-        original version of the method would return base_url + '/' + rel_url
-        which is wrong in this case.
+        It subsequently tries each mirror from the mirror pool, until a mirror
+        is found that can be opened by a specific opener instance (usually a
+        MirrorUrlOpener instance). If such a mirror is found, the actual
+        data that is returned depends on the opener. If no mirror can be
+        opened by the opener, None is returned.
 
-        """
-        return base_url
-
-    def _get_mirror(self, *args, **kwargs):
-        """Returns the next mirror (if one exists).
-
-        This overrides _get_mirror in order to keep track of the
-        used mirror urls.
+        Keyword arguments:
+        kwargs -- optional arguments for the opener (these arguments are not
+                  supposed to be query parameters for the http request)
 
         """
-        url = super(CustomMirrorGroup, self)._get_mirror(*args, **kwargs)
-        # store them in "human readable" format
-        host, path, query = url['mirror']
-        self.used_mirror_urls.append(build_url(host, path, **query))
-        return url
-
-    def urlopen(self):
-        """Returns a RORemoteFile object.
-
-        Overrides urlopen in order to make the interface a bit
-        nicer (otherwise the caller would have to specify an empty
-        url).
-
-        """
-        return super(CustomMirrorGroup, self).urlopen('')
+        for (host, path, query) in self._mirror_pool:
+            kw = kwargs.copy()
+            kw.update(query)
+            self.used_mirror_urls.append(build_url(host, path, **query))
+            try:
+                return self._opener.urlopen(host, path, **kw)
+            except HTTPError:
+                pass
+        return None
 
 
 class MirrorUrlOpener(object):
@@ -265,34 +269,25 @@ class MirrorUrlOpener(object):
     def __init__(self, bdep):
         """Constructs a new MirrorUrlOpener object.
 
-        bdep is a BuildDependency which should be fetched.
+        bdep is a BuildDependency which should be fetched (can be used
+        by potential subclasses).
 
         """
         super(MirrorUrlOpener, self).__init__()
         self._bdep = bdep
 
-    def urlopen(self, url, **kwargs):
+    def urlopen(self, host, path, **kwargs):
         """Returns a RORemoteFile instance.
 
         Invoked by the CustomMirrorGroup object.
-        url is a list with 3 elements: url[0] the host,
-        url[1] the path and url[2] optional query parameters.
+        host is the host and path is the path.
 
         Keyword arguments:
-        **kwargs -- kwargs are ignored
+        kwargs -- optional arguments for the RORemoteFile instance (like
+                  query parameters)
 
         """
-        host, path, query = url
-        f = None
-        try:
-            f = RORemoteFile(path, apiurl=host, lazy_open=False, **query)
-        except HTTPError as e:
-            if f is not None:
-                f.close()
-            exc = grabber.URLGrabError(14, str(e))
-            exc.orig_exc = e
-            raise exc
-        return f
+        return RORemoteFile(path, apiurl=host, lazy_open=False, **kwargs)
 
 
 class FetchListener(object):
@@ -459,20 +454,16 @@ class BuildDependencyFetcher(object):
         binfo is a BuildInfo and bdep is a BuildDependency object.
 
         """
-        urls = []
+        mirror_pool = []
         for url_builder in self._url_builder:
             components = url_builder(binfo, bdep)
             if not [i for i in components if i is None]:
-                urls.append({'mirror': components})
-        mgroup = CustomMirrorGroup(MirrorUrlOpener(bdep), mirrors=urls)
+                mirror_pool.append(components)
+        mgroup = CustomMirrorGroup(MirrorUrlOpener(bdep), mirror_pool)
         # in this case there is no fetch result
         self._notifier.pre_fetch(bdep, None)
-        f = None
-        try:
-            f = mgroup.urlopen()
-        except grabber.URLGrabError:
-            if f is not None:
-                f.close()
+        f = mgroup.urlopen()
+        if f is None:
             fr = BuildDependencyFetcher.FetchResult(bdep, False,
                                                     mgroup.used_mirror_urls,
                                                     False)
