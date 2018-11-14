@@ -81,6 +81,7 @@ class PackageCollection(OscElement):
     All package objects are read only. In order to "work"
     with the package objects (except reading) a call to
     the Package's real_obj method is required.
+
     """
     SCHEMA = ''
 
@@ -93,6 +94,7 @@ class ROPackage(OscElement):
     """Represents a read only package.
 
     This kind of package object is usually used in a collection.
+
     """
 
     def real_obj(self):
@@ -169,6 +171,7 @@ def find_package(xp, **kwargs):
 
     Keyword arguments:
     **kwargs -- optional parameters for the http request
+
     """
     path = '/search/package'
     if 'schema' not in kwargs:
