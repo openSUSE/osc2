@@ -107,6 +107,9 @@ class WCLock(object):
         self._fobj.close()
         self._fobj = None
         lock = _storefile(self._path, _LOCK)
+        # FIXME/XXX: the unlink breaks the locking logic (the fix is easy:
+        # do not unlink the lock file (but we probably have to adjust the
+        # testcases (I have no time for it atm)))
         os.unlink(lock)
 
     def __enter__(self):
